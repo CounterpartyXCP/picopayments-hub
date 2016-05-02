@@ -4,3 +4,6 @@
 
 
 from .version import __version__  # NOQA
+from . import scripts  # NOQA
+from . import channel  # NOQA
+from . import control  # NOQA

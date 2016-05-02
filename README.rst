@@ -1,7 +1,6 @@
-#################################################
-PicoPayments - Counterparty Micropayment Channels
-#################################################
-
+############
+PicoPayments
+############
 
 |BuildLink|_ |CoverageLink|_ |LicenseLink|_ |IssuesLink|_
 
@@ -19,6 +18,9 @@ PicoPayments - Counterparty Micropayment Channels
 .. _IssuesLink: https://github.com/F483/picopayments/issues
 
 
+Trustless unidirectional micropayment channels for counterparty assets ᕕ( ᐛ )ᕗ
+
+
 ============
 Installation
 ============
@@ -28,9 +30,13 @@ Installation
   pip install picopayments
 
 
-=========================
+=====
+Usage
+=====
+
+-------------------------
 Use fast native functions
-=========================
+-------------------------
 
 There is experimental code that will call into OpenSSL for slow functions.
 To enable this, set (and export) environment variable PYCOIN_NATIVE=openssl.
@@ -39,9 +45,9 @@ To enable this, set (and export) environment variable PYCOIN_NATIVE=openssl.
 
   $ export PYCOIN_NATIVE=openssl
 
-=====
-Usage
-=====
+-------
+Example
+-------
 
 TODO
 
