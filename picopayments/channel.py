@@ -32,16 +32,28 @@ class Base(object):
 class Payer(Base):
 
     def __init__(self, asset, user=DEFAULT_COUNTERPARTY_RPC_USER,
-                 password=DEFAULT_COUNTERPARTY_RPC_PASSWORD, url=None,
-                 testnet=DEFAULT_TESTNET, dryrun=False):
-        self.control = Control(self, asset=asset, user=user, password=password,
-                               url=url, testnet=testnet, dryrun=dryrun)
+                 password=DEFAULT_COUNTERPARTY_RPC_PASSWORD,
+                 counterparty_url=None, testnet=DEFAULT_TESTNET, dryrun=False):
+
+        self.control = Control(asset, user=user, password=password,
+                               counterparty_url=counterparty_url,
+                               testnet=testnet, dryrun=dryrun)
 
 
 class Payee(Base):
 
     def __init__(self, asset, user=DEFAULT_COUNTERPARTY_RPC_USER,
-                 password=DEFAULT_COUNTERPARTY_RPC_PASSWORD, url=None,
-                 testnet=DEFAULT_TESTNET, dryrun=False):
-        self.control = Control(self, asset=asset, user=user, password=password,
-                               url=url, testnet=testnet, dryrun=dryrun)
+                 password=DEFAULT_COUNTERPARTY_RPC_PASSWORD,
+                 counterparty_url=None, testnet=DEFAULT_TESTNET, dryrun=False):
+
+        self.control = Control(asset, user=user, password=password,
+                               counterparty_url=counterparty_url,
+                               testnet=testnet, dryrun=dryrun)
+
+
+class Dual(object):
+
+    def __init__(self, asset, user=DEFAULT_COUNTERPARTY_RPC_USER,
+                 password=DEFAULT_COUNTERPARTY_RPC_PASSWORD,
+                 counterparty_url=None, testnet=DEFAULT_TESTNET, dryrun=False):
+        pass

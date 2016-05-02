@@ -5,49 +5,62 @@
        |
        |
        V
-+-------------+                     /------------=----------------\
-| Deposit TX  |----=----------------+ Lock funds so Payer cant    |
-| cGRE        |                     | spend while channel in use. |
-+------+------+                     \-----------------------------/
++-------------+                             /------------=----------------\
+| Deposit TX  |----=------------------------+ Lock funds so Payer cant    |
+| cGRE        |                             | spend while channel in use. |
++------+------+                             \-----------------------------/
        |
        |
        |
-      /+-\    A_SIG & EXPIRED           +-------------+
-      |OR+----------------------------->| Recover XT  +---->Payer
-      \+-/                              | cGRE        |
-       |                                +-------------+
-       |                                      :
-       |                                      |
-       |                            /---------+------------\
-       |                            | Recover funds if     |
-       |                            | channel expired.     |
-       |                            \---------=------------/
+      /+-\    PAYER_SIG & EXPIRED                  +-------------+
+      |OR+---------------------------------------->| Recover XT  +---->Payer
+      \+-/                                         | cGRE        |
+       |                                           +-------------+
+       |                                                 :
+       |                                                 |
+       |                                       /---------+------------\
+       |                                       | Recover funds if     |
+       |                                       | channel expired.     |
+       |                                       \---------=------------/
+       |                                   
+       |                                   
+       |                                   
+      /+-\    PAYER_SIG & SPEND_SECRET             +-------------+
+      |OR+---------------------------------------->| Change XT   +---->Payer
+      \+-/                                         | cGRE        |
+       |                                           +-------------+
+       |                                                 :
+       |                                                 |
+       |                                       /---------+--------------------\
+       |                                       | Recover remaining funds      |
+       |                                       | after spend secret revealed. |
+       |                                       \---------=--------------------/
+       |                                   
+       |                                   
+       |                                   
+       V                                       /----------------------\
++-------------+                                | Close channel and    |
+| Commit TX   |----=---------------------------+ force spend secret   |
+| cGRE        |                                | to be revealed after |
++------+------+                                | min one block.       |
+       |                                       \---------=------------/
        |
        |
        |
-      /+-\    A_SIG & B_SECRET          +-------------+
-      |OR+----------------------------->| Change XT   +---->Payer
-      \+-/                              | cGRE        |
-       |                                +-------------+
-       |                                      :
-       |                                      |
-       |                            /---------+---------------\
-       |                            | Recover remaining funds |
-       |                            | after secret revealed.  |
-       |                            \---------=---------------/
+      /+-\    PAYEE_SIG & SPEND_SECRET & DELAY     +-------------+
+      |OR+---------------------------------------->| Payout XT   +---->Payee
+      \+-/                                         | cGRE        |
+       |                                           +-------------+
+       |                                                  :
+       |                                                  |
+       |                                        /---------+------------------\
+       |                                        | Funds sent to payee.       |
+       |                                        | Reveals spend secret AFTER |
+       |                                        | funds committed.           |
+       |                                        \---------=------------------/
        |
        |
-       |
-       V
-+-------------+    B_SIG & B_SECRET     +-------------+
-| Commit TX   +------------------------>| Payout TX   +---->Payee
-| cGRE        |                         | cGRE        |
-+-------------+                         +-------------+
-          :                                   :
-          |                                   |
-/---------+------------\            /---------+------------\
-| Close channel and    |            | Funds sent to payee. |
-| force secret to be   |            | Reveals secret AFTER |
-| revealed after min   |            | funds committed.     |
-| one block.           |            \---------=------------/
-\---------=------------/
+       |    PAYER_SIG & REVOKE_SECRET              +-------------+
+       +------------------------------------------>| Revoke XT   +---->Payer
+                                                   | cGRE        |
+                                                   +-------------+

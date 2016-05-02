@@ -18,38 +18,16 @@ DEFAULT_COUNTERPARTY_RPC_USER = "rpc"
 DEFAULT_COUNTERPARTY_RPC_PASSWORD = "1234"
 
 
-def wif2sec(wif):
-    return pycoin.key.Key.from_text(wif).sec()
-
-
-def wif2address(wif):
-    return pycoin.key.Key.from_text(wif).address()
-
-
-def wif2secretexponent(wif):
-    return pycoin.key.Key.from_text(wif).secret_exponent()
-
-
-def sec2address(sec, netcode="BTC"):
-    prefix = pycoin.networks.address_prefix_for_netcode(netcode)
-    digest = pycoin.encoding.hash160(sec)
-    return pycoin.encoding.hash160_sec_to_bitcoin_address(digest, prefix)
-
-
-def script2address(script, netcode="BTC"):
-    return pycoin.tx.pay_to.address_for_pay_to_script(script, netcode=netcode)
-
-
 class Control(object):
 
     def __init__(self, asset, user=DEFAULT_COUNTERPARTY_RPC_USER,
-                 password=DEFAULT_COUNTERPARTY_RPC_PASSWORD, url=None,
+                 password=DEFAULT_COUNTERPARTY_RPC_PASSWORD, counterparty_url=None,
                  testnet=DEFAULT_TESTNET, dryrun=False):
 
         if testnet:
-            self.url = DEFAULT_COUNTERPARTY_RPC_TESTNET_URL
+            self.counterparty_url = DEFAULT_COUNTERPARTY_RPC_TESTNET_URL
         else:
-            self.url = DEFAULT_COUNTERPARTY_RPC_MAINNET_URL
+            self.counterparty_url = DEFAULT_COUNTERPARTY_RPC_MAINNET_URL
         self.testnet = testnet
         self.user = user
         self.password = password
@@ -60,7 +38,7 @@ class Control(object):
     def _rpc_call(self, payload):
         headers = {'content-type': 'application/json'}
         auth = HTTPBasicAuth(self.user, self.password)
-        response = requests.post(self.url, data=json.dumps(payload),
+        response = requests.post(self.counterparty_url, data=json.dumps(payload),
                                  headers=headers, auth=auth)
         response_data = json.loads(response.text)
         if "result" not in response_data:

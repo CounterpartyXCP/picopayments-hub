@@ -3,18 +3,23 @@
 # License: MIT (see LICENSE file)
 
 
-import pycoin
+from pycoin.serialize import b2h
+from pycoin import encoding
+from pycoin.tx.script import tools
+from pycoin.tx.pay_to.ScriptType import ScriptType
+from pycoin.tx.pay_to import SUBCLASSES
 
 
+DEFAULT_EXPIRE_TIME = 5
 DEPOSIT_SCRIPT = """
     OP_IF
         2 {payer_pubkey} {payee_pubkey} 2 OP_CHECKMULTISIG
     OP_ELSE
         OP_IF
-            OP_HASH160 {payee_secret_hash} OP_EQUALVERIFY
+            OP_HASH160 {spend_secret_hash} OP_EQUALVERIFY
             {payer_pubkey} OP_CHECKSIG
         OP_ELSE
-            {expire_time} OP_CHECKSEQUENCEVERIFY OP_DROP
+            {expire_time} OP_NOP3 OP_DROP
             {payer_pubkey} OP_CHECKSIG
         OP_ENDIF
     OP_ENDIF
@@ -22,17 +27,23 @@ DEPOSIT_SCRIPT = """
 
 
 COMMIT_SCRIPT = """
-    OP_HASH160 {payee_secret_hash} OP_EQUALVERIFY {payee_pubkey} OP_CHECKSIG
+    OP_IF
+        OP_HASH160 {spend_secret_hash} OP_EQUALVERIFY
+        {payee_pubkey} OP_CHECKSIG
+    OP_ELSE
+        OP_HASH160 {revoke_secret_hash} OP_EQUALVERIFY
+        {payer_pubkey} OP_CHECKSIG
+    OP_ENDIF
 """
 
 
 def compile_deposit_script(payer_pubkey, payee_pubkey,
-                           recover_pubkey, expire_time):
+                           spend_secret_hash, expire_time):
     """
     Args:
         payer_pubkey (hexstr): TODO
         payee_pubkey (hexstr): TODO
-        recover_pubkey (hexstr): TODO
+        spend_secret_hash (hexstr): TODO
         expire_time (int): TODO
 
     Return:
@@ -41,22 +52,23 @@ def compile_deposit_script(payer_pubkey, payee_pubkey,
     script_text = DEPOSIT_SCRIPT.format(
         payer_pubkey=payer_pubkey,
         payee_pubkey=payee_pubkey,
-        recover_pubkey=recover_pubkey,
+        spend_secret_hash=spend_secret_hash,
         expire_time=str(expire_time)
     )
-    return pycoin.tx.script.tools.compile(script_text)
+    return tools.compile(script_text)
 
 
-def create_deposit_script(payer_sec, payee_sec, recover_sec, expire_time):
-    return compile_deposit_script(pycoin.serialize.b2h(payer_sec),
-                                  pycoin.serialize.b2h(payee_sec),
-                                  pycoin.serialize.b2h(recover_sec),
-                                  expire_time)
+def create_deposit_script(payer_sec, payee_sec, recover_sec,
+                          spend_secret_hash, expire_time):
+
+    return compile_deposit_script(b2h(payer_sec), b2h(payee_sec),
+                                  spend_secret_hash, expire_time)
 
 
-class ScriptMicropaymentChannel(pycoin.tx.pay_to.ScriptType.ScriptType):
+class ScriptMicropaymentChannel(ScriptType):
 
-    TEMPLATE = compile_deposit_script("OP_PUBKEY", "OP_PUBKEY", "OP_PUBKEY")
+    TEMPLATE = compile_deposit_script("OP_PUBKEY", "OP_PUBKEY",
+                                      "OP_PUBKEYHASH", DEFAULT_EXPIRE_TIME)
 
     def __init__(self, payer_sec, payee_sec, recover_sec):
         self.payer_sec = payer_sec
@@ -82,22 +94,22 @@ class ScriptMicropaymentChannel(pycoin.tx.pay_to.ScriptType.ScriptType):
             raise Exception("Missing parameters!")
 
         # solve for recover case
-        result = db.get(pycoin.encoding.hash160(self.recover_sec))
+        result = db.get(encoding.hash160(self.recover_sec))
         if result is not None:
             secret_exponent, public_pair, compressed = result
             sig = self._create_script_signature(secret_exponent, sign_value,
                                                 signature_type)
-            solution = pycoin.tx.script.tools.bin_script([sig])
+            solution = tools.bin_script([sig])
 
         # TODO solve for refund case
 
         return solution
 
     def __repr__(self):
-        script_text = pycoin.tx.script.tools.disassemble(self.script)
+        script_text = tools.disassemble(self.script)
         return "<ScriptMicropaymentChannel: {0}".format(script_text)
 
 
 # FIXME create decorater for this and commit to pycoin
 # monkey patch pycoin pay to script subclassis with our own
-pycoin.tx.pay_to.SUBCLASSES.insert(0, ScriptMicropaymentChannel)
+SUBCLASSES.insert(0, ScriptMicropaymentChannel)
