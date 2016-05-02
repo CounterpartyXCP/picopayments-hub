@@ -1,0 +1,53 @@
+
+
+     Payer
+       |
+       |
+       |
+       V
++-------------+                     /------------=----------------\
+| Deposit TX  |----=----------------+ Lock funds so Payer cant    |
+| cGRE        |                     | spend while channel in use. |
++------+------+                     \-----------------------------/
+       |
+       |
+       |
+      /+-\    A_SIG & EXPIRED           +-------------+
+      |OR+----------------------------->| Recover XT  +---->Payer
+      \+-/                              | cGRE        |
+       |                                +-------------+
+       |                                      :
+       |                                      |
+       |                            /---------+------------\
+       |                            | Recover funds if     |
+       |                            | channel expired.     |
+       |                            \---------=------------/
+       |
+       |
+       |
+      /+-\    A_SIG & B_SECRET          +-------------+
+      |OR+----------------------------->| Change XT   +---->Payer
+      \+-/                              | cGRE        |
+       |                                +-------------+
+       |                                      :
+       |                                      |
+       |                            /---------+---------------\
+       |                            | Recover remaining funds |
+       |                            | after secret revealed.  |
+       |                            \---------=---------------/
+       |
+       |
+       |
+       V
++-------------+    B_SIG & B_SECRET     +-------------+
+| Commit TX   +------------------------>| Payout TX   +---->Payee
+| cGRE        |                         | cGRE        |
++-------------+                         +-------------+
+          :                                   :
+          |                                   |
+/---------+------------\            /---------+------------\
+| Close channel and    |            | Funds sent to payee. |
+| force secret to be   |            | Reveals secret AFTER |
+| revealed after min   |            | funds committed.     |
+| one block.           |            \---------=------------/
+\---------=------------/
