@@ -1,4 +1,7 @@
 import pycoin
+from pycoin.serialize import b2h  # NOQA
+from pycoin.serialize import h2b  # NOQA
+from pycoin.encoding import hash160  # NOQA
 
 
 def wif2sec(wif):

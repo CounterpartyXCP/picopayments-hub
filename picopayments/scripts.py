@@ -39,12 +39,13 @@ COMMIT_SCRIPT = """
 
 def compile_deposit_script(payer_pubkey, payee_pubkey,
                            spend_secret_hash, expire_time):
-    """
+    """Compile deposit transaction pay ot script.
+
     Args:
-        payer_pubkey (hexstr): TODO
-        payee_pubkey (hexstr): TODO
-        spend_secret_hash (hexstr): TODO
-        expire_time (int): TODO
+        payer_pubkey: Hex encoded public key in sec format.
+        payee_pubkey: Hex encoded public key in sec format.
+        spend_secret_hash: Hex encoded hash160 of spend secret.
+        expire_time: Channel expire time in blocks given as int.
 
     Return:
         Compiled bitcoin script.
@@ -58,8 +59,19 @@ def compile_deposit_script(payer_pubkey, payee_pubkey,
     return tools.compile(script_text)
 
 
-def create_deposit_script(payer_sec, payee_sec, recover_sec,
+def create_deposit_script(payer_sec, payee_sec,
                           spend_secret_hash, expire_time):
+    """Create deposit transaction pay ot script.
+
+    Args:
+        payer_sec: Public key in sec format.
+        payee_sec: Public key in sec format.
+        spend_secret_hash: Hex encoded hash160 of spend secret.
+        expire_time: Channel expire time in blocks given as int.
+
+    Return:
+        Compiled bitcoin script.
+    """
 
     return compile_deposit_script(b2h(payer_sec), b2h(payee_sec),
                                   spend_secret_hash, expire_time)
@@ -67,14 +79,14 @@ def create_deposit_script(payer_sec, payee_sec, recover_sec,
 
 class ScriptMicropaymentChannel(ScriptType):
 
+    # FIXME make expire time variable
     TEMPLATE = compile_deposit_script("OP_PUBKEY", "OP_PUBKEY",
                                       "OP_PUBKEYHASH", DEFAULT_EXPIRE_TIME)
 
-    def __init__(self, payer_sec, payee_sec, recover_sec):
+    def __init__(self, payer_sec, payee_sec):
         self.payer_sec = payer_sec
         self.payee_sec = payee_sec
-        self.recover_sec = recover_sec
-        self.script = create_deposit_script(payer_sec, payee_sec, recover_sec)
+        self.script = create_deposit_script(payer_sec, payee_sec)
 
     @classmethod
     def from_script(cls, script):

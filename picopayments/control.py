@@ -8,6 +8,8 @@ import json
 import requests
 from btctxstore import BtcTxStore
 from requests.auth import HTTPBasicAuth
+from pycoin.tx.script.tools import disassemble
+from . import util
 from . import scripts
 
 
@@ -21,13 +23,14 @@ DEFAULT_COUNTERPARTY_RPC_PASSWORD = "1234"
 class Control(object):
 
     def __init__(self, asset, user=DEFAULT_COUNTERPARTY_RPC_USER,
-                 password=DEFAULT_COUNTERPARTY_RPC_PASSWORD, counterparty_url=None,
-                 testnet=DEFAULT_TESTNET, dryrun=False):
+                 password=DEFAULT_COUNTERPARTY_RPC_PASSWORD,
+                 counterparty_url=None, testnet=DEFAULT_TESTNET, dryrun=False):
 
         if testnet:
-            self.counterparty_url = DEFAULT_COUNTERPARTY_RPC_TESTNET_URL
+            default_url = DEFAULT_COUNTERPARTY_RPC_TESTNET_URL
         else:
-            self.counterparty_url = DEFAULT_COUNTERPARTY_RPC_MAINNET_URL
+            default_url = DEFAULT_COUNTERPARTY_RPC_MAINNET_URL
+        self.counterparty_url = counterparty_url or default_url
         self.testnet = testnet
         self.user = user
         self.password = password
@@ -38,7 +41,8 @@ class Control(object):
     def _rpc_call(self, payload):
         headers = {'content-type': 'application/json'}
         auth = HTTPBasicAuth(self.user, self.password)
-        response = requests.post(self.counterparty_url, data=json.dumps(payload),
+        response = requests.post(self.counterparty_url,
+                                 data=json.dumps(payload),
                                  headers=headers, auth=auth)
         response_data = json.loads(response.text)
         if "result" not in response_data:
@@ -61,7 +65,8 @@ class Control(object):
             "id": 0,
         })
 
-    def get_balance(self, address):
+    def get_balance(self, address, asset=None):
+        asset = asset or self.asset
         return self._rpc_call({
             "method": "get_balances",
             "params": {
@@ -74,25 +79,28 @@ class Control(object):
             "id": 0,
         })
 
-    def deposit(self, payer_wif, payee_sec, quantity,
-                expire_time, recover_sec=None):
-        payer_sec = wif2sec(payer_wif)
-        recover_sec = recover_sec or payer_sec
-        script = script.create_deposit_script(payer_sec, payee_sec,
-                                              recover_sec, expire_time)
-        dest_address = script2address(script, self.netcode)
-        payer_address = wif2address(payer_wif)
+    def deposit(self, payer_wif, payee_pubkey, spend_secret_hash,
+                expire_time, quantity):
+
+        payer_pubkey = util.b2h(util.wif2sec(payer_wif))
+        script = scripts.compile_deposit_script(payer_pubkey, payee_pubkey,
+                                                spend_secret_hash, expire_time)
+        dest_address = util.script2address(script, self.netcode)
+        payer_address = util.wif2address(payer_wif)
         rawtx = self._create_tx(payer_address, dest_address, quantity)
-        signed_rawtx = self.btctxstore.sign_tx(rawtx, [payer_wif])
-        return signed_rawtx, script
+        return rawtx, disassemble(script)
+        # TODO sign and publish
+        # signed_rawtx = self.btctxstore.sign_tx(rawtx, [payer_wif])
+        # self.btctxstore.publish(signed_rawtx)
+        # return signed_rawtx, script
 
     def recover(self, recover_wif, script, quantity, expire_time):
         # TODO remove quantity and send all assets to recover address
         # TODO get expire_time from script
 
         # create recover tx
-        channel_address = script2address(script, self.netcode)
-        recover_address = wif2address(recover_wif)
+        channel_address = util.script2address(script, self.netcode)
+        recover_address = util.wif2address(recover_wif)
         rawtx = self._create_tx(channel_address, recover_address, quantity)
 
         # prep for script compliance and signing
