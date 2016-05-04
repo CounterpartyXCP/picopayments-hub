@@ -35,7 +35,7 @@ Usage
 =====
 
 ---------------------
-fast native functions
+Fast native functions
 ---------------------
 
 There is experimental code that will call into OpenSSL for slow functions.
@@ -137,6 +137,11 @@ channel to timeout, the payee must reveal the spend secret when spending the
 payout. **The commit transaction spend secret must be the same as the deposit
 transaction spend secret!**
 
+The transaction also enables spending by the payer if the transaction was
+revoked by the payee (revealed the revolk signature). This prevents the payee
+from publishing a revoked transaction.
+
+
 script sig:
 
 ::
@@ -162,7 +167,10 @@ Payout Transaction
 
 The payout transaction is used by the payee to spend the commited funds. In
 order to spend the funds the payee must reveal the spend secret, this ensures
-the payer can ecover the change.
+the payer can recover the change.
+
+The payout can only be done after a delay to ensure the payer has time to
+react if the payee tries to publish a revoked commit transaction.
 
 script sig:
 
@@ -175,8 +183,11 @@ script sig:
 Revoke Transaction 
 ------------------
 
+If the payee tries to publish a revoked commit transaction, the payer can
+recover the funds during the payout delay using the revolk secret.
+
 script sig:
 
 ::
     
-    <payer signature> <revoke secret> OP_False
+    <payer signature> <revoke secret> OP_FALSE
