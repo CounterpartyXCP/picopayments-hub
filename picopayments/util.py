@@ -1,7 +1,13 @@
 import pycoin
 from pycoin.serialize import b2h  # NOQA
 from pycoin.serialize import h2b  # NOQA
+from pycoin.serialize import b2h_rev  # NOQA
 from pycoin.encoding import hash160  # NOQA
+
+
+def gettxid(rawtx):
+    tx = pycoin.tx.Tx.from_hex(rawtx)
+    return b2h_rev(tx.hash())
 
 
 def wif2sec(wif):

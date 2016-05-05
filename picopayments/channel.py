@@ -5,14 +5,14 @@
 
 import os
 from . import util
-from .control import Control
-from .control import DEFAULT_COUNTERPARTY_RPC_USER
-from .control import DEFAULT_COUNTERPARTY_RPC_PASSWORD
-from .control import DEFAULT_TESTNET
+from . import control
 
 
 VALID_STATES = [
-    "INITIALIZING",
+    "INITIALIZING",  # deposit not yet made
+    "DEPOSITING",  # deposit made but not yet confirmed
+    "OPEN",  # deposit made, confirmed but not commit tx ready
+    "CLOSED",  # no more funds in channel
 ]
 
 
@@ -33,7 +33,10 @@ class InsufficientFunds(Exception):
 class Base(object):
 
     state = None
-    # deposit_tx = None   # pycoin.tx.Tx
+    deposit_rawtx = None
+    deposit_script_text = None  # disassembled script
+    recover_rawtx = None
+
     # commit_txs = []     # [pycoin.tx.Tx]
     # recover_tx = None   # pycoin.tx.Tx
     # change_tx = None    # pycoin.tx.Tx
@@ -43,25 +46,36 @@ class Base(object):
         if self.state != expected:
             raise IllegalStateError(expected, self.state)
 
+    def is_deposit_expired(self):
+        assert(self.deposit_rawtx is not None)
+        assert(self.deposit_script_text is not None)
+
+        return False  # TODO implement
+
 
 class Payer(Base):
 
     def __init__(self, payer_wif, payee_pubkey, spend_secret_hash,
-                 expire_time, asset, user=DEFAULT_COUNTERPARTY_RPC_USER,
-                 password=DEFAULT_COUNTERPARTY_RPC_PASSWORD,
-                 counterparty_url=None, testnet=DEFAULT_TESTNET, dryrun=False):
+                 expire_time, asset, user=control.DEFAULT_COUNTERPARTY_RPC_USER,
+                 password=control.DEFAULT_COUNTERPARTY_RPC_PASSWORD,
+                 api_url=None, testnet=control.DEFAULT_TESTNET, dryrun=False):
 
         # TODO validate input
         # TODO validate pubkeys on blockchain (required by counterparty)
 
-        self.control = Control(asset, user=user, password=password,
-                               counterparty_url=counterparty_url,
-                               testnet=testnet, dryrun=dryrun)
+        self.control = control.Control(asset, user=user, password=password,
+                                       api_url=api_url, testnet=testnet,
+                                       dryrun=dryrun, fee=control.DEFAULT_TXFEE,
+                                       dust_size=control.DEFAULT_DUSTSIZE)
+
         self.payer_wif = payer_wif
         self.payee_pubkey = payee_pubkey
         self.spend_secret_hash = spend_secret_hash
         self.expire_time = expire_time
         self.state = "INITIALIZING"
+
+        # TODO make thread that check if deposit was confirmed
+        #      and change state from DEPOSITING to OPEN
 
     def deposit(self, quantity):
         """Create deposit for given quantity.
@@ -82,31 +96,46 @@ class Payer(Base):
 
         # check if enough asset funds to make the deposit
         address = util.wif2address(self.payer_wif)
-        result = self.control.get_balance(address)
-        available = result[0]["quantity"]
-        if available < quantity:
-            raise InsufficientFunds(quantity, available)
+        asset_balance, btc_balance = self.control.get_balance(address)
+        if asset_balance < quantity:
+            raise InsufficientFunds(quantity, asset_balance)
 
-        # FIXME check if enough btc for fees
+        # FIXME check if enough btc for fees or catch counterparty error
         # FIXME check if channel previously used
 
-        return self.control.deposit(self.payer_wif, self.payee_pubkey,
-                                    self.spend_secret_hash,
-                                    self.expire_time, quantity)
+        rawtx, script = self.control.deposit(self.payer_wif, self.payee_pubkey,
+                                             self.spend_secret_hash,
+                                             self.expire_time, quantity)
+        self.deposit_rawtx = rawtx
+        self.deposit_script_text = script
+        self.state = "DEPOSITING"
+        return rawtx, script
+
+    def recover(self):
+        self._validate_state("OPEN")
+        # FIXME check if deposit tx has enough confirms to recover
+
+        rawtx = self.control.recover(self.payer_wif, self.deposit_rawtx,
+                                     self.deposit_script_text)
+        self.recover_rawtx = rawtx
+        self.state = "CLOSED"
+        return rawtx
 
 
 class Payee(Base):
 
-    def __init__(self, payee_wif, asset, user=DEFAULT_COUNTERPARTY_RPC_USER,
-                 password=DEFAULT_COUNTERPARTY_RPC_PASSWORD,
-                 counterparty_url=None, testnet=DEFAULT_TESTNET, dryrun=False):
+    def __init__(self, payee_wif, asset,
+                 user=control.DEFAULT_COUNTERPARTY_RPC_USER,
+                 password=control.DEFAULT_COUNTERPARTY_RPC_PASSWORD,
+                 api_url=None, testnet=control.DEFAULT_TESTNET, dryrun=False):
 
         # TODO validate input
         # TODO validate pubkey on blockchain (required by counterparty)
 
-        self.control = Control(asset, user=user, password=password,
-                               counterparty_url=counterparty_url,
-                               testnet=testnet, dryrun=dryrun)
+        self.control = control.Control(asset, user=user, password=password,
+                                       api_url=api_url, testnet=testnet,
+                                       dryrun=dryrun, fee=control.DEFAULT_TXFEE,
+                                       dust_size=control.DEFAULT_DUSTSIZE)
 
         self.payee_wif = payee_wif
         self.spend_secret = os.urandom(32)

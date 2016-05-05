@@ -8,6 +8,9 @@ from pycoin import encoding
 from pycoin.tx.script import tools
 from pycoin.tx.pay_to.ScriptType import ScriptType
 from pycoin.tx.pay_to import SUBCLASSES
+from pycoin.tx.script.tools import disassemble
+from pycoin.tx.script.tools import compile
+from pycoin.tx.script import opcodes
 
 
 DEFAULT_EXPIRE_TIME = 5
@@ -37,6 +40,10 @@ COMMIT_SCRIPT = """
 """
 
 
+def get_deposit_expire_time(script_text):
+    return int(script_text.split()[14][3])
+
+
 def compile_deposit_script(payer_pubkey, payee_pubkey,
                            spend_secret_hash, expire_time):
     """Compile deposit transaction pay ot script.
@@ -56,7 +63,7 @@ def compile_deposit_script(payer_pubkey, payee_pubkey,
         spend_secret_hash=spend_secret_hash,
         expire_time=str(expire_time)
     )
-    return tools.compile(script_text)
+    return compile(script_text)
 
 
 def create_deposit_script(payer_sec, payee_sec,
@@ -77,51 +84,58 @@ def create_deposit_script(payer_sec, payee_sec,
                                   spend_secret_hash, expire_time)
 
 
-class ScriptMicropaymentChannel(ScriptType):
-
+class ScriptChannelDeposit(ScriptType):
+    # XXX this shit only works because expire time is hardcoded to 5
     # FIXME make expire time variable
     TEMPLATE = compile_deposit_script("OP_PUBKEY", "OP_PUBKEY",
                                       "OP_PUBKEYHASH", DEFAULT_EXPIRE_TIME)
 
-    def __init__(self, payer_sec, payee_sec):
+    def __init__(self, payer_sec, payee_sec, spend_secret_hash, expire_time):
         self.payer_sec = payer_sec
         self.payee_sec = payee_sec
-        self.script = create_deposit_script(payer_sec, payee_sec)
+        self.spend_secret_hash = spend_secret_hash
+        self.expire_time = expire_time
+        self.script = create_deposit_script(payer_sec, payee_sec,
+                                            spend_secret_hash, expire_time)
 
     @classmethod
     def from_script(cls, script):
         r = cls.match(script)
         if r:
-            payer_sec, payee_sec, recover_sec = r["PUBKEY_LIST"]
-            obj = cls(payer_sec, payee_sec, recover_sec)
+            payer_sec = r["PUBKEY_LIST"][0]
+            payee_sec = r["PUBKEY_LIST"][1]
+            assert(payer_sec == r["PUBKEY_LIST"][2])
+            assert(payer_sec == r["PUBKEY_LIST"][3])
+            spend_secret_hash = b2h(r["PUBKEYHASH_LIST"][0])
+            expire_time = 5 # FIXME get expire time
+            obj = cls(payer_sec, payee_sec, spend_secret_hash, 5)
             assert(obj.script == script)
             return obj
         raise ValueError("bad script")
 
     def solve(self, **kwargs):
-        db = kwargs.get("hash160_lookup")
-        sign_value = kwargs.get("sign_value")
-        signature_type = kwargs.get("signature_type")
-        if db is None or sign_value is None or signature_type is None:
-            raise Exception("Missing parameters!")
+        hash160_lookup = kwargs["hash160_lookup"]
+        signature_type = kwargs["signature_type"]
+        sign_value = kwargs["sign_value"]
+        spend_secret = kwargs["sign_value"]
+        spend_type = kwargs["spend_type"]
 
-        # solve for recover case
-        result = db.get(encoding.hash160(self.recover_sec))
-        if result is not None:
-            secret_exponent, public_pair, compressed = result
-            sig = self._create_script_signature(secret_exponent, sign_value,
-                                                signature_type)
-            solution = tools.bin_script([sig])
-
-        # TODO solve for refund case
-
-        return solution
+        private_key = hash160_lookup.get(encoding.hash160(self.payer_sec))
+        secret_exponent, public_pair, compressed = private_key
+        sig = self._create_script_signature(secret_exponent, sign_value,
+                                            signature_type)
+        if spend_type == "recover":
+            return tools.bin_script([sig, b"\0", b"\0"])
+        elif spend_secret is not None:  # change tx
+            raise NotImplementedError()
+        else:  # commit tx
+            raise NotImplementedError()
 
     def __repr__(self):
-        script_text = tools.disassemble(self.script)
-        return "<ScriptMicropaymentChannel: {0}".format(script_text)
+        script_text = disassemble(self.script)
+        return "<ScriptChannelDeposit: {0}".format(script_text)
 
 
 # FIXME create decorater for this and commit to pycoin
 # monkey patch pycoin pay to script subclassis with our own
-SUBCLASSES.insert(0, ScriptMicropaymentChannel)
+SUBCLASSES.insert(0, ScriptChannelDeposit)
