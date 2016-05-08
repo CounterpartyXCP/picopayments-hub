@@ -107,7 +107,7 @@ class ScriptChannelDeposit(ScriptType):
             assert(payer_sec == r["PUBKEY_LIST"][2])
             assert(payer_sec == r["PUBKEY_LIST"][3])
             spend_secret_hash = b2h(r["PUBKEYHASH_LIST"][0])
-            expire_time = 5 # FIXME get expire time
+            expire_time = 5  # FIXME get expire time
             obj = cls(payer_sec, payee_sec, spend_secret_hash, 5)
             assert(obj.script == script)
             return obj

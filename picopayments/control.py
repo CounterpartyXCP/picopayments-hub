@@ -3,6 +3,7 @@
 # License: MIT (see LICENSE file)
 
 
+import six
 import pycoin
 import json
 import requests
@@ -11,6 +12,7 @@ from requests.auth import HTTPBasicAuth
 from pycoin.tx.script.tools import disassemble
 from . import util
 from . import scripts
+from . import exceptions
 
 
 # FIXME make fees per kb and auto adjust to market price
@@ -55,7 +57,8 @@ class Control(object):
         self.password = password
         self.asset = asset
         self.netcode = "BTC" if not self.testnet else "XTN"
-        self.btctxstore = BtcTxStore(testnet=self.testnet, dryrun=dryrun)
+        self.btctxstore = BtcTxStore(testnet=self.testnet, dryrun=dryrun,
+                                     service="insight")
 
     def _rpc_call(self, payload):
         headers = {'content-type': 'application/json'}
@@ -69,8 +72,7 @@ class Control(object):
             ))
         return response_data["result"]
 
-    def _create_tx(self, source_address, dest_address,
-                   quantity, extra_btc=0):
+    def create_tx(self, source_address, dest_address, quantity, extra_btc=0):
         assert(extra_btc >= 0)
         return self._rpc_call({
             "method": "create_send",
@@ -103,8 +105,33 @@ class Control(object):
         btc_balance = sum(map(lambda utxo: utxo["value"], utxos))
         return asset_balance, btc_balance
 
+    def _valid_deposit_request(self, payer_wif, payee_pubkey,
+                               spend_secret_hash, expire_time, quantity):
+
+        # FIXME validate channel previously unused
+
+        # quantity must be > 0
+        if not isinstance(quantity, six.integer_types) or quantity <= 0:
+            raise ValueError()
+
+        # get balances
+        address = util.wif2address(payer_wif)
+        asset_balance, btc_balance = self.get_balance(address)
+
+        # check asset balance
+        if asset_balance < quantity:
+            raise InsufficientFunds(quantity, asset_balance)
+
+        # check btc balance
+        extra_btc = (self.fee + self.dust_size) * 3
+        if btc_balance < extra_btc:
+            raise InsufficientFunds(extra_btc, btc_balance)
+
     def deposit(self, payer_wif, payee_pubkey, spend_secret_hash,
                 expire_time, quantity):
+
+        self._valid_deposit_request(payer_wif, payee_pubkey, spend_secret_hash,
+                                    expire_time, quantity)
 
         payer_pubkey = util.b2h(util.wif2sec(payer_wif))
         script = scripts.compile_deposit_script(payer_pubkey, payee_pubkey,
@@ -116,11 +143,11 @@ class Control(object):
         # change tx or recover + commit tx + payout tx or revoke tx
         extra_btc = (self.fee + self.dust_size) * 3
 
-        rawtx = self._create_tx(payer_address, dest_address,
-                                quantity, extra_btc=extra_btc)
+        rawtx = self.create_tx(payer_address, dest_address,
+                               quantity, extra_btc=extra_btc)
         rawtx = self.btctxstore.sign_tx(rawtx, [payer_wif])
         self.btctxstore.publish(rawtx)
-        return rawtx, disassemble(script)
+        return rawtx, disassemble(script), dest_address
 
     def recover(self, payer_wif, deposit_rawtx, deposit_script_text):
 
@@ -132,8 +159,8 @@ class Control(object):
 
         # create recover tx
         payer_address = util.wif2address(payer_wif)
-        rawtx = self._create_tx(channel_address, payer_address, asset_balance,
-                                extra_btc=btc_balance-self.fee)
+        rawtx = self.create_tx(channel_address, payer_address, asset_balance,
+                               extra_btc=btc_balance-self.fee)
 
         # prep for script compliance and signing
         tx = pycoin.tx.Tx.from_hex(rawtx)
@@ -151,7 +178,9 @@ class Control(object):
         tx.sign(hash160_lookup, p2sh_lookup=p2sh_lookup,
                 spend_type="recover", spend_secret=None)
 
-        # assert(tx.bad_signature_count() == 0) # FIXME patch pycoin so it works
+        # FIXME patch pycoin so it works
+        # assert(tx.bad_signature_count() == 0)
+
         rawtx = tx.as_hex()
         self.btctxstore.publish(rawtx)
         return rawtx

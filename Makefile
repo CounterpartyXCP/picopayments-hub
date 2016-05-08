@@ -75,8 +75,8 @@ test: setup
 	$(PEP8) picopayments
 	$(PEP8) examples
 	$(PEP8) tests
-	$(COVERAGE) run --source="picopayments" -m unittest -v tests
-	$(COVERAGE) report --fail-under=90
+	$(COVERAGE) run --source="picopayments" setup.py test
+	$(COVERAGE) report --fail-under=95
 
 
 publish: test
