@@ -19,7 +19,8 @@ class Payee(Base):
     def __init__(self, payee_wif, asset,
                  user=control.DEFAULT_COUNTERPARTY_RPC_USER,
                  password=control.DEFAULT_COUNTERPARTY_RPC_PASSWORD,
-                 api_url=None, testnet=control.DEFAULT_TESTNET, dryrun=False):
+                 api_url=None, testnet=control.DEFAULT_TESTNET, dryrun=False,
+                 auto_update_interval=0):
 
         # TODO validate input
         # TODO validate pubkey on blockchain (required by counterparty)
@@ -31,20 +32,17 @@ class Payee(Base):
         )
 
         self.payee_wif = payee_wif
-        self.spend_secret = os.urandom(32)
+        self.payee_pubkey = util.b2h(util.wif2sec(self.payee_wif))
+
+        secret = os.urandom(32)
+        self.spend_secret = util.b2h(secret)
+        self.spend_secret_hash = util.b2h(util.hash160(secret))
         self.state = "INITIALIZING"
 
         self.mutex = RLock()
-        self.interval = 10
-        self.start()
+        if auto_update_interval > 0:
+            self.interval = auto_update_interval
+            self.start()
 
     def update(self):
         pass
-
-    def get_pubkey(self):
-        with self.mutex:
-            return util.b2h(util.wif2sec(self.payee_wif))
-
-    def get_secret_hash(self):
-        with self.mutex:
-            return util.b2h(util.hash160(self.spend_secret))

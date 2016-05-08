@@ -18,7 +18,8 @@ class Payer(Base):
 
     def __init__(self, asset, user=control.DEFAULT_COUNTERPARTY_RPC_USER,
                  password=control.DEFAULT_COUNTERPARTY_RPC_PASSWORD,
-                 api_url=None, testnet=control.DEFAULT_TESTNET, dryrun=False):
+                 api_url=None, testnet=control.DEFAULT_TESTNET, dryrun=False,
+                 auto_update_interval=0):
 
         # TODO validate input
 
@@ -29,21 +30,9 @@ class Payer(Base):
         )
 
         self.mutex = RLock()
-        self.interval = 10
-        self.start()
-
-    def initialize(self, payer_wif, payee_pubkey,
-                   spend_secret_hash, deposit_expire_time):
-
-        # TODO validate input
-        # TODO validate pubkeys on blockchain (required by counterparty)
-
-        self.clear()
-        self.payer_wif = payer_wif
-        self.payee_pubkey = payee_pubkey
-        self.spend_secret_hash = spend_secret_hash
-        self.deposit_expire_time = deposit_expire_time
-        self.state = "INITIALIZING"
+        if auto_update_interval > 0:
+            self.interval = auto_update_interval
+            self.start()
 
     def can_recover(self):
         with self.mutex:
@@ -58,7 +47,8 @@ class Payer(Base):
 
             # Regardless of state if deposit expired recover the coins!
             if self.can_recover():
-                self._recover()
+                self.recover()
+                return "RECOVERING"
 
             # Once the recover tx is confirmed the channel can be closed
             if self.state == "RECOVERING" and self.is_recover_confirmed():
@@ -66,15 +56,22 @@ class Payer(Base):
                 _log.info("Recover deposit confirmed: {0}".format(
                     self.recover_rawtx
                 ))
+                return "CLOSED"
 
+            return None
             # deposit confirmed, set channel state to open
             # if self.state == "DEPOSITING" and self.is_deposit_confirmed():
             #     self.state = "OPEN"
 
-    def deposit(self, quantity):
+    def deposit(self, payer_wif, payee_pubkey, spend_secret_hash,
+                expire_time, quantity):
         """Create deposit for given quantity.
 
         Args:
+            payer_wif: TODO doc string
+            payee_pubkey: TODO doc string
+            spend_secret_hash: TODO doc string
+            expire_time: TODO doc string
             quantity: In satoshis
 
         Returns:
@@ -85,11 +82,19 @@ class Payer(Base):
             IllegalStateError if not called directly after initialization.
             InsufficientFunds if not enough funds to cover requested quantity.
         """
+
+        # TODO validate input
+        # TODO validate pubkeys on blockchain (required by counterparty)
+
         with self.mutex:
-            self._validate_state("INITIALIZING")
+            self.clear()
+            self.payer_wif = payer_wif
+            self.payer_pubkey = util.b2h(util.wif2sec(self.payer_wif))
+            self.payee_pubkey = payee_pubkey
+            self.spend_secret_hash = spend_secret_hash
             rawtx, script, address = self.control.deposit(
                 self.payer_wif, self.payee_pubkey,
-                self.spend_secret_hash, self.deposit_expire_time, quantity
+                self.spend_secret_hash, expire_time, quantity
             )
             self.deposit_rawtx = rawtx
             self.deposit_script_text = script
@@ -107,7 +112,7 @@ class Payer(Base):
             )
             return info
 
-    def _recover(self):
+    def recover(self):
         with self.mutex:
             self.recover_rawtx = self.control.recover(
                 self.payer_wif, self.deposit_rawtx, self.deposit_script_text

@@ -15,7 +15,7 @@ DRYRUN = True
 PAYEE_PUBKEY = ("0327f017c35a46b759536309e6de256ad"
                 "44ad609c1c4aed0e2cdb82f62490f75f8")
 SPEND_SECRET_HASH = "a7ec62542b0d393d43442aadf8d55f7da1e303cb"
-EXPIRE_TIME = 5  # payer chooses expire time
+EXPIRE_TIME = 5
 EXPECTED = {
   "asset": "A14456548018133352000",
   "rawtx": (
@@ -54,9 +54,9 @@ class TestDeposit(unittest.TestCase):
         self.channel.stop()
 
     def test_deposit(self):
-        self.channel.initialize(PAYER_WIF, PAYEE_PUBKEY,
-                                SPEND_SECRET_HASH, EXPIRE_TIME)
-        deposit_info = self.channel.deposit(1337)
+        deposit_info = self.channel.deposit(
+            PAYER_WIF, PAYEE_PUBKEY, SPEND_SECRET_HASH, EXPIRE_TIME, 1337
+        )
         self.assertEqual(EXPECTED, deposit_info)
 
 

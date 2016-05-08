@@ -75,7 +75,7 @@ signed = control.btctxstore.sign_tx(unsigned, wifs=[wif])
 print(signed)
 
 
-# WIF = "cPZmtXNUPwdsAjbowvAGEKLCqgQ38ZUu1DhFuQoeJoRdH6XWUwNX"
+# wif: cPZmtXNUPwdsAjbowvAGEKLCqgQ38ZUu1DhFuQoeJoRdH6XWUwNX
 # address:  mhNk2YmEkYNi8PVY86dPRr8z93CWQzXyAs
 # A14456548018133352000: 1337
 # BTC: 100000

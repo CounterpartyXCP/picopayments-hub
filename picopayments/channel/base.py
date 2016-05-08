@@ -10,7 +10,6 @@ import logging
 
 
 VALID_STATES = [
-    "INITIALIZING",  # deposit not yet made
     "DEPOSITING",  # deposit published but not yet confirmed
     "OPEN",  # deposit made, confirmed but not commit tx ready
     "RECOVERING",  # recover tx published but not yet confirmed
@@ -34,7 +33,6 @@ class Base(util.UpdateThreadMixin):
     spend_secret = None         # hex
     spend_secret_hash = None    # hex
 
-    deposit_expire_time = None  # int
     deposit_script_text = None  # disassembled script
     deposit_rawtx = None        # hex
 
@@ -53,7 +51,6 @@ class Base(util.UpdateThreadMixin):
                 "payee_pubkey": self.payee_pubkey,
                 "spend_secret": self.spend_secret,
                 "spend_secret_hash": self.spend_secret_hash,
-                "deposit_expire_time": self.deposit_expire_time,
                 "deposit_script_text": self.deposit_script_text,
                 "deposit_rawtx": self.deposit_rawtx,
                 "recover_rawtx": self.recover_rawtx
@@ -61,17 +58,16 @@ class Base(util.UpdateThreadMixin):
 
     def load(self, data):
         with self.mutex:
-            self.state = data["state"]
-            self.payer_wif = data["payer_wif"]
-            self.payer_pubkey = data["payer_pubkey"]
-            self.payee_wif = data["payee_wif"]
-            self.payee_pubkey = data["payee_pubkey"]
-            self.spend_secret = data["spend_secret"]
-            self.spend_secret_hash = data["spend_secret_hash"]
-            self.deposit_expire_time = data["deposit_expire_time"]
-            self.deposit_script_text = data["deposit_script_text"]
-            self.deposit_rawtx = data["deposit_rawtx"]
-            self.recover_rawtx = data["recover_rawtx"]
+            self.state = data.get("state")
+            self.payer_wif = data.get("payer_wif")
+            self.payer_pubkey = data.get("payer_pubkey")
+            self.payee_wif = data.get("payee_wif")
+            self.payee_pubkey = data.get("payee_pubkey")
+            self.spend_secret = data.get("spend_secret")
+            self.spend_secret_hash = data.get("spend_secret_hash")
+            self.deposit_script_text = data.get("deposit_script_text")
+            self.deposit_rawtx = data.get("deposit_rawtx")
+            self.recover_rawtx = data.get("recover_rawtx")
 
     def clear(self):
         with self.mutex:
@@ -82,7 +78,6 @@ class Base(util.UpdateThreadMixin):
             self.payee_pubkey = None
             self.spend_secret = None
             self.spend_secret_hash = None
-            self.deposit_expire_time = None
             self.deposit_script_text = None
             self.deposit_rawtx = None
             self.recover_rawtx = None
@@ -106,10 +101,8 @@ class Base(util.UpdateThreadMixin):
 
     def is_deposit_expired(self):
         with self.mutex:
-            deposit_expire_time = scripts.get_deposit_expire_time(
-                self.deposit_script_text
-            )
-            return self.get_deposit_confirms() >= deposit_expire_time
+            t = scripts.get_deposit_expire_time(self.deposit_script_text)
+            return self.get_deposit_confirms() >= t
 
     def is_recover_confirmed(self):
         with self.mutex:
