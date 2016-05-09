@@ -2,47 +2,32 @@
 # Copyright (c) 2016 Fabian Barkhau <fabian.barkhau@gmail.com>
 # License: MIT (see LICENSE file)
 
-# import json
+import json
 import time
-import logging
 import picopayments
 
-logging.basicConfig(
-    format="%(asctime)s %(levelname)s %(name)s %(lineno)d: %(message)s",
-    level=logging.INFO
+
+channel = picopayments.channel.Payer(
+    "A14456548018133352000", api_url="http://127.0.0.1:14000/api/",
+    testnet=True, dryrun=True
 )
 
-# counterparty setup
-api_url = "http://127.0.0.1:14000/api/"
-asset = "A14456548018133352000"
-testnet = True
+# make initial deposit
+payer_wif = "cMwtNdKijb7ej6yrmkhQyfvVQ5LibNFURQ8zdpiRFWxhFJ2aohwR"
+payee_pubkey = ("0327f017c35a46b759536309e6de256ad"
+                "44ad609c1c4aed0e2cdb82f62490f75f8")
+spend_secret_hash = "a7ec62542b0d393d43442aadf8d55f7da1e303cb"
+expire_time = 5
+quantity = 1337
+deposit_info = channel.deposit(payer_wif, payee_pubkey,
+                               spend_secret_hash,
+                               expire_time, quantity)
+print("DEPOSIT INFO:")
+print(json.dumps(deposit_info, indent=2))
 
-# 0. Payee initializes channel as they wish to receive funds
-payee_wif = "cQYT6HjZTUrniAb96s5ktjvGGZNBjbhd6SicC7s49RLcBBXmx3cz"
-payee_channel = picopayments.channel.Payee(
-    payee_wif, asset, api_url=api_url, testnet=testnet
-)
 
-# 1. Payee gives payer spend secret hash and pubkey
-payee_pubkey = payee_channel.get_pubkey()
-spend_secret_hash = payee_channel.get_secret_hash()
-
-# 2. Payer initializes channel with payee info
-expire_time = 5  # payer chooses expire time
-payer_wif = "cTvCnpvQJE3TvNejkWbnFA1z6jLJjB2xXXapFabGsazCz2QNYFQb"
-payer_channel = picopayments.channel.Payer(
-    payer_wif, payee_pubkey, spend_secret_hash, expire_time,
-    asset, api_url=api_url, testnet=testnet
-)
-
-# 3. Payer opens channel by making a deposit.
-deposit_info = payer_channel.deposit(31337)
-# print(json.dumps(deposit_info, indent=2))
-
-# 4. Wait until deposit expires (no commit tx published) and is recovered.
-while not payer_channel.is_closed():
+while(channel.update() != "RECOVERING"):
     time.sleep(1)
 
-# 5. stop internal threads
-payer_channel.stop()
-payee_channel.stop()
+print("STATE:")
+print(json.dumps(channel.save(), indent=2))

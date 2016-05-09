@@ -3,15 +3,12 @@ import picopayments
 
 
 ASSET = "A14456548018133352000"
-PAYER_WIF = "cT5RVbfLsgdUv2EAmbckFXNcsj9EmdAVvU9m6aarXb3fUpt9xkjX"
-PAYEE_WIF = "cNk9V4XRrJisyHLvbNz5fmkD4DjuC1ZH4DppMGsrivpp8ipbfQs4"
-USER = "rpc"
-PASSWORD = "1234"
 API_URL = "http://127.0.0.1:14000/api/"
 TESTNET = True
 DRYRUN = True
 
 
+PAYER_WIF = "cT5RVbfLsgdUv2EAmbckFXNcsj9EmdAVvU9m6aarXb3fUpt9xkjX"
 PAYEE_PUBKEY = ("0327f017c35a46b759536309e6de256ad"
                 "44ad609c1c4aed0e2cdb82f62490f75f8")
 SPEND_SECRET_HASH = "a7ec62542b0d393d43442aadf8d55f7da1e303cb"

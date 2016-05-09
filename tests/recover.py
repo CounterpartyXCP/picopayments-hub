@@ -46,6 +46,58 @@ EXPIRED_STATE = {
 }
 
 
+RECOVERING_STATE = {
+    "spend_secret_hash": "a7ec62542b0d393d43442aadf8d55f7da1e303cb",
+    "deposit_script_text": (
+        "OP_IF OP_2 0399e3dde1d1853dbd99c81ba4f2c0cca351b3cceecce7cd0bd59ac"
+        "c5789672135 0327f017c35a46b759536309e6de256ad44ad609c1c4aed0e2cdb8"
+        "2f62490f75f8 OP_2 OP_CHECKMULTISIG OP_ELSE OP_IF OP_HASH160 a7ec62"
+        "542b0d393d43442aadf8d55f7da1e303cb OP_EQUALVERIFY 0399e3dde1d1853d"
+        "bd99c81ba4f2c0cca351b3cceecce7cd0bd59acc5789672135 OP_CHECKSIG OP_"
+        "ELSE OP_5 OP_NOP3 OP_DROP 0399e3dde1d1853dbd99c81ba4f2c0cca351b3cc"
+        "eecce7cd0bd59acc5789672135 OP_CHECKSIG OP_ENDIF OP_ENDIF"
+    ),
+    "payee_wif": None,
+    "spend_secret": None,
+    "deposit_rawtx": (
+        "0100000001d1400bfe207056319b9c90a8526255b2b7755e19f10034811cb8b0a2"
+        "02bf008b000000006a47304402204c4316848dd8dd3823bef339d1e86993350cb8"
+        "98110824d96516e29ac24fb87602203e179a936093423173edde8eb0ba7aa5691b"
+        "574d63642b3cf65903913d51553101210399e3dde1d1853dbd99c81ba4f2c0cca3"
+        "51b3cceecce7cd0bd59acc5789672135ffffffff03d2b400000000000017a91469"
+        "249459340955eab4183ffe74cb6778e8284b898700000000000000001e6a1c4b24"
+        "257191d2cbb31f9b056d79191f04fad8aab4676f8a87de13bf2e5e310200000000"
+        "001976a914d36d5a91d3f05b2c23cf4fdcac88e4f8b50cec9088ac00000000"
+    ),
+    "payee_pubkey": (
+        "0327f017c35a46b759536309e6de256ad44ad609c1c4aed0e2cdb82f62490f75f8"
+    ),
+    "recover_rawtx": (
+        "0200000001f4db00105cdc7cab7d26ae018154540faa2a20872a1e263c6948c5a4"
+        "e44d060f00000000f947304402204c7cbcc610ac5ee744dc7de6fc31421217dbd0"
+        "66e41fd377dbe16dbd70372d3d02201e74b66967b44548c007a011d98bb42a9f22"
+        "651392232b87a640dcf8ad55e1d20100004cad6352210399e3dde1d1853dbd99c8"
+        "1ba4f2c0cca351b3cceecce7cd0bd59acc5789672135210327f017c35a46b75953"
+        "6309e6de256ad44ad609c1c4aed0e2cdb82f62490f75f852ae6763a914a7ec6254"
+        "2b0d393d43442aadf8d55f7da1e303cb88210399e3dde1d1853dbd99c81ba4f2c0"
+        "cca351b3cceecce7cd0bd59acc5789672135ac6755b275210399e3dde1d1853dbd"
+        "99c81ba4f2c0cca351b3cceecce7cd0bd59acc5789672135ac68680500000002c2"
+        "8d0000000000001976a914d36d5a91d3f05b2c23cf4fdcac88e4f8b50cec9088ac"
+        "00000000000000001e6a1cdbb957b39547c4b841700768d623a3f4c849743272bc"
+        "7783855c9c4d00000000"
+    ),
+    "payer_wif": "cMwtNdKijb7ej6yrmkhQyfvVQ5LibNFURQ8zdpiRFWxhFJ2aohwR",
+    "payer_pubkey": (
+        "0399e3dde1d1853dbd99c81ba4f2c0cca351b3cceecce7cd0bd59acc5789672135"
+    ),
+    "state": "RECOVERING"
+}
+
+
+print(RECOVERING_STATE["recover_rawtx"])  # FIXME publish on blockchain
+print(RECOVERING_STATE["deposit_script_text"])  # FIXME publish on blockchain
+
+
 class TestRecover(unittest.TestCase):
 
     def setUp(self):
@@ -56,10 +108,15 @@ class TestRecover(unittest.TestCase):
     def tearDown(self):
         self.channel.stop()
 
-    def test_recover(self):
+    def test_expired_to_recovering(self):
         self.channel.load(EXPIRED_STATE)
         new_state = self.channel.update()
         self.assertEqual(new_state, "RECOVERING")
+
+    def test_recovering_to_closed(self):
+        self.channel.load(RECOVERING_STATE)
+        new_state = self.channel.update()
+        self.assertEqual(new_state, "CLOSED")
 
 
 if __name__ == "__main__":

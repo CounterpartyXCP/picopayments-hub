@@ -37,6 +37,7 @@ class Payer(Base):
     def can_recover(self):
         with self.mutex:
             return (
+                self.state != "RECOVERING" and
                 self.deposit_rawtx is not None and
                 self.deposit_script_text is not None and
                 self.is_deposit_expired()
