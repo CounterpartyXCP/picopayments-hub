@@ -20,6 +20,10 @@ class TestScripts(unittest.TestCase):
         h = picopayments.scripts.get_deposit_spend_secret_hash(SCRIPT_TEXT)
         self.assertEqual(h, SPEND_SECRET_HASH)
 
+    def test_get_deposit_expire_time(self):
+        t = picopayments.scripts.get_deposit_expire_time(SCRIPT_TEXT)
+        self.assertEqual(t, 5)
+
 
 if __name__ == "__main__":
     unittest.main()
