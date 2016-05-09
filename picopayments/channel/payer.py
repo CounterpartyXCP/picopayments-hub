@@ -3,15 +3,10 @@
 # License: MIT (see LICENSE file)
 
 
-import json
 from picopayments import util
 from picopayments import control
 from picopayments.channel.base import Base
 from threading import RLock
-import logging
-
-
-_log = logging.getLogger(__name__)
 
 
 class Payer(Base):
@@ -54,15 +49,13 @@ class Payer(Base):
             # Once the recover tx is confirmed the channel can be closed
             if self.state == "RECOVERING" and self.is_recover_confirmed():
                 self.state = "CLOSED"
-                _log.info("Recover deposit confirmed: {0}".format(
-                    self.recover_rawtx
-                ))
                 return "CLOSED"
 
-            return None
             # deposit confirmed, set channel state to open
-            # if self.state == "DEPOSITING" and self.is_deposit_confirmed():
-            #     self.state = "OPEN"
+            if self.state == "DEPOSITING" and self.is_deposit_confirmed():
+                self.state = "OPEN"
+
+            return None
 
     def deposit(self, payer_wif, payee_pubkey, spend_secret_hash,
                 expire_time, quantity):
@@ -92,10 +85,9 @@ class Payer(Base):
             self.payer_wif = payer_wif
             self.payer_pubkey = util.b2h(util.wif2sec(self.payer_wif))
             self.payee_pubkey = payee_pubkey
-            self.spend_secret_hash = spend_secret_hash
             rawtx, script, address = self.control.deposit(
                 self.payer_wif, self.payee_pubkey,
-                self.spend_secret_hash, expire_time, quantity
+                spend_secret_hash, expire_time, quantity
             )
             self.deposit_rawtx = rawtx
             self.deposit_script_text = script
@@ -108,9 +100,6 @@ class Payer(Base):
                 "script": script,
                 "address": address
             }
-            _log.info("Depositing funds: {0}".format(
-                json.dumps(info, indent=2))
-            )
             return info
 
     def recover(self):
@@ -119,4 +108,3 @@ class Payer(Base):
                 self.payer_wif, self.deposit_rawtx, self.deposit_script_text
             )
             self.state = "RECOVERING"
-            _log.info("Recovering deposit: {0}".format(self.recover_rawtx))

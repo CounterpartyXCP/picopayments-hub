@@ -13,7 +13,6 @@ DRYRUN = True
 
 EXPIRED_STATE = {
     "payer_wif": "cMtErY7rdk8gycybQ9nPVQ4FchyvsMYMyQHjdgobnFMFfMU6eFj3",
-    "spend_secret_hash": "a7ec62542b0d393d43442aadf8d55f7da1e303cb",
     "deposit_rawtx": (
         "010000000103fb314b25de6a000de0b9227a1fbf1439d355fb5f1b5bfd1d1e057f"
         "9cc10413000000006a47304402203320ac3ce8017c8eb7a2881916af7eea96d0b2"
@@ -47,7 +46,6 @@ EXPIRED_STATE = {
 
 
 RECOVERING_STATE = {
-    "spend_secret_hash": "a7ec62542b0d393d43442aadf8d55f7da1e303cb",
     "deposit_script_text": (
         "OP_IF OP_2 0399e3dde1d1853dbd99c81ba4f2c0cca351b3cceecce7cd0bd59ac"
         "c5789672135 0327f017c35a46b759536309e6de256ad44ad609c1c4aed0e2cdb8"

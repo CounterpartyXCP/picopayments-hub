@@ -55,6 +55,10 @@ class TestDeposit(unittest.TestCase):
             PAYER_WIF, PAYEE_PUBKEY, SPEND_SECRET_HASH, EXPIRE_TIME, 1337
         )
         self.assertEqual(EXPECTED, deposit_info)
+        # TODO check state
+
+    def test_depositing_to_open(self):
+        pass
 
 
 if __name__ == "__main__":

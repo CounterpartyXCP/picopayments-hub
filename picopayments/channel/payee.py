@@ -36,7 +36,6 @@ class Payee(Base):
 
         secret = os.urandom(32)
         self.spend_secret = util.b2h(secret)
-        self.spend_secret_hash = util.b2h(util.hash160(secret))
         self.state = "INITIALIZING"
 
         self.mutex = RLock()

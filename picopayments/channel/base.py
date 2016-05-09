@@ -31,7 +31,6 @@ class Base(util.UpdateThreadMixin):
     payee_pubkey = None         # hex
 
     spend_secret = None         # hex
-    spend_secret_hash = None    # hex
 
     deposit_script_text = None  # disassembled script
     deposit_rawtx = None        # hex
@@ -50,7 +49,6 @@ class Base(util.UpdateThreadMixin):
                 "payee_wif": self.payee_wif,
                 "payee_pubkey": self.payee_pubkey,
                 "spend_secret": self.spend_secret,
-                "spend_secret_hash": self.spend_secret_hash,
                 "deposit_script_text": self.deposit_script_text,
                 "deposit_rawtx": self.deposit_rawtx,
                 "recover_rawtx": self.recover_rawtx
@@ -64,7 +62,6 @@ class Base(util.UpdateThreadMixin):
             self.payee_wif = data.get("payee_wif")
             self.payee_pubkey = data.get("payee_pubkey")
             self.spend_secret = data.get("spend_secret")
-            self.spend_secret_hash = data.get("spend_secret_hash")
             self.deposit_script_text = data.get("deposit_script_text")
             self.deposit_rawtx = data.get("deposit_rawtx")
             self.recover_rawtx = data.get("recover_rawtx")
@@ -77,7 +74,6 @@ class Base(util.UpdateThreadMixin):
             self.payee_wif = None
             self.payee_pubkey = None
             self.spend_secret = None
-            self.spend_secret_hash = None
             self.deposit_script_text = None
             self.deposit_rawtx = None
             self.recover_rawtx = None
@@ -94,6 +90,15 @@ class Base(util.UpdateThreadMixin):
             assert(self.deposit_script_text is not None)
             txid = util.gettxid(self.deposit_rawtx)
             return self.control.btctxstore.confirms(txid) or 0
+
+    def get_spend_secret_hash(self):
+        if self.spend_secret is not None:  # payee
+            return util.b2h(util.hash160(self.spend_secret))
+        elif self.deposit_script_text is not None:  # payer
+            script_text = self.deposit_script_text
+            return scripts.get_deposit_spend_secret_hash(script_text)
+        else:  # undefined
+            raise Exception("Undefined state, not payee or payer.")
 
     def is_deposit_confirmed(self):
         with self.mutex:

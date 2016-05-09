@@ -44,6 +44,10 @@ def get_deposit_expire_time(script_text):
     return int(script_text.split()[14][3])
 
 
+def get_deposit_spend_secret_hash(script_text):
+    return script_text.split()[9]
+
+
 def compile_deposit_script(payer_pubkey, payee_pubkey,
                            spend_secret_hash, expire_time):
     """Compile deposit transaction pay ot script.
