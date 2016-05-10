@@ -1,9 +1,10 @@
 import unittest
 
+
 from . import deposit  # NOQA
-from . import recover  # NOQA
+from . import timeout  # NOQA
 from . import control  # NOQA
-from . import haggle  # NOQA
+from . import change  # NOQA
 from . import scripts  # NOQA
 
 

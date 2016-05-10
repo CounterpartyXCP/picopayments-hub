@@ -52,7 +52,7 @@ ALPHA_EXPECTED_STATE = {
   "payer_pubkey": (
     "033faa57e0ed3a3bf89340a0a3074ce0ef403ebfb77cb3402d0daa29d808e2bde0"
   ),
-  "recover_rawtx": None,
+  "timeout_rawtx": None,
   "deposit_script_text": (
     "OP_IF OP_2 [033faa57e0ed3a3bf89340a0a3074ce0ef403ebfb77cb3402d0daa29d8"
     "08e2bde0] [0327f017c35a46b759536309e6de256ad44ad609c1c4aed0e2cdb82f624"
@@ -74,15 +74,6 @@ ALPHA_EXPECTED_STATE = {
     "6912b4e115fb8b8d84d5330b88ac00000000"
   )
 }
-
-
-BETA_PAYER_WIF = "cUZoCj8cmBJBzuRFsBbyjRU2cjC2e9eu2B4KnGo1buxxZ8LKQYWq"
-BETA_PAYEE_PUBKEY = (
-    "0327f017c35a46b759536309e6de256ad44ad609c1c4aed0e2cdb82f62490f75f8"
-)
-BETA_SPEND_SECRET_HASH = "a7ec62542b0d393d43442aadf8d55f7da1e303cb"
-BETA_EXPIRE_TIME = 300
-BETA_QUANTITY = 1337
 
 
 class TestDeposit(unittest.TestCase):

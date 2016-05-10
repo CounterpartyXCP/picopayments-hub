@@ -149,7 +149,7 @@ class Control(object):
         self.btctxstore.publish(rawtx)
         return rawtx, disassemble(script), dest_address
 
-    def recover(self, payer_wif, deposit_rawtx, deposit_script_text):
+    def timeout_recover(self, payer_wif, deposit_rawtx, deposit_script_text):
 
         # get channel info
         script = scripts.compile(deposit_script_text)
@@ -157,7 +157,7 @@ class Control(object):
         asset_balance, btc_balance = self.get_balance(channel_address)
         expire_time = scripts.get_deposit_expire_time(deposit_script_text)
 
-        # create recover tx
+        # create timeout tx
         payer_address = util.wif2address(payer_wif)
         rawtx = self.create_tx(channel_address, payer_address, asset_balance,
                                extra_btc=btc_balance-self.fee)
@@ -176,7 +176,7 @@ class Control(object):
         )
         p2sh_lookup = pycoin.tx.pay_to.build_p2sh_lookup([script])
         tx.sign(hash160_lookup, p2sh_lookup=p2sh_lookup,
-                spend_type="recover", spend_secret=None)
+                spend_type="timeout", spend_secret=None)
 
         # FIXME patch pycoin so it works
         # assert(tx.bad_signature_count() == 0)

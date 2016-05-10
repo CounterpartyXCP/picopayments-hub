@@ -93,10 +93,10 @@ pay to script:
 
 
 -------------------
-Recover Transaction 
+Timeout Transaction 
 -------------------
 
-The recover transaction is used by the payee to recover the and funds after
+The timeout transaction is used by the payee to recover the and funds after
 the channel reaches a timeout. This is to prevent funds being lost should
 the payee be hit by a bus.
 

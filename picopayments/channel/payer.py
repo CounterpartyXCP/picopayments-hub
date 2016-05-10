@@ -29,7 +29,7 @@ class Payer(Base):
             self.interval = auto_update_interval
             self.start()
 
-    def can_recover(self):
+    def can_timeout_recover(self):
         with self.mutex:
             return (
                 self.state != "RECOVERING" and
@@ -42,12 +42,12 @@ class Payer(Base):
         with self.mutex:
 
             # Regardless of state if deposit expired recover the coins!
-            if self.can_recover():
-                self.recover()
+            if self.can_timeout_recover():
+                self.timeout_recover()
                 return "RECOVERING"
 
             # Once the recover tx is confirmed the channel can be closed
-            if self.state == "RECOVERING" and self.is_recover_confirmed():
+            if self.state == "RECOVERING" and self.is_timeout_confirmed():
                 self.state = "CLOSED"
                 return "CLOSED"
 
@@ -102,9 +102,9 @@ class Payer(Base):
             }
             return info
 
-    def recover(self):
+    def timeout_recover(self):
         with self.mutex:
-            self.recover_rawtx = self.control.recover(
+            self.timeout_rawtx = self.control.timeout_recover(
                 self.payer_wif, self.deposit_rawtx, self.deposit_script_text
             )
             self.state = "RECOVERING"

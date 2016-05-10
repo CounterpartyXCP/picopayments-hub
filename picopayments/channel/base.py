@@ -12,7 +12,7 @@ import logging
 VALID_STATES = [
     "DEPOSITING",  # deposit published but not yet confirmed
     "OPEN",  # deposit made, confirmed but not commit tx ready
-    "RECOVERING",  # recover tx published but not yet confirmed
+    "RECOVERING",  # timeout tx published but not yet confirmed
     "CLOSED",  # no more funds in channel
 ]
 
@@ -35,7 +35,7 @@ class Base(util.UpdateThreadMixin):
     deposit_script_text = None  # disassembled script
     deposit_rawtx = None        # hex
 
-    recover_rawtx = None        # hex
+    timeout_rawtx = None        # hex
 
     # commit_rawtxs = []     # [rawtx]
     # change_rawtx = None
@@ -51,7 +51,7 @@ class Base(util.UpdateThreadMixin):
                 "spend_secret": self.spend_secret,
                 "deposit_script_text": self.deposit_script_text,
                 "deposit_rawtx": self.deposit_rawtx,
-                "recover_rawtx": self.recover_rawtx
+                "timeout_rawtx": self.timeout_rawtx
             }
 
     def load(self, data):
@@ -64,7 +64,7 @@ class Base(util.UpdateThreadMixin):
             self.spend_secret = data.get("spend_secret")
             self.deposit_script_text = data.get("deposit_script_text")
             self.deposit_rawtx = data.get("deposit_rawtx")
-            self.recover_rawtx = data.get("recover_rawtx")
+            self.timeout_rawtx = data.get("timeout_rawtx")
 
     def clear(self):
         with self.mutex:
@@ -76,7 +76,7 @@ class Base(util.UpdateThreadMixin):
             self.spend_secret = None
             self.deposit_script_text = None
             self.deposit_rawtx = None
-            self.recover_rawtx = None
+            self.timeout_rawtx = None
 
     def _validate_state(self, expected):
         with self.mutex:
@@ -109,10 +109,10 @@ class Base(util.UpdateThreadMixin):
             t = scripts.get_deposit_expire_time(self.deposit_script_text)
             return self.get_deposit_confirms() >= t
 
-    def is_recover_confirmed(self):
+    def is_timeout_confirmed(self):
         with self.mutex:
-            assert(self.recover_rawtx is not None)
-            txid = util.gettxid(self.recover_rawtx)
+            assert(self.timeout_rawtx is not None)
+            txid = util.gettxid(self.timeout_rawtx)
             return bool(self.control.btctxstore.confirms(txid))
 
     def is_closed(self):

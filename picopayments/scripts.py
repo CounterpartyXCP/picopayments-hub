@@ -128,7 +128,7 @@ class ScriptChannelDeposit(ScriptType):
         secret_exponent, public_pair, compressed = private_key
         sig = self._create_script_signature(secret_exponent, sign_value,
                                             signature_type)
-        if spend_type == "recover":
+        if spend_type == "timeout":
             return tools.bin_script([sig, b"\0", b"\0"])
         elif spend_secret is not None:  # change tx
             raise NotImplementedError()

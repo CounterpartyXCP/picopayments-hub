@@ -1,4 +1,4 @@
-import json
+# import json
 import unittest
 import picopayments
 
@@ -27,7 +27,7 @@ EXPIRED_STATE = {
         "0327f017c35a46b759536309e6de256ad44ad609c1c4aed0e2cdb82f62490f75f8"
     ),
     "state": "DEPOSITING",
-    "recover_rawtx": None,
+    "timeout_rawtx": None,
     "payer_pubkey": (
         "0389bdba52b9820a4d672bbb14b6c01aa54963cc0f1419b14a01e9ebeb62ebef1f"
     ),
@@ -70,7 +70,7 @@ RECOVERING_STATE = {
     "payee_pubkey": (
         "0327f017c35a46b759536309e6de256ad44ad609c1c4aed0e2cdb82f62490f75f8"
     ),
-    "recover_rawtx": (
+    "timeout_rawtx": (
         "0200000001f4db00105cdc7cab7d26ae018154540faa2a20872a1e263c6948c5a4"
         "e44d060f00000000f947304402204c7cbcc610ac5ee744dc7de6fc31421217dbd0"
         "66e41fd377dbe16dbd70372d3d02201e74b66967b44548c007a011d98bb42a9f22"
