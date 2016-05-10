@@ -57,5 +57,6 @@ class TestRecover(unittest.TestCase):
     def test_haggle(self):
         pass  # TODO implement and test
 
+
 if __name__ == "__main__":
     unittest.main()

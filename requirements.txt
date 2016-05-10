@@ -1,4 +1,4 @@
-pycoin >= 0.52
+pycoin >= 0.70
 six >= 1.10.0
 future >= 0.15.2
 btctxstore >= 4.7.1

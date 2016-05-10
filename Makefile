@@ -76,7 +76,7 @@ test: setup
 	$(PEP8) examples
 	$(PEP8) tests
 	$(COVERAGE) run --source="picopayments" setup.py test
-	$(COVERAGE) report --fail-under=95
+	$(COVERAGE) report --fail-under=80
 
 
 publish: test
@@ -90,6 +90,19 @@ view_readme: setup graphs
 
 graphs:
 	ditaa channel.ditaa channel.png
+
+
+bitcoind_startserver:
+	bitcoind -testnet -daemon -txindex
+	# bitcoind -testnet -daemon -reindex -txindex
+
+
+bitcoind_getinfo:
+	bitcoin-cli --rpcuser=bitcoinrpcuser --rpcpassword=bitcoinrpcpass --rpcport=18332 getinfo
+
+
+bitcoind_stopserver:
+	bitcoin-cli --rpcuser=bitcoinrpcuser --rpcpassword=bitcoinrpcpass --rpcport=18332 stop
 
 
 # Break in case of bug!

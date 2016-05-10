@@ -13,19 +13,19 @@ channel = picopayments.channel.Payer(
 )
 
 # make initial deposit
-payer_wif = "cRFw92LUdNwkyy6uvNb4yLatySiCiiEN1gscQnf8iZYhYLZG9Ro1"
-# payer_address = "moyUhi9cqMiVjfA9mLmzivvFfbbeh5ryGK"
+payer_wif = "cUZoCj8cmBJBzuRFsBbyjRU2cjC2e9eu2B4KnGo1buxxZ8LKQYWq"
 
 print(picopayments.util.b2h(picopayments.util.wif2sec(payer_wif)))
 
-payee_pubkey = ("0327f017c35a46b759536309e6de256ad"
-                "44ad609c1c4aed0e2cdb82f62490f75f8")
+payee_pubkey = (
+    "0327f017c35a46b759536309e6de256ad44ad609c1c4aed0e2cdb82f62490f75f8"
+)
 spend_secret_hash = "a7ec62542b0d393d43442aadf8d55f7da1e303cb"
-expire_time = 5
+expire_time = 110
 quantity = 1337
-deposit_info = channel.deposit(payer_wif, payee_pubkey,
-                               spend_secret_hash,
-                               expire_time, quantity)
+deposit_info = channel.deposit(
+    payer_wif, payee_pubkey, spend_secret_hash, expire_time, quantity
+)
 print("DEPOSIT INFO:")
 print(json.dumps(deposit_info, indent=2))
 

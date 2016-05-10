@@ -92,10 +92,6 @@ RECOVERING_STATE = {
 }
 
 
-print(RECOVERING_STATE["recover_rawtx"])  # FIXME publish on blockchain
-print(RECOVERING_STATE["deposit_script_text"])  # FIXME publish on blockchain
-
-
 class TestRecover(unittest.TestCase):
 
     def setUp(self):
