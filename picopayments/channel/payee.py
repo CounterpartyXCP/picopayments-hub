@@ -36,7 +36,6 @@ class Payee(Base):
 
         secret = os.urandom(32)
         self.spend_secret = util.b2h(secret)
-        self.state = "INITIALIZING"
 
         self.mutex = RLock()
         if auto_update_interval > 0:

@@ -1,5 +1,4 @@
 import unittest
-import json
 import picopayments
 
 
@@ -48,7 +47,6 @@ ALPHA_EXPECTED_STATE = {
   ),
   "payer_wif": "cT5RVbfLsgdUv2EAmbckFXNcsj9EmdAVvU9m6aarXb3fUpt9xkjX",
   "payee_wif": None,
-  "state": "DEPOSITING",
   "payer_pubkey": (
     "033faa57e0ed3a3bf89340a0a3074ce0ef403ebfb77cb3402d0daa29d808e2bde0"
   ),
@@ -63,6 +61,7 @@ ALPHA_EXPECTED_STATE = {
     "9d808e2bde0] OP_CHECKSIG OP_ENDIF OP_ENDIF"
   ),
   "spend_secret": None,
+  "change_rawtx": None,
   "deposit_rawtx": (
     "0100000001dab5588f6df29b3f3b650f57b443bb2dbd9ba8d113dbf1f80b18b60f1a71"
     "0447000000006b483045022100ba5366aa8f8110ae52bc6ed3916ca1fcf86e7c11d621"
@@ -82,6 +81,7 @@ class TestDeposit(unittest.TestCase):
         self.channel = picopayments.channel.Payer(
             ASSET, api_url=API_URL, testnet=TESTNET, dryrun=DRYRUN
         )
+        self.maxDiff = None
 
     def tearDown(self):
         self.channel.stop()
@@ -94,7 +94,6 @@ class TestDeposit(unittest.TestCase):
 
         self.assertEqual(ALPHA_EXPECTED_INFO, deposit_info)
         save_state = self.channel.save()
-        print(json.dumps(save_state, indent=2))
         self.assertEqual(ALPHA_EXPECTED_STATE, save_state)
 
     def test_depositing_to_open(self):

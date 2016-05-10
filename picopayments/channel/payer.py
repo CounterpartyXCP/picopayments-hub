@@ -32,10 +32,16 @@ class Payer(Base):
     def can_timeout_recover(self):
         with self.mutex:
             return (
-                self.state != "RECOVERING" and
+
+                # deposit was made
                 self.deposit_rawtx is not None and
                 self.deposit_script_text is not None and
-                self.is_deposit_expired()
+
+                # deposit expired
+                self.is_deposit_expired() and
+
+                # not already recovering
+                self.timeout_rawtx is None
             )
 
     def update(self):
@@ -44,16 +50,7 @@ class Payer(Base):
             # Regardless of state if deposit expired recover the coins!
             if self.can_timeout_recover():
                 self.timeout_recover()
-                return "RECOVERING"
-
-            # Once the recover tx is confirmed the channel can be closed
-            if self.state == "RECOVERING" and self.is_timeout_confirmed():
-                self.state = "CLOSED"
-                return "CLOSED"
-
-            # deposit confirmed, set channel state to open
-            if self.state == "DEPOSITING" and self.is_deposit_confirmed():
-                self.state = "OPEN"
+                return "TIMEOUT_TX_PUBLISHED"
 
             return None
 
@@ -91,7 +88,6 @@ class Payer(Base):
             )
             self.deposit_rawtx = rawtx
             self.deposit_script_text = script
-            self.state = "DEPOSITING"
             info = {
                 "asset": self.control.asset,
                 "quantity": quantity,
@@ -107,4 +103,3 @@ class Payer(Base):
             self.timeout_rawtx = self.control.timeout_recover(
                 self.payer_wif, self.deposit_rawtx, self.deposit_script_text
             )
-            self.state = "RECOVERING"

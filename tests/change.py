@@ -25,7 +25,6 @@ OPEN_STATE = {
     "payee_pubkey": (
         "0327f017c35a46b759536309e6de256ad44ad609c1c4aed0e2cdb82f62490f75f8"
     ),
-    "state": "DEPOSITING",
     "timeout_rawtx": None,
     "payer_pubkey": (
         "03f71179e931904043eb4cc9b1b0d7df1a2c27f68812eced8e53b98ee004cf36c1"

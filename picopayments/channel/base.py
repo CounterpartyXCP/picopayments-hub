@@ -5,24 +5,9 @@
 
 from picopayments import util
 from picopayments import scripts
-from picopayments import exceptions
-import logging
-
-
-VALID_STATES = [
-    "DEPOSITING",  # deposit published but not yet confirmed
-    "OPEN",  # deposit made, confirmed but not commit tx ready
-    "RECOVERING",  # timeout tx published but not yet confirmed
-    "CLOSED",  # no more funds in channel
-]
-
-
-_log = logging.getLogger(__name__)
 
 
 class Base(util.UpdateThreadMixin):
-
-    state = None                # str
 
     payer_wif = None            # wif
     payer_pubkey = None         # hex
@@ -36,14 +21,13 @@ class Base(util.UpdateThreadMixin):
     deposit_rawtx = None        # hex
 
     timeout_rawtx = None        # hex
+    change_rawtx = None         # hex
 
-    # commit_rawtxs = []     # [rawtx]
-    # change_rawtx = None
+    # commit_rawtxs = []        # [rawtx]
 
     def save(self):
         with self.mutex:
             return {
-                "state": self.state,
                 "payer_wif": self.payer_wif,
                 "payer_pubkey": self.payer_pubkey,
                 "payee_wif": self.payee_wif,
@@ -51,12 +35,12 @@ class Base(util.UpdateThreadMixin):
                 "spend_secret": self.spend_secret,
                 "deposit_script_text": self.deposit_script_text,
                 "deposit_rawtx": self.deposit_rawtx,
-                "timeout_rawtx": self.timeout_rawtx
+                "timeout_rawtx": self.timeout_rawtx,
+                "change_rawtx": self.timeout_rawtx
             }
 
     def load(self, data):
         with self.mutex:
-            self.state = data.get("state")
             self.payer_wif = data.get("payer_wif")
             self.payer_pubkey = data.get("payer_pubkey")
             self.payee_wif = data.get("payee_wif")
@@ -65,10 +49,10 @@ class Base(util.UpdateThreadMixin):
             self.deposit_script_text = data.get("deposit_script_text")
             self.deposit_rawtx = data.get("deposit_rawtx")
             self.timeout_rawtx = data.get("timeout_rawtx")
+            self.change_rawtx = data.get("change_rawtx")
 
     def clear(self):
         with self.mutex:
-            self.state = None
             self.payer_wif = None
             self.payer_pubkey = None
             self.payee_wif = None
@@ -77,18 +61,25 @@ class Base(util.UpdateThreadMixin):
             self.deposit_script_text = None
             self.deposit_rawtx = None
             self.timeout_rawtx = None
-
-    def _validate_state(self, expected):
-        with self.mutex:
-            assert(expected in VALID_STATES)
-            if self.state != expected:
-                raise exceptions.IllegalStateError(expected, self.state)
+            self.change_rawtx = None
 
     def get_deposit_confirms(self):
         with self.mutex:
             assert(self.deposit_rawtx is not None)
             assert(self.deposit_script_text is not None)
             txid = util.gettxid(self.deposit_rawtx)
+            return self.control.btctxstore.confirms(txid) or 0
+
+    def get_timeout_confirms(self):
+        with self.mutex:
+            assert(self.timeout_rawtx is not None)
+            txid = util.gettxid(self.timeout_rawtx)
+            return self.control.btctxstore.confirms(txid) or 0
+
+    def get_change_confirms(self):
+        with self.mutex:
+            assert(self.change_rawtx is not None)
+            txid = util.gettxid(self.change_rawtx)
             return self.control.btctxstore.confirms(txid) or 0
 
     def get_spend_secret_hash(self):
@@ -115,6 +106,20 @@ class Base(util.UpdateThreadMixin):
             txid = util.gettxid(self.timeout_rawtx)
             return bool(self.control.btctxstore.confirms(txid))
 
-    def is_closed(self):
+    def is_change_confirmed(self):
         with self.mutex:
-            return self.state == "CLOSED"
+            assert(self.change_rawtx is not None)
+            txid = util.gettxid(self.change_rawtx)
+            return bool(self.control.btctxstore.confirms(txid))
+
+    def is_closing(self):
+        return (
+            self.change_rawtx is not None and not self.is_change_confirmed() or
+            self.timeout_rawtx is not None and not self.is_timeout_confirmed()
+        )
+
+    def is_closed(self):
+        return (
+            self.change_rawtx is not None and self.is_change_confirmed() or
+            self.timeout_rawtx is not None and self.is_timeout_confirmed()
+        )

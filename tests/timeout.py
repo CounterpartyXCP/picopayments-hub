@@ -26,7 +26,6 @@ EXPIRED_STATE = {
     "payee_pubkey": (
         "0327f017c35a46b759536309e6de256ad44ad609c1c4aed0e2cdb82f62490f75f8"
     ),
-    "state": "DEPOSITING",
     "timeout_rawtx": None,
     "payer_pubkey": (
         "0389bdba52b9820a4d672bbb14b6c01aa54963cc0f1419b14a01e9ebeb62ebef1f"
@@ -88,7 +87,6 @@ RECOVERING_STATE = {
     "payer_pubkey": (
         "0399e3dde1d1853dbd99c81ba4f2c0cca351b3cceecce7cd0bd59acc5789672135"
     ),
-    "state": "RECOVERING"
 }
 
 
@@ -104,13 +102,13 @@ class TestRecover(unittest.TestCase):
 
     def test_expired_to_recovering(self):
         self.channel.load(EXPIRED_STATE)
-        new_state = self.channel.update()
-        self.assertEqual(new_state, "RECOVERING")
+        self.assertFalse(self.channel.is_closing())
+        self.channel.update()  # publish timeout tx
+        self.assertTrue(self.channel.is_closing())
 
     def test_recovering_to_closed(self):
         self.channel.load(RECOVERING_STATE)
-        new_state = self.channel.update()
-        self.assertEqual(new_state, "CLOSED")
+        self.assertTrue(self.channel.is_closed())
 
 
 if __name__ == "__main__":
