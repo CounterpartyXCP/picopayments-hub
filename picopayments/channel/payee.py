@@ -4,14 +4,10 @@
 
 
 import os
-import logging
 from threading import RLock
 from picopayments import util
 from picopayments import control
 from picopayments.channel.base import Base
-
-
-_log = logging.getLogger(__name__)
 
 
 class Payee(Base):
@@ -36,6 +32,7 @@ class Payee(Base):
 
         secret = os.urandom(32)
         self.spend_secret = util.b2h(secret)
+        self.spend_secret_hash = util.b2h(util.hash160(secret))
 
         self.mutex = RLock()
         if auto_update_interval > 0:

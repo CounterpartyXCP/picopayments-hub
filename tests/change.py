@@ -1,5 +1,7 @@
+import json
 import unittest
 import picopayments
+from picopayments import util
 
 
 ASSET = "A14456548018133352000"
@@ -10,40 +12,19 @@ TESTNET = True
 DRYRUN = True
 
 
-OPEN_STATE = {
-    "payer_wif": "cRFw92LUdNwkyy6uvNb4yLatySiCiiEN1gscQnf8iZYhYLZG9Ro1",
-    "deposit_rawtx": (
-        "010000000184763c748fd7b7f10a7755ebec390cac90ac30b19f74a874f192b379"
-        "a99f8c74000000006b4830450221009c730b454dff76fbb0c130c32cd13f6b0a46"
-        "52371289e5f5e7b54135134a074602203a2699819b9f3c17a2ebfc69b0a6fa29f0"
-        "23e37680eb58d9c52f4f741354ecc8012103f71179e931904043eb4cc9b1b0d7df"
-        "1a2c27f68812eced8e53b98ee004cf36c1ffffffff03d2b400000000000017a914"
-        "3e4fe6f243858e350785442381431f95909720b78700000000000000001e6a1cc5"
-        "c5e5796db8055af5f366696617c2f1fc35c0b3de44913a374e2f4c5e3102000000"
-        "00001976a9145cc53459271a9cc509f00f769f2634005ba5243288ac00000000",
-    ),
-    "payee_pubkey": (
-        "0327f017c35a46b759536309e6de256ad44ad609c1c4aed0e2cdb82f62490f75f8"
-    ),
-    "timeout_rawtx": None,
-    "payer_pubkey": (
-        "03f71179e931904043eb4cc9b1b0d7df1a2c27f68812eced8e53b98ee004cf36c1"
-    ),
-    "payee_wif": None,
-    "spend_secret": None,
-    "deposit_script_text": (
-        "OP_IF OP_2 03f71179e931904043eb4cc9b1b0d7df1a2c27f68812eced8e53b98"
-        "ee004cf36c1 0327f017c35a46b759536309e6de256ad44ad609c1c4aed0e2cdb8"
-        "2f62490f75f8 OP_2 OP_CHECKMULTISIG OP_ELSE OP_IF OP_HASH160 a7ec62"
-        "542b0d393d43442aadf8d55f7da1e303cb OP_EQUALVERIFY 03f71179e9319040"
-        "43eb4cc9b1b0d7df1a2c27f68812eced8e53b98ee004cf36c1 OP_CHECKSIG OP_"
-        "ELSE OP_5 OP_NOP3 OP_DROP 03f71179e931904043eb4cc9b1b0d7df1a2c27f6"
-        "8812eced8e53b98ee004cf36c1 OP_CHECKSIG OP_ENDIF OP_ENDIF",
-    )
-}
+PAYER_WIF = "cNEC8Ftb6g8gmpthaSJd1bqFP811FFhykF4SK1jdByPJbxzbLGGw"
+SPEND_SECRET = (
+    "89a4a2395b242fcf77c766fc47dc6c14399c06a197f2322c8c503da87e76d842"
+)
+SPEND_SECRET_HASH = util.b2h(util.hash160(util.h2b(SPEND_SECRET)))
+EXPIRE_TIME = 2**16 - 1  # max
+QUANTITY = 1337
+PAYEE_PUBKEY = (
+    "0327f017c35a46b759536309e6de256ad44ad609c1c4aed0e2cdb82f62490f75f8"
+)
 
 
-class TestRecover(unittest.TestCase):
+class TestChange(unittest.TestCase):
 
     def setUp(self):
         self.channel = picopayments.channel.Payer(
@@ -53,8 +34,19 @@ class TestRecover(unittest.TestCase):
     def tearDown(self):
         self.channel.stop()
 
-    def test_haggle(self):
-        pass  # TODO implement and test
+    def test_change(self):
+        self.channel.deposit(
+            PAYER_WIF, PAYEE_PUBKEY, SPEND_SECRET_HASH, EXPIRE_TIME, QUANTITY
+        )
+        print(json.dumps(self.channel.save(), indent=2))
+
+#   def test_change(self):
+#       self.channel.load(BEFORE_STATE)
+#       self.assertFalse(self.channel.can_change_recover())
+#       self.channel.spend_secret = SPEND_SECRET
+#       self.assertTrue(self.channel.can_change_recover())
+#       self.channel.update()
+#       print(json.dumps(self.channel.save(), indent=2))
 
 
 if __name__ == "__main__":

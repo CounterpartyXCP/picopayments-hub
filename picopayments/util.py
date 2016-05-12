@@ -16,6 +16,10 @@ def wif2sec(wif):
     return pycoin.key.Key.from_text(wif).sec()
 
 
+def wif2pubkey(wif):
+    return b2h(wif2sec(wif))
+
+
 def wif2address(wif):
     return pycoin.key.Key.from_text(wif).address()
 
@@ -32,6 +36,10 @@ def sec2address(sec, netcode="BTC"):
 
 def script2address(script, netcode="BTC"):
     return pycoin.tx.pay_to.address_for_pay_to_script(script, netcode=netcode)
+
+
+def hash160hex(hexdata):
+    return b2h(hash160(h2b(hexdata)))
 
 
 class UpdateThreadMixin(object):

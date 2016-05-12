@@ -30,13 +30,11 @@ ALPHA_EXPECTED_INFO = {
   "quantity": 1337,
   "txid": "9a602185541095aac7e59b7d6942a800aef6358e0dee5004a9cdfb085a9908a5",
   "script": (
-    "OP_IF OP_2 [033faa57e0ed3a3bf89340a0a3074ce0ef403ebfb77cb3402d0daa29d8"
-    "08e2bde0] [0327f017c35a46b759536309e6de256ad44ad609c1c4aed0e2cdb82f624"
-    "90f75f8] OP_2 OP_CHECKMULTISIG OP_ELSE OP_IF OP_HASH160 [a7ec62542b0d3"
-    "93d43442aadf8d55f7da1e303cb] OP_EQUALVERIFY [033faa57e0ed3a3bf89340a0a"
-    "3074ce0ef403ebfb77cb3402d0daa29d808e2bde0] OP_CHECKSIG OP_ELSE OP_5 OP"
-    "_NOP3 OP_DROP [033faa57e0ed3a3bf89340a0a3074ce0ef403ebfb77cb3402d0daa2"
-    "9d808e2bde0] OP_CHECKSIG OP_ENDIF OP_ENDIF"
+    "635221033faa57e0ed3a3bf89340a0a3074ce0ef403ebfb77cb3402d0daa29d808e2bd"
+    "e0210327f017c35a46b759536309e6de256ad44ad609c1c4aed0e2cdb82f62490f75f8"
+    "52ae6763a914a7ec62542b0d393d43442aadf8d55f7da1e303cb8821033faa57e0ed3a"
+    "3bf89340a0a3074ce0ef403ebfb77cb3402d0daa29d808e2bde0ac6755b27521033faa"
+    "57e0ed3a3bf89340a0a3074ce0ef403ebfb77cb3402d0daa29d808e2bde0ac6868"
   ),
   "address": "2N8nMmhmPoxTXckZV2h9HvcNedmjB65LzBz"
 }
@@ -51,14 +49,12 @@ ALPHA_EXPECTED_STATE = {
     "033faa57e0ed3a3bf89340a0a3074ce0ef403ebfb77cb3402d0daa29d808e2bde0"
   ),
   "timeout_rawtx": None,
-  "deposit_script_text": (
-    "OP_IF OP_2 [033faa57e0ed3a3bf89340a0a3074ce0ef403ebfb77cb3402d0daa29d8"
-    "08e2bde0] [0327f017c35a46b759536309e6de256ad44ad609c1c4aed0e2cdb82f624"
-    "90f75f8] OP_2 OP_CHECKMULTISIG OP_ELSE OP_IF OP_HASH160 [a7ec62542b0d3"
-    "93d43442aadf8d55f7da1e303cb] OP_EQUALVERIFY [033faa57e0ed3a3bf89340a0a"
-    "3074ce0ef403ebfb77cb3402d0daa29d808e2bde0] OP_CHECKSIG OP_ELSE OP_5 OP"
-    "_NOP3 OP_DROP [033faa57e0ed3a3bf89340a0a3074ce0ef403ebfb77cb3402d0daa2"
-    "9d808e2bde0] OP_CHECKSIG OP_ENDIF OP_ENDIF"
+  "deposit_script_hex": (
+    "635221033faa57e0ed3a3bf89340a0a3074ce0ef403ebfb77cb3402d0daa29d808e2bd"
+    "e0210327f017c35a46b759536309e6de256ad44ad609c1c4aed0e2cdb82f62490f75f8"
+    "52ae6763a914a7ec62542b0d393d43442aadf8d55f7da1e303cb8821033faa57e0ed3a"
+    "3bf89340a0a3074ce0ef403ebfb77cb3402d0daa29d808e2bde0ac6755b27521033faa"
+    "57e0ed3a3bf89340a0a3074ce0ef403ebfb77cb3402d0daa29d808e2bde0ac6868"
   ),
   "spend_secret": None,
   "change_rawtx": None,
@@ -91,7 +87,6 @@ class TestDeposit(unittest.TestCase):
             ALPHA_PAYER_WIF, ALPHA_PAYEE_PUBKEY, ALPHA_SPEND_SECRET_HASH,
             ALPHA_EXPIRE_TIME, ALPHA_QUANTITY
         )
-
         self.assertEqual(ALPHA_EXPECTED_INFO, deposit_info)
         save_state = self.channel.save()
         self.assertEqual(ALPHA_EXPECTED_STATE, save_state)

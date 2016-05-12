@@ -9,7 +9,6 @@ import json
 import requests
 from btctxstore import BtcTxStore
 from requests.auth import HTTPBasicAuth
-from pycoin.tx.script.tools import disassemble
 from . import util
 from . import scripts
 from . import exceptions
@@ -133,7 +132,7 @@ class Control(object):
         self._valid_deposit_request(payer_wif, payee_pubkey, spend_secret_hash,
                                     expire_time, quantity)
 
-        payer_pubkey = util.b2h(util.wif2sec(payer_wif))
+        payer_pubkey = util.wif2pubkey(payer_wif)
         script = scripts.compile_deposit_script(payer_pubkey, payee_pubkey,
                                                 spend_secret_hash, expire_time)
         dest_address = util.script2address(script, self.netcode)
@@ -147,15 +146,15 @@ class Control(object):
                                quantity, extra_btc=extra_btc)
         rawtx = self.btctxstore.sign_tx(rawtx, [payer_wif])
         self.btctxstore.publish(rawtx)
-        return rawtx, disassemble(script), dest_address
+        return rawtx, script, dest_address
 
-    def timeout_recover(self, payer_wif, deposit_rawtx, deposit_script_text):
+    def _recover(self, payer_wif, deposit_rawtx,
+                 script, spend_type, spend_secret):
 
         # get channel info
-        script = scripts.compile(deposit_script_text)
         channel_address = util.script2address(script, self.netcode)
         asset_balance, btc_balance = self.get_balance(channel_address)
-        expire_time = scripts.get_deposit_expire_time(deposit_script_text)
+        expire_time = scripts.get_deposit_expire_time(script)
 
         # create timeout tx
         payer_address = util.wif2address(payer_wif)
@@ -176,7 +175,7 @@ class Control(object):
         )
         p2sh_lookup = pycoin.tx.pay_to.build_p2sh_lookup([script])
         tx.sign(hash160_lookup, p2sh_lookup=p2sh_lookup,
-                spend_type="timeout", spend_secret=None)
+                spend_type=spend_type, spend_secret=spend_secret)
 
         # FIXME patch pycoin so it works
         # assert(tx.bad_signature_count() == 0)
@@ -184,3 +183,10 @@ class Control(object):
         rawtx = tx.as_hex()
         self.btctxstore.publish(rawtx)
         return rawtx
+
+    def timeout_recover(self, payer_wif, deposit_rawtx, script):
+        return self._recover(payer_wif, deposit_rawtx, script, "timeout", None)
+
+    def change_recover(self, payer_wif, deposit_rawtx, script, spend_secret):
+        return self._recover(payer_wif, deposit_rawtx,
+                             script, "change", spend_secret)

@@ -17,7 +17,7 @@ class Base(util.UpdateThreadMixin):
 
     spend_secret = None         # hex
 
-    deposit_script_text = None  # disassembled script
+    deposit_script_hex = None   # hex
     deposit_rawtx = None        # hex
 
     timeout_rawtx = None        # hex
@@ -33,7 +33,7 @@ class Base(util.UpdateThreadMixin):
                 "payee_wif": self.payee_wif,
                 "payee_pubkey": self.payee_pubkey,
                 "spend_secret": self.spend_secret,
-                "deposit_script_text": self.deposit_script_text,
+                "deposit_script_hex": self.deposit_script_hex,
                 "deposit_rawtx": self.deposit_rawtx,
                 "timeout_rawtx": self.timeout_rawtx,
                 "change_rawtx": self.timeout_rawtx
@@ -46,7 +46,7 @@ class Base(util.UpdateThreadMixin):
             self.payee_wif = data.get("payee_wif")
             self.payee_pubkey = data.get("payee_pubkey")
             self.spend_secret = data.get("spend_secret")
-            self.deposit_script_text = data.get("deposit_script_text")
+            self.deposit_script_hex = data.get("deposit_script_hex")
             self.deposit_rawtx = data.get("deposit_rawtx")
             self.timeout_rawtx = data.get("timeout_rawtx")
             self.change_rawtx = data.get("change_rawtx")
@@ -58,7 +58,7 @@ class Base(util.UpdateThreadMixin):
             self.payee_wif = None
             self.payee_pubkey = None
             self.spend_secret = None
-            self.deposit_script_text = None
+            self.deposit_script_hex = None
             self.deposit_rawtx = None
             self.timeout_rawtx = None
             self.change_rawtx = None
@@ -66,7 +66,7 @@ class Base(util.UpdateThreadMixin):
     def get_deposit_confirms(self):
         with self.mutex:
             assert(self.deposit_rawtx is not None)
-            assert(self.deposit_script_text is not None)
+            assert(self.deposit_script_hex is not None)
             txid = util.gettxid(self.deposit_rawtx)
             return self.control.btctxstore.confirms(txid) or 0
 
@@ -84,10 +84,10 @@ class Base(util.UpdateThreadMixin):
 
     def get_spend_secret_hash(self):
         if self.spend_secret is not None:  # payee
-            return util.b2h(util.hash160(self.spend_secret))
-        elif self.deposit_script_text is not None:  # payer
-            script_text = self.deposit_script_text
-            return scripts.get_deposit_spend_secret_hash(script_text)
+            return util.b2h(util.hash160(util.h2b(self.spend_secret)))
+        elif self.deposit_script_hex is not None:  # payer
+            script = util.h2b(self.deposit_script_hex)
+            return scripts.get_deposit_spend_secret_hash(script)
         else:  # undefined
             raise Exception("Undefined state, not payee or payer.")
 
@@ -97,7 +97,8 @@ class Base(util.UpdateThreadMixin):
 
     def is_deposit_expired(self):
         with self.mutex:
-            t = scripts.get_deposit_expire_time(self.deposit_script_text)
+            script = util.h2b(self.deposit_script_hex)
+            t = scripts.get_deposit_expire_time(script)
             return self.get_deposit_confirms() >= t
 
     def is_timeout_confirmed(self):
