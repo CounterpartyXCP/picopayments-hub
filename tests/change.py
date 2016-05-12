@@ -38,7 +38,7 @@ class TestChange(unittest.TestCase):
         self.channel.deposit(
             PAYER_WIF, PAYEE_PUBKEY, SPEND_SECRET_HASH, EXPIRE_TIME, QUANTITY
         )
-        print(json.dumps(self.channel.save(), indent=2))
+        # print(json.dumps(self.channel.save(), indent=2))
 
 #   def test_change(self):
 #       self.channel.load(BEFORE_STATE)

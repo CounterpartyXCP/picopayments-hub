@@ -16,6 +16,9 @@ from pycoin.tx.script import opcodes
 from pycoin.encoding import hash160
 
 
+MAX_SEQUENCE = 0x0000FFFF
+
+
 DEFAULT_EXPIRE_TIME = 5
 DEPOSIT_SCRIPT = """
     OP_IF
@@ -65,6 +68,9 @@ def get_deposit_expire_time(script):
         value = opcode - 80
     else:
         raise ValueError("Invalid expire time: {0}".format(disassembled))
+    if value > MAX_SEQUENCE:
+        msg = "Max expire time exceeded: {0} > {1}"
+        raise ValueError(msg.format(value, MAX_SEQUENCE))
     return value
 
 

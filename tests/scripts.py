@@ -12,40 +12,53 @@ SPEND_SECRET = (
 SPEND_SECRET_HASH = picopayments.util.hash160hex(SPEND_SECRET)
 
 
-ALPHA_SCRIPT = picopayments.scripts.compile_deposit_script(
-    PAYER_PUBKEY, PAYEE_PUBKEY, SPEND_SECRET_HASH, 1  # OP_1 (min)
-)
-BETA_SCRIPT = picopayments.scripts.compile_deposit_script(
-    PAYER_PUBKEY, PAYEE_PUBKEY, SPEND_SECRET_HASH, 16  # OP_16
-)
-GAMMA_SCRIPT = picopayments.scripts.compile_deposit_script(
-    PAYER_PUBKEY, PAYEE_PUBKEY, SPEND_SECRET_HASH, 17
-)
-DELTA_SCRIPT = picopayments.scripts.compile_deposit_script(
-    PAYER_PUBKEY, PAYEE_PUBKEY, SPEND_SECRET_HASH, 2 ** 8
-)
-EPSILON_SCRIPT = picopayments.scripts.compile_deposit_script(
-    PAYER_PUBKEY, PAYEE_PUBKEY, SPEND_SECRET_HASH, 2**16
-)
-
-
 class TestScripts(unittest.TestCase):
 
     def test_get_deposit_spend_secret_hash(self):
-        h = picopayments.scripts.get_deposit_spend_secret_hash(ALPHA_SCRIPT)
+        script = picopayments.scripts.compile_deposit_script(
+            PAYER_PUBKEY, PAYEE_PUBKEY, SPEND_SECRET_HASH, 1
+        )
+        h = picopayments.scripts.get_deposit_spend_secret_hash(script)
         self.assertEqual(h, SPEND_SECRET_HASH)
 
-    def test_get_deposit_expire_time(self):
-        t = picopayments.scripts.get_deposit_expire_time(ALPHA_SCRIPT)
+    def test_get_deposit_expire_time_min_op(self):
+        script = picopayments.scripts.compile_deposit_script(
+            PAYER_PUBKEY, PAYEE_PUBKEY, SPEND_SECRET_HASH, 1  # OP_1 (min)
+        )
+        t = picopayments.scripts.get_deposit_expire_time(script)
         self.assertEqual(t, 1)
-        t = picopayments.scripts.get_deposit_expire_time(BETA_SCRIPT)
+
+    def test_get_deposit_expire_time_max_op(self):
+        script = picopayments.scripts.compile_deposit_script(
+            PAYER_PUBKEY, PAYEE_PUBKEY, SPEND_SECRET_HASH, 16  # OP_16
+        )
+        t = picopayments.scripts.get_deposit_expire_time(script)
         self.assertEqual(t, 16)
-        t = picopayments.scripts.get_deposit_expire_time(GAMMA_SCRIPT)
+
+    def test_get_deposit_expire_time_min_data(self):
+        script = picopayments.scripts.compile_deposit_script(
+            PAYER_PUBKEY, PAYEE_PUBKEY, SPEND_SECRET_HASH, 17
+        )
+        t = picopayments.scripts.get_deposit_expire_time(script)
         self.assertEqual(t, 17)
-        t = picopayments.scripts.get_deposit_expire_time(DELTA_SCRIPT)
-        self.assertEqual(t, 2 ** 8)
-        t = picopayments.scripts.get_deposit_expire_time(EPSILON_SCRIPT)
-        self.assertEqual(t, 2 ** 16)
+
+    def test_get_deposit_expire_time_max_data(self):
+        script = picopayments.scripts.compile_deposit_script(
+            PAYER_PUBKEY, PAYEE_PUBKEY, SPEND_SECRET_HASH,
+            picopayments.scripts.MAX_SEQUENCE
+        )
+        t = picopayments.scripts.get_deposit_expire_time(script)
+        self.assertEqual(t, picopayments.scripts.MAX_SEQUENCE)
+
+    def test_get_deposit_expire_time_over_max(self):
+        script = picopayments.scripts.compile_deposit_script(
+            PAYER_PUBKEY, PAYEE_PUBKEY, SPEND_SECRET_HASH,
+            picopayments.scripts.MAX_SEQUENCE + 1
+        )
+
+        def callback():
+            picopayments.scripts.get_deposit_expire_time(script)
+        self.assertRaises(ValueError, callback)
 
 
 if __name__ == "__main__":
