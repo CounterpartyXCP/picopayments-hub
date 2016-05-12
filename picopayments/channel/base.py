@@ -36,7 +36,7 @@ class Base(util.UpdateThreadMixin):
                 "deposit_script_hex": self.deposit_script_hex,
                 "deposit_rawtx": self.deposit_rawtx,
                 "timeout_rawtx": self.timeout_rawtx,
-                "change_rawtx": self.timeout_rawtx
+                "change_rawtx": self.change_rawtx
             }
 
     def load(self, data):
@@ -124,3 +124,6 @@ class Base(util.UpdateThreadMixin):
             self.change_rawtx is not None and self.is_change_confirmed() or
             self.timeout_rawtx is not None and self.is_timeout_confirmed()
         )
+
+    def set_spend_secret(self, secret):
+        self.spend_secret = secret

@@ -90,6 +90,7 @@ def compile_deposit_script(payer_pubkey, payee_pubkey,
         expire_time: Channel expire time in blocks given as int.
 
     Return:
+        assert(False)
         Compiled bitcoin script.
     """
     script_text = DEPOSIT_SCRIPT.format(
@@ -101,11 +102,7 @@ def compile_deposit_script(payer_pubkey, payee_pubkey,
     return tools.compile(script_text)
 
 
-class ScriptChannelDeposit(ScriptType):
-    # XXX this shit only works because expire time is hardcoded to 5
-    # FIXME make expire time variable
-    TEMPLATE = compile_deposit_script("OP_PUBKEY", "OP_PUBKEY",
-                                      "OP_PUBKEYHASH", DEFAULT_EXPIRE_TIME)
+class AbsScriptChannelDeposit(ScriptType):
 
     def __init__(self, payer_sec, payee_sec, spend_secret_hash, expire_time):
         self.payer_sec = payer_sec
@@ -124,8 +121,8 @@ class ScriptChannelDeposit(ScriptType):
             assert(payer_sec == r["PUBKEY_LIST"][2])
             assert(payer_sec == r["PUBKEY_LIST"][3])
             spend_secret_hash = b2h(r["PUBKEYHASH_LIST"][0])
-            expire_time = 5  # FIXME get expire time
-            obj = cls(payer_sec, payee_sec, spend_secret_hash, 5)
+            expire_time = get_deposit_expire_time(cls.TEMPLATE)
+            obj = cls(payer_sec, payee_sec, spend_secret_hash, expire_time)
             assert(obj.script == script)
             return obj
         raise ValueError("bad script")
@@ -134,7 +131,7 @@ class ScriptChannelDeposit(ScriptType):
         hash160_lookup = kwargs["hash160_lookup"]
         signature_type = kwargs["signature_type"]
         sign_value = kwargs["sign_value"]
-        spend_secret = kwargs["sign_value"]
+        spend_secret = kwargs["spend_secret"]
         spend_type = kwargs["spend_type"]
 
         private_key = hash160_lookup.get(encoding.hash160(self.payer_sec))
@@ -161,6 +158,18 @@ class ScriptChannelDeposit(ScriptType):
         return "<ScriptChannelDeposit: {0}".format(script_text)
 
 
-# FIXME create decorater for this and commit to pycoin
-# monkey patch pycoin pay to script subclassis with our own
-SUBCLASSES.insert(0, ScriptChannelDeposit)
+class DepositScriptHandler():
+
+    def __init__(self, expire_time):
+        class ScriptChannelDeposit(AbsScriptChannelDeposit):
+            TEMPLATE = compile_deposit_script(
+                "OP_PUBKEY", "OP_PUBKEY",
+                "OP_PUBKEYHASH", expire_time
+            )
+        self.script_handler = ScriptChannelDeposit
+
+    def __enter__(self):
+        SUBCLASSES.insert(0, self.script_handler)
+
+    def __exit__(self, type, value, traceback):
+        SUBCLASSES.pop(0)

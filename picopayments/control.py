@@ -174,8 +174,9 @@ class Control(object):
             [util.wif2secretexponent(payer_wif)]
         )
         p2sh_lookup = pycoin.tx.pay_to.build_p2sh_lookup([script])
-        tx.sign(hash160_lookup, p2sh_lookup=p2sh_lookup,
-                spend_type=spend_type, spend_secret=spend_secret)
+        with scripts.DepositScriptHandler(expire_time):
+            tx.sign(hash160_lookup, p2sh_lookup=p2sh_lookup,
+                    spend_type=spend_type, spend_secret=spend_secret)
 
         # FIXME patch pycoin so it works
         # assert(tx.bad_signature_count() == 0)
