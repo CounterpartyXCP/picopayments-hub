@@ -163,9 +163,11 @@ class Control(object):
 
         # prep for script compliance and signing
         tx = pycoin.tx.Tx.from_hex(rawtx)
-        tx.version = 2  # enable relative lock-time, see bip68 & bip112
+        if spend_type == "timeout":
+            tx.version = 2  # enable relative lock-time, see bip68 & bip112
         for txin in tx.txs_in:
-            txin.sequence = expire_time  # relative lock-time
+            if spend_type == "timeout":
+                txin.sequence = expire_time  # relative lock-time
             utxo_tx = self.btctxstore.service.get_tx(txin.previous_hash)
             tx.unspents.append(utxo_tx.txs_out[txin.previous_index])
 
