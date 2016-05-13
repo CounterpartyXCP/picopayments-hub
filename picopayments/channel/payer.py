@@ -4,30 +4,10 @@
 
 
 from picopayments import util
-from picopayments import control
 from picopayments.channel.base import Base
-from threading import RLock
 
 
 class Payer(Base):
-
-    def __init__(self, asset, user=control.DEFAULT_COUNTERPARTY_RPC_USER,
-                 password=control.DEFAULT_COUNTERPARTY_RPC_PASSWORD,
-                 api_url=None, testnet=control.DEFAULT_TESTNET, dryrun=False,
-                 auto_update_interval=0):
-
-        # TODO validate input
-
-        self.control = control.Control(
-            asset, user=user, password=password, api_url=api_url,
-            testnet=testnet, dryrun=dryrun, fee=control.DEFAULT_TXFEE,
-            dust_size=control.DEFAULT_DUSTSIZE
-        )
-
-        self.mutex = RLock()
-        if auto_update_interval > 0:
-            self.interval = auto_update_interval
-            self.start()
 
     def can_change_recover(self):
         with self.mutex:
@@ -62,6 +42,7 @@ class Payer(Base):
 
     def update(self):
         with self.mutex:
+            # FIXME monitor commit output for reveal of spend secret
 
             # If deposit expired recover the coins!
             if self.can_timeout_recover():
@@ -97,10 +78,8 @@ class Payer(Base):
         with self.mutex:
             self.clear()
             self.payer_wif = payer_wif
-            self.payer_pubkey = util.b2h(util.wif2sec(self.payer_wif))
-            self.payee_pubkey = payee_pubkey
             rawtx, script, address = self.control.deposit(
-                self.payer_wif, self.payee_pubkey,
+                self.payer_wif, payee_pubkey,
                 spend_secret_hash, expire_time, quantity
             )
             self.deposit_rawtx = rawtx

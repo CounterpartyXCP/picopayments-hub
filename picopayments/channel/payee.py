@@ -4,40 +4,31 @@
 
 
 import os
-from threading import RLock
 from picopayments import util
-from picopayments import control
 from picopayments.channel.base import Base
 
 
 class Payee(Base):
 
-    def __init__(self, payee_wif, asset,
-                 user=control.DEFAULT_COUNTERPARTY_RPC_USER,
-                 password=control.DEFAULT_COUNTERPARTY_RPC_PASSWORD,
-                 api_url=None, testnet=control.DEFAULT_TESTNET, dryrun=False,
-                 auto_update_interval=0):
+    def setup(self, payee_wif):
+        with self.mutex:
+            self.clear()
+            self.payee_wif = payee_wif
+            payee_pubkey = util.wif2pubkey(self.payee_wif)
+            secret = os.urandom(32)  # secure random number
+            self.spend_secret = util.b2h(secret)
+            self.spend_secret_hash = util.b2h(util.hash160(secret))
+            return payee_pubkey, self.spend_secret_hash
 
-        # TODO validate input
-        # TODO validate pubkey on blockchain (required by counterparty)
+    def request(self, amount):
+        with self.mutex:
+            secret = util.b2h(os.urandom(32))  # secure random number
+            secret_hash = util.hash160hex(secret)
 
-        self.control = control.Control(
-            asset, user=user, password=password, api_url=api_url,
-            testnet=testnet, dryrun=dryrun, fee=control.DEFAULT_TXFEE,
-            dust_size=control.DEFAULT_DUSTSIZE
-        )
+            # TODO check current commits
+            # TODO add new commit entry
 
-        self.payee_wif = payee_wif
-        self.payee_pubkey = util.b2h(util.wif2sec(self.payee_wif))
-
-        secret = os.urandom(32)
-        self.spend_secret = util.b2h(secret)
-        self.spend_secret_hash = util.b2h(util.hash160(secret))
-
-        self.mutex = RLock()
-        if auto_update_interval > 0:
-            self.interval = auto_update_interval
-            self.start()
+            return amount, secret_hash
 
     def update(self):
         pass

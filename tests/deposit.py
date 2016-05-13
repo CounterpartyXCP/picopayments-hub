@@ -40,14 +40,10 @@ ALPHA_EXPECTED_INFO = {
 }
 
 ALPHA_EXPECTED_STATE = {
-  "payee_pubkey": (
-    "0327f017c35a46b759536309e6de256ad44ad609c1c4aed0e2cdb82f62490f75f8"
-  ),
   "payer_wif": "cT5RVbfLsgdUv2EAmbckFXNcsj9EmdAVvU9m6aarXb3fUpt9xkjX",
   "payee_wif": None,
-  "payer_pubkey": (
-    "033faa57e0ed3a3bf89340a0a3074ce0ef403ebfb77cb3402d0daa29d808e2bde0"
-  ),
+  "revoked_commits": [],
+  "active_commits": [],
   "timeout_rawtx": None,
   "deposit_script_hex": (
     "635221033faa57e0ed3a3bf89340a0a3074ce0ef403ebfb77cb3402d0daa29d808e2bd"

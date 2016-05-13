@@ -14,6 +14,20 @@ SPEND_SECRET_HASH = picopayments.util.hash160hex(SPEND_SECRET)
 
 class TestScripts(unittest.TestCase):
 
+    def test_get_deposit_payer_pubkey(self):
+        script = picopayments.scripts.compile_deposit_script(
+            PAYER_PUBKEY, PAYEE_PUBKEY, SPEND_SECRET_HASH, 1
+        )
+        pubkey = picopayments.scripts.get_deposit_payer_pubkey(script)
+        self.assertEqual(pubkey, PAYER_PUBKEY)
+
+    def test_get_deposit_payee_pubkey(self):
+        script = picopayments.scripts.compile_deposit_script(
+            PAYER_PUBKEY, PAYEE_PUBKEY, SPEND_SECRET_HASH, 1
+        )
+        pubkey = picopayments.scripts.get_deposit_payee_pubkey(script)
+        self.assertEqual(pubkey, PAYEE_PUBKEY)
+
     def test_get_deposit_spend_secret_hash(self):
         script = picopayments.scripts.compile_deposit_script(
             PAYER_PUBKEY, PAYEE_PUBKEY, SPEND_SECRET_HASH, 1

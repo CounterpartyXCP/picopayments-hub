@@ -23,13 +23,10 @@ EXPIRED_STATE = {
     "8bbd060c6e6e029e6ab0228938cd3e4225a49bc3a832b0c60fd85e310200000000"
     "001976a9147f6ac1ca784f65f161d20b6dca3fa0b26449b58588ac00000000"
   ),
-  "payee_pubkey": (
-    "0327f017c35a46b759536309e6de256ad44ad609c1c4aed0e2cdb82f62490f75f8"
-  ),
+  "revoked_commits": [],
+  "active_commits": [],
+  "change_rawtx": None,
   "timeout_rawtx": None,
-  "payer_pubkey": (
-    "0389bdba52b9820a4d672bbb14b6c01aa54963cc0f1419b14a01e9ebeb62ebef1f"
-  ),
   "payee_wif": None,
   "spend_secret": None,
   "deposit_script_hex": (
@@ -50,6 +47,9 @@ RECOVERING_STATE = {
     "3dbd99c81ba4f2c0cca351b3cceecce7cd0bd59acc5789672135ac6755b275210399e3"
     "dde1d1853dbd99c81ba4f2c0cca351b3cceecce7cd0bd59acc5789672135ac6868"
   ),
+  "revoked_commits": [],
+  "active_commits": [],
+  "change_rawtx": None,
   "payee_wif": None,
   "spend_secret": None,
   "deposit_rawtx": (
@@ -61,9 +61,6 @@ RECOVERING_STATE = {
     "249459340955eab4183ffe74cb6778e8284b898700000000000000001e6a1c4b24"
     "257191d2cbb31f9b056d79191f04fad8aab4676f8a87de13bf2e5e310200000000"
     "001976a914d36d5a91d3f05b2c23cf4fdcac88e4f8b50cec9088ac00000000"
-  ),
-  "payee_pubkey": (
-    "0327f017c35a46b759536309e6de256ad44ad609c1c4aed0e2cdb82f62490f75f8"
   ),
   "timeout_rawtx": (
     "0200000001f4db00105cdc7cab7d26ae018154540faa2a20872a1e263c6948c5a4"
@@ -80,9 +77,6 @@ RECOVERING_STATE = {
     "7783855c9c4d00000000"
   ),
   "payer_wif": "cMwtNdKijb7ej6yrmkhQyfvVQ5LibNFURQ8zdpiRFWxhFJ2aohwR",
-  "payer_pubkey": (
-    "0399e3dde1d1853dbd99c81ba4f2c0cca351b3cceecce7cd0bd59acc5789672135"
-  ),
 }
 
 

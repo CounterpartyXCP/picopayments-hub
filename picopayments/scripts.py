@@ -11,7 +11,6 @@ from pycoin.tx.pay_to.ScriptType import ScriptType
 from pycoin.tx.pay_to import SUBCLASSES
 from pycoin.tx.script.tools import disassemble
 from pycoin.tx.script.tools import compile
-
 from pycoin.tx.script import opcodes
 from pycoin.encoding import hash160
 
@@ -55,6 +54,16 @@ def get_word(script, index):
     if i != index + 1:
         raise ValueError(index)
     return opcode, data, tools.disassemble_for_opcode_data(opcode, data)
+
+
+def get_deposit_payer_pubkey(script):
+    opcode, data, disassembled = get_word(script, 2)
+    return b2h(data)
+
+
+def get_deposit_payee_pubkey(script):
+    opcode, data, disassembled = get_word(script, 3)
+    return b2h(data)
 
 
 def get_deposit_expire_time(script):

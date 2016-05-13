@@ -3,65 +3,94 @@
 # License: MIT (see LICENSE file)
 
 
+from threading import RLock
 from picopayments import util
 from picopayments import scripts
+from picopayments import control
 
 
 class Base(util.UpdateThreadMixin):
 
-    payer_wif = None            # wif
-    payer_pubkey = None         # hex
+    payer_wif = None
+    payee_wif = None
+    spend_secret = None
+    deposit_script_hex = None
+    deposit_rawtx = None
+    timeout_rawtx = None
+    change_rawtx = None
+    active_commits = []
+    revoked_commits = []
 
-    payee_wif = None            # wif
-    payee_pubkey = None         # hex
+    # {
+    #   "txid": hex,
+    #   "rawtx": hex,
+    #   "amount": int,
+    #   "script": hex,
+    #   "revoke_secret": hex,
+    #   "revoke_secret_hash": hex,
+    # }
 
-    spend_secret = None         # hex
+    def __init__(self, asset, user=control.DEFAULT_COUNTERPARTY_RPC_USER,
+                 password=control.DEFAULT_COUNTERPARTY_RPC_PASSWORD,
+                 api_url=None, testnet=control.DEFAULT_TESTNET, dryrun=False,
+                 auto_update_interval=0):
 
-    deposit_script_hex = None   # hex
-    deposit_rawtx = None        # hex
+        # TODO validate input
 
-    timeout_rawtx = None        # hex
-    change_rawtx = None         # hex
+        self.control = control.Control(
+            asset, user=user, password=password, api_url=api_url,
+            testnet=testnet, dryrun=dryrun, fee=control.DEFAULT_TXFEE,
+            dust_size=control.DEFAULT_DUSTSIZE
+        )
 
-    # commit_rawtxs = []        # [rawtx]
+        self.mutex = RLock()
+        if auto_update_interval > 0:
+            self.interval = auto_update_interval
+            self.start()
+
+    def commits_peek(self, stack):
+        if len(stack) == 0:
+            return None
+        return stack[-1]
 
     def save(self):
         with self.mutex:
             return {
                 "payer_wif": self.payer_wif,
-                "payer_pubkey": self.payer_pubkey,
                 "payee_wif": self.payee_wif,
-                "payee_pubkey": self.payee_pubkey,
                 "spend_secret": self.spend_secret,
                 "deposit_script_hex": self.deposit_script_hex,
                 "deposit_rawtx": self.deposit_rawtx,
                 "timeout_rawtx": self.timeout_rawtx,
-                "change_rawtx": self.change_rawtx
+                "change_rawtx": self.change_rawtx,
+                "active_commits": self.active_commits,
+                "revoked_commits": self.revoked_commits,
             }
 
     def load(self, data):
+        # TODO validate input
         with self.mutex:
-            self.payer_wif = data.get("payer_wif")
-            self.payer_pubkey = data.get("payer_pubkey")
-            self.payee_wif = data.get("payee_wif")
-            self.payee_pubkey = data.get("payee_pubkey")
-            self.spend_secret = data.get("spend_secret")
-            self.deposit_script_hex = data.get("deposit_script_hex")
-            self.deposit_rawtx = data.get("deposit_rawtx")
-            self.timeout_rawtx = data.get("timeout_rawtx")
-            self.change_rawtx = data.get("change_rawtx")
+            self.payer_wif = data["payer_wif"]
+            self.payee_wif = data["payee_wif"]
+            self.spend_secret = data["spend_secret"]
+            self.deposit_script_hex = data["deposit_script_hex"]
+            self.deposit_rawtx = data["deposit_rawtx"]
+            self.timeout_rawtx = data["timeout_rawtx"]
+            self.change_rawtx = data["change_rawtx"]
+            self.active_commits = data["active_commits"]
+            self.revoked_commits = data["revoked_commits"]
 
     def clear(self):
         with self.mutex:
             self.payer_wif = None
-            self.payer_pubkey = None
             self.payee_wif = None
-            self.payee_pubkey = None
             self.spend_secret = None
             self.deposit_script_hex = None
             self.deposit_rawtx = None
             self.timeout_rawtx = None
             self.change_rawtx = None
+            self.active_commits = []
+            self.revoked_commits = []
 
     def get_deposit_confirms(self):
         with self.mutex:
@@ -127,3 +156,32 @@ class Base(util.UpdateThreadMixin):
 
     def set_spend_secret(self, secret):
         self.spend_secret = secret
+
+    def set_deposit(self, deposit_rawtx, deposit_script_hex):
+
+        # FIXME validate input
+
+        # assert correct state
+        assert(self.payer_wif is None)
+        assert(self.payee_wif is not None)
+        assert(self.spend_secret is not None)
+        assert(self.spend_secret_hash is not None)
+        assert(self.deposit_rawtx is None)
+        assert(self.deposit_script_hex is None)
+        assert(len(self.active_commits) == 0)
+        assert(len(self.revoked_commits) == 0)
+
+        script = util.h2b(deposit_script_hex)
+
+        # deposit script must have the correct spend secret hash
+        given_spend_secret_hash = scripts.get_deposit_spend_secret_hash(script)
+        own_spend_secret_hash = util.hash160hex(self.spend_secret)
+        if given_spend_secret_hash != own_spend_secret_hash:
+            raise ValueError("Incorrect spend secret hash: {0} != {1}".format(
+                given_spend_secret_hash, own_spend_secret_hash
+            ))
+
+        # FIXME get payer pubkey
+
+        self.deposit_rawtx = deposit_rawtx
+        self.deposit_script_hex = deposit_script_hex
