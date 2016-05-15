@@ -153,6 +153,7 @@ pay to script:
 ::
 
     OP_IF
+        <delay time> OP_CHECKSEQUENCEVERIFY OP_DROP
         OP_HASH160 <spend secret hash> OP_EQUALVERIFY
         <payee pubkey> OP_CHECKSIG
     OP_ELSE

@@ -18,17 +18,10 @@ class Base(util.UpdateThreadMixin):
     deposit_rawtx = None
     timeout_rawtx = None
     change_rawtx = None
-    active_commits = []
-    revoked_commits = []
 
-    # {
-    #   "txid": hex,
-    #   "rawtx": hex,
-    #   "amount": int,
-    #   "script": hex,
-    #   "revoke_secret": hex,
-    #   "revoke_secret_hash": hex,
-    # }
+    commits_pending = []  # [[quantity, revoke_secret]]
+    commits_active = []   # [[rawtx, script, revoke_secret]] stack low to heigh
+    commits_revoked = []  # [[rawtx, script, revoke_secret]]
 
     def __init__(self, asset, user=control.DEFAULT_COUNTERPARTY_RPC_USER,
                  password=control.DEFAULT_COUNTERPARTY_RPC_PASSWORD,
@@ -48,11 +41,6 @@ class Base(util.UpdateThreadMixin):
             self.interval = auto_update_interval
             self.start()
 
-    def commits_peek(self, stack):
-        if len(stack) == 0:
-            return None
-        return stack[-1]
-
     def save(self):
         with self.mutex:
             return {
@@ -63,8 +51,9 @@ class Base(util.UpdateThreadMixin):
                 "deposit_rawtx": self.deposit_rawtx,
                 "timeout_rawtx": self.timeout_rawtx,
                 "change_rawtx": self.change_rawtx,
-                "active_commits": self.active_commits,
-                "revoked_commits": self.revoked_commits,
+                "commits_pending": self.commits_pending,
+                "commits_active": self.commits_active,
+                "commits_revoked": self.commits_revoked,
             }
 
     def load(self, data):
@@ -77,8 +66,9 @@ class Base(util.UpdateThreadMixin):
             self.deposit_rawtx = data["deposit_rawtx"]
             self.timeout_rawtx = data["timeout_rawtx"]
             self.change_rawtx = data["change_rawtx"]
-            self.active_commits = data["active_commits"]
-            self.revoked_commits = data["revoked_commits"]
+            self.commits_pending = data["commits_pending"]
+            self.commits_active = data["commits_active"]
+            self.commits_revoked = data["commits_revoked"]
 
     def clear(self):
         with self.mutex:
@@ -89,8 +79,9 @@ class Base(util.UpdateThreadMixin):
             self.deposit_rawtx = None
             self.timeout_rawtx = None
             self.change_rawtx = None
-            self.active_commits = []
-            self.revoked_commits = []
+            self.commits_pending = []
+            self.commits_active = []
+            self.commits_revoked = []
 
     def get_deposit_confirms(self):
         with self.mutex:
@@ -143,45 +134,56 @@ class Base(util.UpdateThreadMixin):
             return bool(self.control.btctxstore.confirms(txid))
 
     def is_closing(self):
-        return (
-            self.change_rawtx is not None and not self.is_change_confirmed() or
-            self.timeout_rawtx is not None and not self.is_timeout_confirmed()
-        )
+        with self.mutex:
+            unconfirmed_change = (
+                self.change_rawtx is not None and
+                not self.is_change_confirmed()
+            )
+            unconfirmed_timeout = (
+                self.timeout_rawtx is not None and
+                not self.is_timeout_confirmed()
+            )
+            return unconfirmed_change or unconfirmed_timeout
 
     def is_closed(self):
-        return (
-            self.change_rawtx is not None and self.is_change_confirmed() or
-            self.timeout_rawtx is not None and self.is_timeout_confirmed()
-        )
+        with self.mutex:
+            return (
+                self.change_rawtx is not None and self.is_change_confirmed() or
+                self.timeout_rawtx is not None and self.is_timeout_confirmed()
+            )
 
     def set_spend_secret(self, secret):
-        self.spend_secret = secret
+        with self.mutex:
+            self.spend_secret = secret
 
-    def set_deposit(self, deposit_rawtx, deposit_script_hex):
+    def get_transferred_amount(self):
+        """Returns funds transferred from payer to payee."""
+        with self.mutex:
+            heighest = util.stack_peek(self.commits_active)
+            if heighest is not None:
+                return self.control.get_quantity(heighest["rawtx"])
+            return 0
 
-        # FIXME validate input
+    def get_deposit_total(self):
+        """Returns the total deposit amount"""
+        with self.mutex:
+            assert(self.deposit_rawtx is not None)
+            return self.control.get_quantity(self.deposit_rawtx)
 
-        # assert correct state
-        assert(self.payer_wif is None)
-        assert(self.payee_wif is not None)
-        assert(self.spend_secret is not None)
-        assert(self.spend_secret_hash is not None)
-        assert(self.deposit_rawtx is None)
-        assert(self.deposit_script_hex is None)
-        assert(len(self.active_commits) == 0)
-        assert(len(self.revoked_commits) == 0)
+    def get_deposit_remaining(self):
+        """Returns the remaining deposit amount"""
+        with self.mutex:
+            return self.get_deposit_total() - self.get_transferred_amount()
 
-        script = util.h2b(deposit_script_hex)
+    def validate_transfer_quantity(self, quantity):
+        with self.mutex:
 
-        # deposit script must have the correct spend secret hash
-        given_spend_secret_hash = scripts.get_deposit_spend_secret_hash(script)
-        own_spend_secret_hash = util.hash160hex(self.spend_secret)
-        if given_spend_secret_hash != own_spend_secret_hash:
-            raise ValueError("Incorrect spend secret hash: {0} != {1}".format(
-                given_spend_secret_hash, own_spend_secret_hash
-            ))
+            transferred = self.get_transferred_amount()
+            if quantity <= transferred:
+                msg = "Amount not greater transferred: {0} <= {1}"
+                raise ValueError(msg.format(quantity, transferred))
 
-        # FIXME get payer pubkey
-
-        self.deposit_rawtx = deposit_rawtx
-        self.deposit_script_hex = deposit_script_hex
+            total = self.get_deposit_total()
+            if quantity > total:
+                msg = "Amount greater total: {0} > {1}"
+                raise ValueError(msg.fromat(quantity, total))

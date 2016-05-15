@@ -36,6 +36,7 @@ DEPOSIT_SCRIPT = """
 
 COMMIT_SCRIPT = """
     OP_IF
+        {delay_time} OP_NOP3 OP_DROP
         OP_HASH160 {spend_secret_hash} OP_EQUALVERIFY
         {payee_pubkey} OP_CHECKSIG
     OP_ELSE
@@ -107,6 +108,18 @@ def compile_deposit_script(payer_pubkey, payee_pubkey,
         payee_pubkey=payee_pubkey,
         spend_secret_hash=spend_secret_hash,
         expire_time=str(expire_time)
+    )
+    return tools.compile(script_text)
+
+
+def compile_commit_script(payer_pubkey, payee_pubkey, spend_secret_hash,
+                          revoke_secret_hash, delay_time):
+    script_text = COMMIT_SCRIPT.format(
+        payer_pubkey=payer_pubkey,
+        payee_pubkey=payee_pubkey,
+        spend_secret_hash=spend_secret_hash,
+        revoke_secret_hash=revoke_secret_hash,
+        delay_time=str(delay_time)
     )
     return tools.compile(script_text)
 

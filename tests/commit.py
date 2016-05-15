@@ -1,4 +1,3 @@
-# import json
 import unittest
 import picopayments
 
@@ -12,63 +11,111 @@ DRYRUN = True
 
 
 PAYER_BEFORE = {
-  "payer_wif": "cRFw92LUdNwkyy6uvNb4yLatySiCiiEN1gscQnf8iZYhYLZG9Ro1",
-  "change_rawtx": None,
-  "payee_wif": None,
-  "revoked_commits": [],
-  "active_commits": [],
+  "payer_wif": "cSthi1Ye1sbHepC5s8rNukQBAKLCyct6hLg6MCH9Ybk1cKfGcPb2",
   "deposit_script_hex": (
-      "63522103f71179e931904043eb4cc9b1b0d7df1a2c27f68812eced8e53b98ee004"
-      "cf36c12103c7b09d53bdb0ef9cfea06c1e6f2192e6a91cdeac209402bc36c1c368"
-      "021a861152ae6763a914f8320aeb45ed0fa07447b6a1e4ff3a7e6cd4dfee882103"
-      "f71179e931904043eb4cc9b1b0d7df1a2c27f68812eced8e53b98ee004cf36c1ac"
-      "6703ffff00b2752103f71179e931904043eb4cc9b1b0d7df1a2c27f68812eced8e"
-      "53b98ee004cf36c1ac6868"
+    "63522102a73443bc32f5fec6a551f71af75311b0876686156d16d367562d3d29987792d5"
+    "2103c7b09d53bdb0ef9cfea06c1e6f2192e6a91cdeac209402bc36c1c368021a861152ae"
+    "6763a9144cc776751eb4d41f23feaf94697cb7ec2fe597a4882102a73443bc32f5fec6a5"
+    "51f71af75311b0876686156d16d367562d3d29987792d5ac6703ffff00b2752102a73443"
+    "bc32f5fec6a551f71af75311b0876686156d16d367562d3d29987792d5ac6868"
+  ),
+  "commits_active": [],
+  "deposit_rawtx": (
+    "0100000001d85205661d29fec2e5ede0dbb8eaa0e55655c7b14b1aeac9b0e72dae01596f"
+    "63000000006b483045022100e631d8b259bd09ba8956a96e6e471e9938ddad1fa831bb12"
+    "ffa690f2d0d2640002202cf3bcc376225e1861443608cad549d63a76b636225630946942"
+    "205dfd8f4672012102a73443bc32f5fec6a551f71af75311b0876686156d16d367562d3d"
+    "29987792d5ffffffff03d2b400000000000017a9145c6f176aa8bab82688c8b07562595a"
+    "622d7b889a8700000000000000001e6a1c6c4d9b5afac6415f4eff0ec371c5d8155b5821"
+    "76fa9e12aed0cc84645e310200000000001976a914a5efd9bcdc152be40dc2390607a806"
+    "b32cf2902c88ac00000000"
   ),
   "timeout_rawtx": None,
+  "payee_wif": None,
+  "commits_revoked": [],
+  "change_rawtx": None,
   "spend_secret": None,
-  "deposit_rawtx": (
-      "01000000010b081ef30aa3de2a2c79079cc584e781dda8c292b76e9879b66b6944"
-      "ee1efe7a020000006a47304402207949937be48aef0df098522532d238541cdab7"
-      "5b61e34a7e2098d178faaa5be3022044e2ecf85fa9ebd08ca60b11bd15979373ed"
-      "b77eb5368237e18f700e3fe93414012103f71179e931904043eb4cc9b1b0d7df1a"
-      "2c27f68812eced8e53b98ee004cf36c1ffffffff03d2b400000000000017a914a8"
-      "785b3899415ad153dadf14e1375744130058268700000000000000001e6a1c18fd"
-      "cc0a3b365a715a44ba45edc93aa5d06a02c53820de74079b0fd47c550100000000"
-      "001976a9145cc53459271a9cc509f00f769f2634005ba5243288ac00000000"
-  )
+  "commits_pending": []
 }
-
 
 PAYEE_BEFORE = {
   "payer_wif": None,
-  "change_rawtx": None,
-  "payee_wif": "cVmyYsHfeJWmCFy7N6DUeC4aXMS8vRR57aW7eGmpFVLfSHWjZ4jc",
-  "revoked_commits": [],
-  "active_commits": [],
   "deposit_script_hex": (
-      "63522103f71179e931904043eb4cc9b1b0d7df1a2c27f68812eced8e53b98ee004"
-      "cf36c12103c7b09d53bdb0ef9cfea06c1e6f2192e6a91cdeac209402bc36c1c368"
-      "021a861152ae6763a914f8320aeb45ed0fa07447b6a1e4ff3a7e6cd4dfee882103"
-      "f71179e931904043eb4cc9b1b0d7df1a2c27f68812eced8e53b98ee004cf36c1ac"
-      "6703ffff00b2752103f71179e931904043eb4cc9b1b0d7df1a2c27f68812eced8e"
-      "53b98ee004cf36c1ac6868"
+    "63522102a73443bc32f5fec6a551f71af75311b0876686156d16d367562d3d29987792d5"
+    "2103c7b09d53bdb0ef9cfea06c1e6f2192e6a91cdeac209402bc36c1c368021a861152ae"
+    "6763a9144cc776751eb4d41f23feaf94697cb7ec2fe597a4882102a73443bc32f5fec6a5"
+    "51f71af75311b0876686156d16d367562d3d29987792d5ac6703ffff00b2752102a73443"
+    "bc32f5fec6a551f71af75311b0876686156d16d367562d3d29987792d5ac6868"
+  ),
+  "commits_active": [],
+  "deposit_rawtx": (
+    "0100000001d85205661d29fec2e5ede0dbb8eaa0e55655c7b14b1aeac9b0e72dae01596f"
+    "63000000006b483045022100e631d8b259bd09ba8956a96e6e471e9938ddad1fa831bb12"
+    "ffa690f2d0d2640002202cf3bcc376225e1861443608cad549d63a76b636225630946942"
+    "205dfd8f4672012102a73443bc32f5fec6a551f71af75311b0876686156d16d367562d3d"
+    "29987792d5ffffffff03d2b400000000000017a9145c6f176aa8bab82688c8b07562595a"
+    "622d7b889a8700000000000000001e6a1c6c4d9b5afac6415f4eff0ec371c5d8155b5821"
+    "76fa9e12aed0cc84645e310200000000001976a914a5efd9bcdc152be40dc2390607a806"
+    "b32cf2902c88ac00000000"
   ),
   "timeout_rawtx": None,
+  "payee_wif": "cVmyYsHfeJWmCFy7N6DUeC4aXMS8vRR57aW7eGmpFVLfSHWjZ4jc",
+  "commits_revoked": [],
+  "change_rawtx": None,
   "spend_secret": (
-      "ca572d8a58e8403a22c9e6653206fab2cf060171f5f13fe458a5a997dc0a8101"
+    "d688fc3400f9feb6f8c409b804c75deaa5fa1635bf252d5d5de262a5c63cb5e5"
   ),
+  "commits_pending": []
+}
+
+PAYER_AFTER = {
+  "change_rawtx": None,
+  "timeout_rawtx": None,
+  "commits_pending": [],
+  "commits_active": [
+    [
+      (
+        "01000000017231934b8873769b325c090a99dd7e5a3d8708bf13e94f677228b90787"
+        "631f070000000017a9145c6f176aa8bab82688c8b07562595a622d7b889a87ffffff"
+        "ff03463c00000000000017a914b57a70f9301cfd13603fc36b3162b57340b3958b87"
+        "00000000000000001e6a1c5144cf3299cdb4115af7e5b1a21ecac52fedaf164910f4"
+        "fe4beb0a877c5100000000000017a9145c6f176aa8bab82688c8b07562595a622d7b"
+        "889a8700000000"
+      ),
+      (
+        "6355b275a9144cc776751eb4d41f23feaf94697cb7ec2fe597a4882103c7b09d53bd"
+        "b0ef9cfea06c1e6f2192e6a91cdeac209402bc36c1c368021a8611ac67a914bcc82b"
+        "07e3c1317a52d7adbff1ef869d4e46ac35882102a73443bc32f5fec6a551f71af753"
+        "11b0876686156d16d367562d3d29987792d5ac68"
+      ),
+      None
+    ]
+  ],
+  "deposit_script_hex": (
+    "63522102a73443bc32f5fec6a551f71af75311b0876686156d16d367562d3d29987792d5"
+    "2103c7b09d53bdb0ef9cfea06c1e6f2192e6a91cdeac209402bc36c1c368021a861152ae"
+    "6763a9144cc776751eb4d41f23feaf94697cb7ec2fe597a4882102a73443bc32f5fec6a5"
+    "51f71af75311b0876686156d16d367562d3d29987792d5ac6703ffff00b2752102a73443"
+    "bc32f5fec6a551f71af75311b0876686156d16d367562d3d29987792d5ac6868"
+  ),
+  "commits_revoked": [],
+  "spend_secret": None,
+  "payer_wif": "cSthi1Ye1sbHepC5s8rNukQBAKLCyct6hLg6MCH9Ybk1cKfGcPb2",
+  "payee_wif": None,
   "deposit_rawtx": (
-      "01000000010b081ef30aa3de2a2c79079cc584e781dda8c292b76e9879b66b6944"
-      "ee1efe7a020000006a47304402207949937be48aef0df098522532d238541cdab7"
-      "5b61e34a7e2098d178faaa5be3022044e2ecf85fa9ebd08ca60b11bd15979373ed"
-      "b77eb5368237e18f700e3fe93414012103f71179e931904043eb4cc9b1b0d7df1a"
-      "2c27f68812eced8e53b98ee004cf36c1ffffffff03d2b400000000000017a914a8"
-      "785b3899415ad153dadf14e1375744130058268700000000000000001e6a1c18fd"
-      "cc0a3b365a715a44ba45edc93aa5d06a02c53820de74079b0fd47c550100000000"
-      "001976a9145cc53459271a9cc509f00f769f2634005ba5243288ac00000000"
+    "0100000001d85205661d29fec2e5ede0dbb8eaa0e55655c7b14b1aeac9b0e72dae01596f"
+    "63000000006b483045022100e631d8b259bd09ba8956a96e6e471e9938ddad1fa831bb12"
+    "ffa690f2d0d2640002202cf3bcc376225e1861443608cad549d63a76b636225630946942"
+    "205dfd8f4672012102a73443bc32f5fec6a551f71af75311b0876686156d16d367562d3d"
+    "29987792d5ffffffff03d2b400000000000017a9145c6f176aa8bab82688c8b07562595a"
+    "622d7b889a8700000000000000001e6a1c6c4d9b5afac6415f4eff0ec371c5d8155b5821"
+    "76fa9e12aed0cc84645e310200000000001976a914a5efd9bcdc152be40dc2390607a806"
+    "b32cf2902c88ac00000000"
   )
 }
+
+
+REVOKE_SECRET_HASH = "bcc82b07e3c1317a52d7adbff1ef869d4e46ac35"
 
 
 class TestCommit(unittest.TestCase):
@@ -80,16 +127,25 @@ class TestCommit(unittest.TestCase):
         self.payee = picopayments.channel.Payee(
             ASSET, api_url=API_URL, testnet=TESTNET, dryrun=DRYRUN
         )
+        self.maxDiff = None
 
     def tearDown(self):
         self.payer.stop()
         self.payee.stop()
 
-    def test_commit(self):
+    def test_request_commit(self):
         self.payee.load(PAYEE_BEFORE)
-        self.payer.load(PAYER_BEFORE)
+        amount, revoke_secret_hash = self.payee.request_commit(1)
+        hash_bin = picopayments.util.h2b(revoke_secret_hash)
+        self.assertEqual(len(hash_bin), 20)
+        self.assertEqual(amount, 1)
 
-        # self.payee.
+    def test_commit(self):
+        self.payer.load(PAYER_BEFORE)
+        commit_rawtx, commit_script = self.payer.create_commit(
+            1, REVOKE_SECRET_HASH, 5
+        )
+        self.assertEqual(self.payer.save(), PAYER_AFTER)
 
 
 if __name__ == "__main__":

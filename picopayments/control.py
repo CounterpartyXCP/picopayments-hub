@@ -10,8 +10,14 @@ import requests
 from btctxstore import BtcTxStore
 from requests.auth import HTTPBasicAuth
 from . import util
-from . import scripts
 from . import exceptions
+from .scripts import get_deposit_spend_secret_hash
+from .scripts import get_deposit_payee_pubkey
+from .scripts import get_deposit_payer_pubkey
+from .scripts import get_deposit_expire_time
+from .scripts import compile_commit_script
+from .scripts import compile_deposit_script
+from .scripts import DepositScriptHandler
 
 
 # FIXME make fees per kb and auto adjust to market price
@@ -73,7 +79,7 @@ class Control(object):
 
     def create_tx(self, source_address, dest_address, quantity, extra_btc=0):
         assert(extra_btc >= 0)
-        return self._rpc_call({
+        rawtx = self._rpc_call({
             "method": "create_send",
             "params": {
                 "source": source_address,
@@ -86,6 +92,8 @@ class Control(object):
             "jsonrpc": "2.0",
             "id": 0,
         })
+        assert(self.get_quantity(rawtx) == quantity)
+        return rawtx
 
     def get_balance(self, address):
         result = self._rpc_call({
@@ -104,6 +112,37 @@ class Control(object):
         btc_balance = sum(map(lambda utxo: utxo["value"], utxos))
         return asset_balance, btc_balance
 
+    def publish(self, rawtx):
+        raise NotImplementedError()
+        # see http://counterparty.io/docs/api/#wallet-integration
+
+    def get_quantity(self, rawtx):
+        result = self._rpc_call({
+            "method": "get_tx_info",
+            "params": {
+                "tx_hex": rawtx
+            },
+            "jsonrpc": "2.0",
+            "id": 0,
+        })
+        src, dest, btc, fee, data = result
+        result = self._rpc_call({
+            "method": "unpack",
+            "params": {
+                "data_hex": data
+            },
+            "jsonrpc": "2.0",
+            "id": 0,
+        })
+        message_type_id, unpacked = result
+        if message_type_id != 0:
+            msg = "Incorrect message type id: {0} != {1}"
+            raise ValueError(msg.format(message_type_id, 0))
+        if self.asset != unpacked["asset"]:
+            msg = "Incorrect asset: {0} != {1}"
+            raise ValueError(msg.format(self.asset, unpacked["asset"]))
+        return unpacked["quantity"]
+
     def _valid_deposit_request(self, payer_wif, payee_pubkey,
                                spend_secret_hash, expire_time, quantity):
 
@@ -119,12 +158,12 @@ class Control(object):
 
         # check asset balance
         if asset_balance < quantity:
-            raise InsufficientFunds(quantity, asset_balance)
+            raise exceptions.InsufficientFunds(quantity, asset_balance)
 
         # check btc balance
         extra_btc = (self.fee + self.dust_size) * 3
         if btc_balance < extra_btc:
-            raise InsufficientFunds(extra_btc, btc_balance)
+            raise exceptions.InsufficientFunds(extra_btc, btc_balance)
 
     def deposit(self, payer_wif, payee_pubkey, spend_secret_hash,
                 expire_time, quantity):
@@ -133,8 +172,8 @@ class Control(object):
                                     expire_time, quantity)
 
         payer_pubkey = util.wif2pubkey(payer_wif)
-        script = scripts.compile_deposit_script(payer_pubkey, payee_pubkey,
-                                                spend_secret_hash, expire_time)
+        script = compile_deposit_script(payer_pubkey, payee_pubkey,
+                                        spend_secret_hash, expire_time)
         dest_address = util.script2address(script, self.netcode)
         payer_address = util.wif2address(payer_wif)
 
@@ -146,7 +185,36 @@ class Control(object):
                                quantity, extra_btc=extra_btc)
         rawtx = self.btctxstore.sign_tx(rawtx, [payer_wif])
         self.btctxstore.publish(rawtx)
-        return rawtx, script, dest_address
+        return rawtx, script
+
+    def commit(self, payer_wif, deposit_script, quantity,
+               revoke_secret_hash, delay_time):
+        payer_pubkey = get_deposit_payer_pubkey(deposit_script)
+        assert(util.wif2pubkey(payer_wif) == payer_pubkey)
+        payee_pubkey = get_deposit_payee_pubkey(deposit_script)
+        spend_secret_hash = get_deposit_spend_secret_hash(deposit_script)
+        commit_script = compile_commit_script(
+            payer_pubkey, payee_pubkey, spend_secret_hash,
+            revoke_secret_hash, delay_time
+        )
+        src_address = util.script2address(deposit_script, self.netcode)
+        dest_address = util.script2address(commit_script, self.netcode)
+
+        # TODO check if quantity spends entire deposit
+        # spend all btc if so, as change tx is no longer needed
+
+        asset_balance, btc_balance = self.get_balance(src_address)
+
+        # provide extra btc for future payout/revoke tx fees
+        extra_btc = (self.fee + self.dust_size)
+
+        rawtx = self.create_tx(src_address, dest_address,
+                               quantity, extra_btc=extra_btc)
+
+        # TODO sign tx
+        # TODO publish tx
+
+        return rawtx, commit_script
 
     def _recover(self, payer_wif, deposit_rawtx,
                  script, spend_type, spend_secret):
@@ -154,7 +222,7 @@ class Control(object):
         # get channel info
         channel_address = util.script2address(script, self.netcode)
         asset_balance, btc_balance = self.get_balance(channel_address)
-        expire_time = scripts.get_deposit_expire_time(script)
+        expire_time = get_deposit_expire_time(script)
 
         # create timeout tx
         payer_address = util.wif2address(payer_wif)
@@ -176,7 +244,7 @@ class Control(object):
             [util.wif2secretexponent(payer_wif)]
         )
         p2sh_lookup = pycoin.tx.pay_to.build_p2sh_lookup([script])
-        with scripts.DepositScriptHandler(expire_time):
+        with DepositScriptHandler(expire_time):
             tx.sign(hash160_lookup, p2sh_lookup=p2sh_lookup,
                     spend_type=spend_type, spend_secret=spend_secret)
 

@@ -23,8 +23,9 @@ EXPIRED_STATE = {
     "8bbd060c6e6e029e6ab0228938cd3e4225a49bc3a832b0c60fd85e310200000000"
     "001976a9147f6ac1ca784f65f161d20b6dca3fa0b26449b58588ac00000000"
   ),
-  "revoked_commits": [],
-  "active_commits": [],
+  "commits_revoked": [],
+  "commits_active": [],
+  "commits_pending": [],
   "change_rawtx": None,
   "timeout_rawtx": None,
   "payee_wif": None,
@@ -47,8 +48,9 @@ RECOVERING_STATE = {
     "3dbd99c81ba4f2c0cca351b3cceecce7cd0bd59acc5789672135ac6755b275210399e3"
     "dde1d1853dbd99c81ba4f2c0cca351b3cceecce7cd0bd59acc5789672135ac6868"
   ),
-  "revoked_commits": [],
-  "active_commits": [],
+  "commits_revoked": [],
+  "commits_active": [],
+  "commits_pending": [],
   "change_rawtx": None,
   "payee_wif": None,
   "spend_secret": None,

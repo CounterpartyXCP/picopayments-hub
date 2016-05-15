@@ -78,21 +78,13 @@ class Payer(Base):
         with self.mutex:
             self.clear()
             self.payer_wif = payer_wif
-            rawtx, script, address = self.control.deposit(
+            rawtx, script = self.control.deposit(
                 self.payer_wif, payee_pubkey,
                 spend_secret_hash, expire_time, quantity
             )
             self.deposit_rawtx = rawtx
             self.deposit_script_hex = util.b2h(script)
-            info = {
-                "asset": self.control.asset,
-                "quantity": quantity,
-                "rawtx": rawtx,
-                "txid": util.gettxid(rawtx),
-                "script": util.b2h(script),
-                "address": address
-            }
-            return info
+            return {"rawtx": rawtx, "script": util.b2h(script)}
 
     def timeout_recover(self):
         with self.mutex:
@@ -108,3 +100,14 @@ class Payer(Base):
                 self.payer_wif, self.deposit_rawtx,
                 script, self.spend_secret
             )
+
+    def create_commit(self, quantity, revoke_secret_hash, delay_time):
+        with self.mutex:
+            self.validate_transfer_quantity(quantity)
+            rawtx, script = self.control.commit(
+                self.payer_wif, util.h2b(self.deposit_script_hex),
+                quantity, revoke_secret_hash, delay_time
+            )
+            script_hex = util.b2h(script)
+            util.stack_push(self.commits_active, [rawtx, script_hex, None])
+            return rawtx, script_hex
