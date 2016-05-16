@@ -104,7 +104,7 @@ class Payer(Base):
     def create_commit(self, quantity, revoke_secret_hash, delay_time):
         with self.mutex:
             self.validate_transfer_quantity(quantity)
-            rawtx, script = self.control.commit(
+            rawtx, script = self.control.create_commit(
                 self.payer_wif, util.h2b(self.deposit_script_hex),
                 quantity, revoke_secret_hash, delay_time
             )

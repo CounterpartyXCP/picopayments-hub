@@ -3,16 +3,13 @@
 # License: MIT (see LICENSE file)
 
 
-import re
 from pycoin.serialize import b2h, h2b
 from pycoin import encoding
 from pycoin.tx.script import tools
 from pycoin.tx.pay_to.ScriptType import ScriptType
 from pycoin.tx.pay_to import SUBCLASSES
-from pycoin.tx.script.tools import disassemble
-from pycoin.tx.script.tools import compile
-from pycoin.tx.script import opcodes
 from pycoin.encoding import hash160
+from pycoin.tx.pay_to.ScriptType import DEFAULT_PLACEHOLDER_SIGNATURE
 
 
 MAX_SEQUENCE = 0x0000FFFF
@@ -156,6 +153,9 @@ class AbsScriptChannelDeposit(ScriptType):
         spend_secret = kwargs["spend_secret"]
         spend_type = kwargs["spend_type"]
 
+        signature_placeholder = kwargs.get("signature_placeholder",
+                                           DEFAULT_PLACEHOLDER_SIGNATURE)
+
         private_key = hash160_lookup.get(encoding.hash160(self.payer_sec))
         secret_exponent, public_pair, compressed = private_key
         sig = b2h(self._create_script_signature(secret_exponent, sign_value,
@@ -169,10 +169,12 @@ class AbsScriptChannelDeposit(ScriptType):
             script_sig = "{sig} {secret} OP_1 OP_0".format(
                 sig=sig, secret=spend_secret
             )
-        elif spend_type == "commit":
-            raise NotImplementedError()
+        elif spend_type == "create_commit":
+            script_sig = "{payer_sig} {payee_sig} OP_1".format(
+                payer_sig=sig, payee_sig=b2h(signature_placeholder)
+            )
         else:
-            raise NotImplementedError()  # illegal state
+            raise Exception("Illegal State!")
         return tools.compile(script_sig)
 
     def __repr__(self):

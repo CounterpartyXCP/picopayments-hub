@@ -187,8 +187,10 @@ class Control(object):
         self.btctxstore.publish(rawtx)
         return rawtx, script
 
-    def commit(self, payer_wif, deposit_script, quantity,
-               revoke_secret_hash, delay_time):
+    def create_commit(self, payer_wif, deposit_script, quantity,
+                      revoke_secret_hash, delay_time):
+
+        # create script
         payer_pubkey = get_deposit_payer_pubkey(deposit_script)
         assert(util.wif2pubkey(payer_wif) == payer_pubkey)
         payee_pubkey = get_deposit_payee_pubkey(deposit_script)
@@ -197,23 +199,37 @@ class Control(object):
             payer_pubkey, payee_pubkey, spend_secret_hash,
             revoke_secret_hash, delay_time
         )
+
+        # create tx
         src_address = util.script2address(deposit_script, self.netcode)
         dest_address = util.script2address(commit_script, self.netcode)
-
-        # TODO check if quantity spends entire deposit
-        # spend all btc if so, as change tx is no longer needed
-
         asset_balance, btc_balance = self.get_balance(src_address)
-
-        # provide extra btc for future payout/revoke tx fees
-        extra_btc = (self.fee + self.dust_size)
-
+        if quantity == asset_balance:  # spend all btc as change tx not needed
+            extra_btc = btc_balance - self.fee
+        else:  # provide extra btc for future payout/revoke tx fees
+            extra_btc = (self.fee + self.dust_size)
         rawtx = self.create_tx(src_address, dest_address,
                                quantity, extra_btc=extra_btc)
 
-        # TODO sign tx
-        # TODO publish tx
+        # prep for signing
+        tx = pycoin.tx.Tx.from_hex(rawtx)
+        for txin in tx.txs_in:
+            utxo_tx = self.btctxstore.service.get_tx(txin.previous_hash)
+            tx.unspents.append(utxo_tx.txs_out[txin.previous_index])
 
+        # sign tx
+        hash160_lookup = pycoin.tx.pay_to.build_hash160_lookup(
+            [util.wif2secretexponent(payer_wif)]
+        )
+        p2sh_lookup = pycoin.tx.pay_to.build_p2sh_lookup([deposit_script])
+        expire_time = get_deposit_expire_time(deposit_script)
+        with DepositScriptHandler(expire_time):
+            tx.sign(hash160_lookup, p2sh_lookup=p2sh_lookup,
+                    spend_type="create_commit", spend_secret=None)
+
+        # publish tx
+        rawtx = tx.as_hex()
+        self.btctxstore.publish(rawtx)
         return rawtx, commit_script
 
     def _recover(self, payer_wif, deposit_rawtx,
