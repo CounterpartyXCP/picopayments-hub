@@ -83,7 +83,6 @@ publish: test
 	$(PY) setup.py register bdist_wheel upload
 
 
-
 view_readme: setup graphs
 	env/bin/restview README.rst
 
@@ -93,8 +92,7 @@ graphs:
 
 
 bitcoind_startserver:
-	bitcoind -testnet -daemon -txindex
-	# bitcoind -testnet -daemon -reindex -txindex
+	bitcoind -testnet -daemon -txindex  # -reindex
 
 
 bitcoind_getinfo:

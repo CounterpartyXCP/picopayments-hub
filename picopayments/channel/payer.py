@@ -110,4 +110,4 @@ class Payer(Base):
             )
             script_hex = util.b2h(script)
             util.stack_push(self.commits_active, [rawtx, script_hex, None])
-            return rawtx, script_hex
+            return {"rawtx": rawtx, "script": script_hex}

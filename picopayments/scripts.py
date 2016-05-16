@@ -13,8 +13,6 @@ from pycoin.tx.pay_to.ScriptType import DEFAULT_PLACEHOLDER_SIGNATURE
 
 
 MAX_SEQUENCE = 0x0000FFFF
-
-
 DEFAULT_EXPIRE_TIME = 5
 DEPOSIT_SCRIPT = """
     OP_IF
@@ -29,8 +27,6 @@ DEPOSIT_SCRIPT = """
         OP_ENDIF
     OP_ENDIF
 """
-
-
 COMMIT_SCRIPT = """
     OP_IF
         {delay_time} OP_NOP3 OP_DROP
@@ -54,18 +50,7 @@ def get_word(script, index):
     return opcode, data, tools.disassemble_for_opcode_data(opcode, data)
 
 
-def get_deposit_payer_pubkey(script):
-    opcode, data, disassembled = get_word(script, 2)
-    return b2h(data)
-
-
-def get_deposit_payee_pubkey(script):
-    opcode, data, disassembled = get_word(script, 3)
-    return b2h(data)
-
-
-def get_deposit_expire_time(script):
-    opcode, data, disassembled = get_word(script, 14)
+def parse_sequence_value(opcode, data, disassembled):
     value = None
     if opcode == 0:
         value = 0
@@ -79,6 +64,46 @@ def get_deposit_expire_time(script):
         msg = "Max expire time exceeded: {0} > {1}"
         raise ValueError(msg.format(value, MAX_SEQUENCE))
     return value
+
+
+def get_commit_payer_pubkey(script):
+    opcode, data, disassembled = get_word(script, 13)
+    return b2h(data)
+
+
+def get_commit_payee_pubkey(script):
+    opcode, data, disassembled = get_word(script, 7)
+    return b2h(data)
+
+
+def get_commit_delay_time(script):
+    opcode, data, disassembled = get_word(script, 1)
+    return parse_sequence_value(opcode, data, disassembled)
+
+
+def get_commit_spend_secret_hash(script):
+    opcode, data, disassembled = get_word(script, 5)
+    return b2h(data)
+
+
+def get_commit_revoke_secret_hash(script):
+    opcode, data, disassembled = get_word(script, 11)
+    return b2h(data)
+
+
+def get_deposit_payer_pubkey(script):
+    opcode, data, disassembled = get_word(script, 2)
+    return b2h(data)
+
+
+def get_deposit_payee_pubkey(script):
+    opcode, data, disassembled = get_word(script, 3)
+    return b2h(data)
+
+
+def get_deposit_expire_time(script):
+    opcode, data, disassembled = get_word(script, 14)
+    return parse_sequence_value(opcode, data, disassembled)
 
 
 def get_deposit_spend_secret_hash(script):
@@ -97,7 +122,6 @@ def compile_deposit_script(payer_pubkey, payee_pubkey,
         expire_time: Channel expire time in blocks given as int.
 
     Return:
-        assert(False)
         Compiled bitcoin script.
     """
     script_text = DEPOSIT_SCRIPT.format(

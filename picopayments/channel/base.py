@@ -19,8 +19,8 @@ class Base(util.UpdateThreadMixin):
     timeout_rawtx = None
     change_rawtx = None
 
-    commits_pending = []  # [[quantity, revoke_secret]]
-    commits_active = []   # [[rawtx, script, revoke_secret]] stack low to heigh
+    commits_requested = []  # [[quantity, revoke_secret]]
+    commits_active = []  # [[rawtx, script, revoke_secret]] sort low to heigh
     commits_revoked = []  # [[rawtx, script, revoke_secret]]
 
     def __init__(self, asset, user=control.DEFAULT_COUNTERPARTY_RPC_USER,
@@ -51,7 +51,7 @@ class Base(util.UpdateThreadMixin):
                 "deposit_rawtx": self.deposit_rawtx,
                 "timeout_rawtx": self.timeout_rawtx,
                 "change_rawtx": self.change_rawtx,
-                "commits_pending": self.commits_pending,
+                "commits_requested": self.commits_requested,
                 "commits_active": self.commits_active,
                 "commits_revoked": self.commits_revoked,
             }
@@ -66,7 +66,7 @@ class Base(util.UpdateThreadMixin):
             self.deposit_rawtx = data["deposit_rawtx"]
             self.timeout_rawtx = data["timeout_rawtx"]
             self.change_rawtx = data["change_rawtx"]
-            self.commits_pending = data["commits_pending"]
+            self.commits_requested = data["commits_requested"]
             self.commits_active = data["commits_active"]
             self.commits_revoked = data["commits_revoked"]
 
@@ -79,7 +79,7 @@ class Base(util.UpdateThreadMixin):
             self.deposit_rawtx = None
             self.timeout_rawtx = None
             self.change_rawtx = None
-            self.commits_pending = []
+            self.commits_requested = []
             self.commits_active = []
             self.commits_revoked = []
 
@@ -161,7 +161,7 @@ class Base(util.UpdateThreadMixin):
         with self.mutex:
             heighest = util.stack_peek(self.commits_active)
             if heighest is not None:
-                return self.control.get_quantity(heighest["rawtx"])
+                return self.control.get_quantity(heighest[0])
             return 0
 
     def get_deposit_total(self):

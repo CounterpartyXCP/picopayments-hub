@@ -40,7 +40,7 @@ EXPECTED_STATE = {
   "payee_wif": None,
   "commits_revoked": [],
   "commits_active": [],
-  "commits_pending": [],
+  "commits_requested": [],
   "timeout_rawtx": None,
   "deposit_script_hex": (
     "635221033faa57e0ed3a3bf89340a0a3074ce0ef403ebfb77cb3402d0daa29d808e2bd"

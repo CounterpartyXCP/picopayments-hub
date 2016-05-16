@@ -38,7 +38,7 @@ BEFORE_STATE = {
   "change_rawtx": None,
   "commits_revoked": [],
   "commits_active": [],
-  "commits_pending": [],
+  "commits_requested": [],
   "deposit_script_hex": (
       "635221022eda5e6902b0978073d2fd1df6d6355f77c667df598c09621e3da926cf"
       "2af25b210327f017c35a46b759536309e6de256ad44ad609c1c4aed0e2cdb82f62"
@@ -64,7 +64,7 @@ AFTER_STATE = {
   ),
   "commits_revoked": [],
   "commits_active": [],
-  "commits_pending": [],
+  "commits_requested": [],
   "payee_wif": None,
   "payer_wif": "cNEC8Ftb6g8gmpthaSJd1bqFP811FFhykF4SK1jdByPJbxzbLGGw",
   "timeout_rawtx": None,
