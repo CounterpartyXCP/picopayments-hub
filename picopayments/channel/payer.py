@@ -103,12 +103,13 @@ class Payer(Base):
 
     def create_commit(self, quantity, revoke_secret_hash, delay_time):
         with self.mutex:
-            self.validate_transfer_quantity(quantity)
+            self._validate_transfer_quantity(quantity)
             rawtx, script = self.control.create_commit(
                 self.payer_wif, util.h2b(self.deposit_script_hex),
                 quantity, revoke_secret_hash, delay_time
             )
             script_hex = util.b2h(script)
+            self._order_active()
             util.stack_push(self.commits_active, {
                 "rawtx": rawtx, "script": script_hex, "revoke_secret": None
             })

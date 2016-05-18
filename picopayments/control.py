@@ -243,7 +243,7 @@ class Control(object):
         # create timeout tx
         payer_address = util.wif2address(payer_wif)
         rawtx = self.create_tx(channel_address, payer_address, asset_balance,
-                               extra_btc=btc_balance-self.fee)
+                               extra_btc=btc_balance - self.fee)
 
         # prep for script compliance and signing
         tx = pycoin.tx.Tx.from_hex(rawtx)

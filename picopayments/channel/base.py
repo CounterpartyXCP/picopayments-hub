@@ -25,6 +25,7 @@ class Base(util.UpdateThreadMixin):
     # resolution when reversing the channel.
     commits_requested = []  # ["revoke_secret_hex"]
 
+    # must be ordered lowest to heighest at all times!
     commits_active = []     # [{
     #                             "rawtx": hex,
     #                             "script": hex,
@@ -57,6 +58,7 @@ class Base(util.UpdateThreadMixin):
 
     def save(self):
         with self.mutex:
+            self._order_active()
             return copy.deepcopy({
                 "payer_wif": self.payer_wif,
                 "payee_wif": self.payee_wif,
@@ -72,8 +74,8 @@ class Base(util.UpdateThreadMixin):
 
     def load(self, data):
         # TODO validate input
-        data = copy.deepcopy(data)
         with self.mutex:
+            data = copy.deepcopy(data)
             self.payer_wif = data["payer_wif"]
             self.payee_wif = data["payee_wif"]
             self.spend_secret = data["spend_secret"]
@@ -84,6 +86,7 @@ class Base(util.UpdateThreadMixin):
             self.commits_requested = data["commits_requested"]
             self.commits_active = data["commits_active"]
             self.commits_revoked = data["commits_revoked"]
+            self._order_active()
 
     def clear(self):
         with self.mutex:
@@ -118,13 +121,14 @@ class Base(util.UpdateThreadMixin):
             return self.control.btctxstore.confirms(txid) or 0
 
     def get_spend_secret_hash(self):
-        if self.spend_secret is not None:  # payee
-            return util.b2h(util.hash160(util.h2b(self.spend_secret)))
-        elif self.deposit_script_hex is not None:  # payer
-            script = util.h2b(self.deposit_script_hex)
-            return scripts.get_deposit_spend_secret_hash(script)
-        else:  # undefined
-            raise Exception("Undefined state, not payee or payer.")
+        with self.mutex:
+            if self.spend_secret is not None:  # payee
+                return util.b2h(util.hash160(util.h2b(self.spend_secret)))
+            elif self.deposit_script_hex is not None:  # payer
+                script = util.h2b(self.deposit_script_hex)
+                return scripts.get_deposit_spend_secret_hash(script)
+            else:  # undefined
+                raise Exception("Undefined state, not payee or payer.")
 
     def is_deposit_confirmed(self):
         with self.mutex:
@@ -175,6 +179,7 @@ class Base(util.UpdateThreadMixin):
         """Returns funds transferred from payer to payee."""
         with self.mutex:
             # FIXME sort first!
+            self._order_active()
             heighest = util.stack_peek(self.commits_active)
             if heighest is not None:
                 return self.control.get_quantity(heighest["rawtx"])
@@ -191,7 +196,7 @@ class Base(util.UpdateThreadMixin):
         with self.mutex:
             return self.get_deposit_total() - self.get_transferred_amount()
 
-    def validate_transfer_quantity(self, quantity):
+    def _validate_transfer_quantity(self, quantity):
         with self.mutex:
 
             transferred = self.get_transferred_amount()
@@ -203,3 +208,22 @@ class Base(util.UpdateThreadMixin):
             if quantity > total:
                 msg = "Amount greater total: {0} > {1}"
                 raise ValueError(msg.fromat(quantity, total))
+
+    def _order_active(self):
+
+        def sort_func(entry):
+            return self.control.get_quantity(entry["rawtx"])
+        self.commits_active.sort(key=sort_func)
+
+    def revoke(self, secret):
+        with self.mutex:
+            secret_hash = util.hash160hex(secret)
+            for commit in self.commits_active[:]:
+                script = util.h2b(commit["script"])
+                if secret_hash == scripts.get_commit_revoke_secret_hash(
+                        script):
+                    self.commits_active.remove(commit)  # remove from active
+                    commit["revoke_secret"] = secret  # save secret
+                    self.commits_revoked.append(commit)  # add to revoked
+                    return copy.deepcopy(commit)
+            return None

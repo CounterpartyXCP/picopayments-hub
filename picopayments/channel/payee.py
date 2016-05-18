@@ -43,7 +43,7 @@ class Payee(Base):
                 given_payee_pubkey, own_payee_pubkey
             ))
 
-    def assert_unopen_state(self):
+    def _assert_unopen_state(self):
         assert(self.payer_wif is None)
         assert(self.payee_wif is not None)
         assert(self.spend_secret is not None)
@@ -54,7 +54,7 @@ class Payee(Base):
 
     def set_deposit(self, rawtx, script_hex):
         with self.mutex:
-            self.assert_unopen_state()
+            self._assert_unopen_state()
 
             # TODO validate rawtx
             # TODO validate script
@@ -69,13 +69,13 @@ class Payee(Base):
 
     def request_commit(self, quantity):
         with self.mutex:
-            self.validate_transfer_quantity(quantity)
+            self._validate_transfer_quantity(quantity)
             secret = util.b2h(os.urandom(32))  # secure random number
             secret_hash = util.hash160hex(secret)
             self.commits_requested.append(secret)
             return quantity, secret_hash
 
-    def validate_commit_secret_hash(self, script):
+    def _validate_commit_secret_hash(self, script):
         given_spend_secret_hash = get_commit_spend_secret_hash(script)
         own_spend_secret_hash = util.hash160hex(self.spend_secret)
         if given_spend_secret_hash != own_spend_secret_hash:
@@ -84,7 +84,7 @@ class Payee(Base):
                 given_spend_secret_hash, own_spend_secret_hash
             ))
 
-    def validate_commit_payee_pubkey(self, script):
+    def _validate_commit_payee_pubkey(self, script):
         given_payee_pubkey = get_commit_payee_pubkey(script)
         own_payee_pubkey = util.wif2pubkey(self.payee_wif)
         if given_payee_pubkey != own_payee_pubkey:
@@ -93,7 +93,7 @@ class Payee(Base):
                 given_payee_pubkey, own_payee_pubkey
             ))
 
-    def assert_open_state(self):
+    def _assert_open_state(self):
         assert(self.payer_wif is None)
         assert(self.payee_wif is not None)
         assert(self.spend_secret is not None)
@@ -102,7 +102,7 @@ class Payee(Base):
 
     def set_commit(self, rawtx, script_hex):
         with self.mutex:
-            self.assert_open_state()
+            self._assert_open_state()
 
             # TODO validate rawtx
             # TODO validate script
@@ -111,8 +111,8 @@ class Payee(Base):
             # TODO check given script is commit script
 
             script = util.h2b(script_hex)
-            self.validate_commit_secret_hash(script)
-            self.validate_commit_payee_pubkey(script)
+            self._validate_commit_secret_hash(script)
+            self._validate_commit_payee_pubkey(script)
 
             quantity = self.control.get_quantity(rawtx)
             revoke_secret_hash = get_commit_revoke_secret_hash(script)
@@ -125,16 +125,12 @@ class Payee(Base):
                     # remove from requests
                     self.commits_requested.remove(revoke_secret)
 
-                    # add to active and sort by quantity
+                    # add to active
+                    self._order_active()
                     self.commits_active.append({
                         "rawtx": rawtx, "script": script_hex,
                         "revoke_secret": revoke_secret
                     })
-
-                    def sort_func(entry):  # FIXME move to base
-                        return self.control.get_quantity(entry["rawtx"])
-                    self.commits_active.sort(key=sort_func)
-
                     return self.get_transferred_amount()
 
             return None

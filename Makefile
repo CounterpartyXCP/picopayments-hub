@@ -3,6 +3,7 @@ WHEEL_DIR := /tmp/wheelhouse
 PIP := env/bin/pip
 PY := env/bin/python
 PEP8 := env/bin/pep8
+AUTOPEP8 := env/bin/autopep8
 COVERAGE := env/bin/coverage
 USE_WHEELS := 0
 ifeq ($(USE_WHEELS), 0)
@@ -72,9 +73,9 @@ shell: install
 
 
 test: setup
-	$(PEP8) picopayments
-	$(PEP8) examples
-	$(PEP8) tests
+	$(AUTOPEP8) --in-place --aggressive --aggressive --recursive picopayments
+	$(AUTOPEP8) --in-place --aggressive --aggressive --recursive examples
+	$(AUTOPEP8) --in-place --aggressive --aggressive --recursive tests
 	$(COVERAGE) run --source="picopayments" setup.py test
 	$(COVERAGE) report --fail-under=80
 
