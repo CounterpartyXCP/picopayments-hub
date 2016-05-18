@@ -1,3 +1,4 @@
+# import json
 import unittest
 import picopayments
 
@@ -249,6 +250,9 @@ EXPECTED_COMMIT = {
 }
 
 
+DELAY_TIME = 5
+
+
 class TestCommit(unittest.TestCase):
 
     def setUp(self):
@@ -266,16 +270,14 @@ class TestCommit(unittest.TestCase):
 
     def test_request_commit(self):
         self.payee.load(PAYEE_BEFORE_REQUEST)
-        amount, revoke_secret_hash = self.payee.request_commit(1)
+        quantity, revoke_secret_hash = self.payee.request_commit(1)
         hash_bin = picopayments.util.h2b(revoke_secret_hash)
         self.assertEqual(len(hash_bin), 20)
-        self.assertEqual(amount, 1)
+        self.assertEqual(quantity, 1)
 
     def test_create_commit(self):
         self.payer.load(PAYER_BEFORE)
-
-        commit = self.payer.create_commit(1, REVOKE_SECRET_HASH, 5)
-
+        commit = self.payer.create_commit(1, REVOKE_SECRET_HASH, DELAY_TIME)
         self.assertEqual(self.payer.save(), PAYER_AFTER)
         self.assertEqual(commit, EXPECTED_COMMIT)
 
@@ -284,6 +286,22 @@ class TestCommit(unittest.TestCase):
         self.payee.load(PAYEE_AFTER_REQUEST)
         self.payee.set_commit(commit["rawtx"], commit["script"])
         self.assertEqual(self.payee.save(), PAYEE_AFTER_SET_COMMIT)
+
+    def test_funds_flow(self):
+        self.payer.load(PAYER_BEFORE)
+        self.payee.load(PAYEE_BEFORE_REQUEST)
+
+        for quantity in range(1, 10):
+            print(quantity)
+            amount, revoke_hash = self.payee.request_commit(quantity)
+            commit = self.payer.create_commit(amount, revoke_hash, DELAY_TIME)
+            self.payee.set_commit(commit["rawtx"], commit["script"])
+
+        self.assertEqual(self.payer.get_transferred_amount(), 9)
+        self.assertEqual(self.payee.get_transferred_amount(), 9)
+
+        # print(json.dumps(self.payer.save(), indent=2))
+        # print(json.dumps(self.payee.save(), indent=2))
 
 
 if __name__ == "__main__":

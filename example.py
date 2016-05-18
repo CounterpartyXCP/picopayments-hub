@@ -1,6 +1,7 @@
 import time
 import picopayments
 
+
 ASSET = "A14456548018133352000"
 USER = "rpc"
 PASSWORD = "1234"
@@ -18,6 +19,12 @@ payee = picopayments.channel.Payee(
     ASSET, api_url=API_URL, testnet=TESTNET, dryrun=DRYRUN
 )
 
+
+###########################
+# SETUP CHANNEL (DEPOSIT) #
+###########################
+
+
 # payee published its pubkey and declares the spend secret hash
 payee_pubkey, spend_secret_hash = payee.setup(PAYEE_WIF)
 
@@ -30,13 +37,15 @@ deposit_rawtx = deposit["rawtx"]
 deposit_script_hex = deposit["script"]
 payee.set_deposit(deposit_rawtx, deposit_script_hex)
 
-# import json
-# print(json.dumps(payer.save(), indent=2))
-# print(json.dumps(payee.save(), indent=2))
-
 # wait until deposit is confirmed
 while not payer.is_deposit_confirmed():
     time.sleep(1)
+
+
+##################################
+# MOVE FUNDS FROM PAYER TO PAYEE #
+##################################
+
 
 # payee requests amount and provides revoke secret hash for commit tx
 amount, revoke_secret_hash = payee.request_commit(1)
@@ -48,6 +57,12 @@ commit = payer.create_commit(amount, revoke_secret_hash)
 commit_rawtx = commit["rawtx"]
 commit_script = commit["script"]
 payee.set_commit(commit_rawtx, commit_script)
+
+
+# import json
+# print(json.dumps(payer.save(), indent=2))
+# print(json.dumps(payee.save(), indent=2))
+
 
 payer.stop()
 payee.stop()

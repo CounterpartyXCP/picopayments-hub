@@ -3,6 +3,7 @@
 # License: MIT (see LICENSE file)
 
 
+import copy
 from threading import RLock
 from picopayments import util
 from picopayments import scripts
@@ -19,6 +20,7 @@ class Base(util.UpdateThreadMixin):
     timeout_rawtx = None
     change_rawtx = None
 
+    # FIXME use dicts instead of lists for entries
     commits_requested = []  # [[quantity, revoke_secret]]
     commits_active = []  # [[rawtx, script, revoke_secret]] sort low to heigh
     commits_revoked = []  # [[rawtx, script, revoke_secret]]
@@ -43,7 +45,7 @@ class Base(util.UpdateThreadMixin):
 
     def save(self):
         with self.mutex:
-            return {
+            return copy.deepcopy({
                 "payer_wif": self.payer_wif,
                 "payee_wif": self.payee_wif,
                 "spend_secret": self.spend_secret,
@@ -54,10 +56,11 @@ class Base(util.UpdateThreadMixin):
                 "commits_requested": self.commits_requested,
                 "commits_active": self.commits_active,
                 "commits_revoked": self.commits_revoked,
-            }
+            })
 
     def load(self, data):
         # TODO validate input
+        data = copy.deepcopy(data)
         with self.mutex:
             self.payer_wif = data["payer_wif"]
             self.payee_wif = data["payee_wif"]
