@@ -110,8 +110,7 @@ class Payer(Base):
             )
             script_hex = util.b2h(script)
             self._order_active()
-            util.stack_push(self.commits_active, {
+            self.commits_active.append({
                 "rawtx": rawtx, "script": script_hex, "revoke_secret": None
             })
-
             return {"rawtx": rawtx, "script": script_hex}

@@ -6,8 +6,10 @@
 import copy
 from threading import RLock
 from picopayments import util
-from picopayments import scripts
 from picopayments import control
+from picopayments.scripts import get_deposit_spend_secret_hash
+from picopayments.scripts import get_deposit_expire_time
+from picopayments.scripts import get_commit_revoke_secret_hash
 
 
 class Base(util.UpdateThreadMixin):
@@ -126,7 +128,7 @@ class Base(util.UpdateThreadMixin):
                 return util.b2h(util.hash160(util.h2b(self.spend_secret)))
             elif self.deposit_script_hex is not None:  # payer
                 script = util.h2b(self.deposit_script_hex)
-                return scripts.get_deposit_spend_secret_hash(script)
+                return get_deposit_spend_secret_hash(script)
             else:  # undefined
                 raise Exception("Undefined state, not payee or payer.")
 
@@ -137,7 +139,7 @@ class Base(util.UpdateThreadMixin):
     def is_deposit_expired(self):
         with self.mutex:
             script = util.h2b(self.deposit_script_hex)
-            t = scripts.get_deposit_expire_time(script)
+            t = get_deposit_expire_time(script)
             return self.get_deposit_confirms() >= t
 
     def is_timeout_confirmed(self):
@@ -179,11 +181,11 @@ class Base(util.UpdateThreadMixin):
         """Returns funds transferred from payer to payee."""
         with self.mutex:
             # FIXME sort first!
+            if len(self.commits_active) == 0:
+                return 0
             self._order_active()
-            heighest = util.stack_peek(self.commits_active)
-            if heighest is not None:
-                return self.control.get_quantity(heighest["rawtx"])
-            return 0
+            commit = self.commits_active[-1]
+            return self.control.get_quantity(commit["rawtx"])
 
     def get_deposit_total(self):
         """Returns the total deposit amount"""
@@ -215,13 +217,15 @@ class Base(util.UpdateThreadMixin):
             return self.control.get_quantity(entry["rawtx"])
         self.commits_active.sort(key=sort_func)
 
+    def revoke_all(self, secrets):
+        return list(map(self.revoke, secrets))
+
     def revoke(self, secret):
         with self.mutex:
             secret_hash = util.hash160hex(secret)
             for commit in self.commits_active[:]:
                 script = util.h2b(commit["script"])
-                if secret_hash == scripts.get_commit_revoke_secret_hash(
-                        script):
+                if secret_hash == get_commit_revoke_secret_hash(script):
                     self.commits_active.remove(commit)  # remove from active
                     commit["revoke_secret"] = secret  # save secret
                     self.commits_revoked.append(commit)  # add to revoked

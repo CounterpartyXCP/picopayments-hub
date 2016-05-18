@@ -1,4 +1,4 @@
-# import json
+import json
 import unittest
 import picopayments
 
@@ -290,6 +290,7 @@ class TestCommit(unittest.TestCase):
         self.payer.load(PAYER_BEFORE)
         self.payee.load(PAYEE_BEFORE_REQUEST)
 
+        # send funds
         for quantity in range(1, 10):
             amount, revoke_hash = self.payee.request_commit(quantity)
             commit = self.payer.create_commit(amount, revoke_hash, DELAY_TIME)
@@ -298,11 +299,12 @@ class TestCommit(unittest.TestCase):
         self.assertEqual(self.payer.get_transferred_amount(), 9)
         self.assertEqual(self.payee.get_transferred_amount(), 9)
 
-    def test_revoke_commit(self):
-        pass
+        # reverse funds
+        secrets = self.payee.revoke_until(4)
+        self.payer.revoke_all(secrets)
 
-        # print(json.dumps(self.payer.save(), indent=2))
-        # print(json.dumps(self.payee.save(), indent=2))
+        self.assertEqual(self.payer.get_transferred_amount(), 4)
+        self.assertEqual(self.payee.get_transferred_amount(), 4)
 
 
 if __name__ == "__main__":

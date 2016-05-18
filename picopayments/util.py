@@ -42,20 +42,6 @@ def hash160hex(hexdata):
     return b2h(hash160(h2b(hexdata)))
 
 
-def stack_push(stack, element):
-    stack.append(element)
-
-
-def stack_pop(stack):
-    return stack.pop()
-
-
-def stack_peek(stack):
-    if len(stack) == 0:
-        return None
-    return stack[-1]
-
-
 class UpdateThreadMixin(object):
 
     interval = 0.1

@@ -135,5 +135,17 @@ class Payee(Base):
 
             return None
 
+    def revoke_until(self, quantity):
+        with self.mutex:
+            secrets = []
+            self._order_active()
+            for commit in reversed(self.commits_active[:]):
+                if quantity < self.control.get_quantity(commit["rawtx"]):
+                    secrets.append(commit["revoke_secret"])
+                else:
+                    break
+            self.revoke_all(secrets)
+            return secrets
+
     def update(self):
         pass
