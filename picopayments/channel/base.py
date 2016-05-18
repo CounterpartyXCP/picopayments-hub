@@ -20,10 +20,22 @@ class Base(util.UpdateThreadMixin):
     timeout_rawtx = None
     change_rawtx = None
 
-    # FIXME use dicts instead of lists for entries
-    commits_requested = []  # [[quantity, revoke_secret]]
-    commits_active = []  # [[rawtx, script, revoke_secret]] sort low to heigh
-    commits_revoked = []  # [[rawtx, script, revoke_secret]]
+    commits_requested = []  # [{
+    #                             "quantity": int,
+    #                             "revoke_secret": hex
+    #                         }]
+
+    commits_active = []     # [{
+    #                             "rawtx": hex,
+    #                             "script": hex,
+    #                             "revoke_secret": hex
+    #                         }]
+
+    commits_revoked = []    # [{
+    #                            "rawtx": hex,
+    #                            "script": hex,
+    #                            "revoke_secret": hex
+    #                         }]
 
     def __init__(self, asset, user=control.DEFAULT_COUNTERPARTY_RPC_USER,
                  password=control.DEFAULT_COUNTERPARTY_RPC_PASSWORD,
@@ -162,9 +174,10 @@ class Base(util.UpdateThreadMixin):
     def get_transferred_amount(self):
         """Returns funds transferred from payer to payee."""
         with self.mutex:
+            # FIXME sort first!
             heighest = util.stack_peek(self.commits_active)
             if heighest is not None:
-                return self.control.get_quantity(heighest[0])
+                return self.control.get_quantity(heighest["rawtx"])
             return 0
 
     def get_deposit_total(self):

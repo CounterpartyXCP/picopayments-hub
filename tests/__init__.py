@@ -3,7 +3,6 @@ import unittest
 
 from . import deposit  # NOQA
 from . import timeout  # NOQA
-from . import control  # NOQA
 from . import change  # NOQA
 from . import commit  # NOQA
 from . import scripts  # NOQA

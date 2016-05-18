@@ -75,7 +75,10 @@ class Payee(Base):
             secret_hash = util.hash160hex(secret)
 
             # add request to pending
-            self.commits_requested.append((quantity, secret))
+            self.commits_requested.append({
+                "quantity": quantity,
+                "revoke_secret": secret
+            })
 
             return quantity, secret_hash
 
@@ -121,7 +124,8 @@ class Payee(Base):
             quantity = self.control.get_quantity(rawtx)
             revoke_secret_hash = get_commit_revoke_secret_hash(script)
             for requested_commit in self.commits_requested[:]:
-                request_quantity, revoke_secret = requested_commit
+                request_quantity = requested_commit["quantity"]
+                revoke_secret = requested_commit["revoke_secret"]
 
                 # revoke secret hash must match as it would
                 # otherwise break the channels reversability
@@ -136,12 +140,13 @@ class Payee(Base):
                     self.commits_requested.remove(requested_commit)
 
                     # add to active and sort by quantity
-                    self.commits_active.append([
-                        rawtx, script_hex, revoke_secret
-                    ])
+                    self.commits_active.append({
+                        "rawtx": rawtx, "script": script_hex,
+                        "revoke_secret": revoke_secret
+                    })
 
-                    def sort_func(entry):
-                        return self.control.get_quantity(entry[0])
+                    def sort_func(entry):  # FIXME move to base
+                        return self.control.get_quantity(entry["rawtx"])
                     self.commits_active.sort(key=sort_func)
                     return self.get_transferred_amount()
 

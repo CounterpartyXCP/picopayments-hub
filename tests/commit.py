@@ -76,8 +76,8 @@ PAYER_AFTER = {
   "timeout_rawtx": None,
   "commits_requested": [],
   "commits_active": [
-    [
-      (
+    {
+      "rawtx": (
         "01000000017231934b8873769b325c090a99dd7e5a3d8708bf13e94f677228b90787"
         "631f0700000000fd4501483045022100ea61f098fdaf5b26f7b37b578ac0dcde84ae"
         "c1169aa45f84a876ff97075e29c602205ec1abeb2be0efb3891e4b1cc88cc687ab8d"
@@ -94,14 +94,14 @@ PAYER_AFTER = {
         "eb0a877c5100000000000017a9145c6f176aa8bab82688c8b07562595a622d7b889a"
         "8700000000"
       ),
-      (
+      "script": (
         "6355b275a9144cc776751eb4d41f23feaf94697cb7ec2fe597a4882103c7b09d53bd"
         "b0ef9cfea06c1e6f2192e6a91cdeac209402bc36c1c368021a8611ac67a914bcc82b"
         "07e3c1317a52d7adbff1ef869d4e46ac35882102a73443bc32f5fec6a551f71af753"
         "11b0876686156d16d367562d3d29987792d5ac68"
       ),
-      None
-    ]
+      "revoke_secret": None
+    }
   ],
   "deposit_script_hex": (
     "63522102a73443bc32f5fec6a551f71af75311b0876686156d16d367562d3d29987792d5"
@@ -134,10 +134,12 @@ PAYEE_AFTER_REQUEST = {
   "change_rawtx": None,
   "timeout_rawtx": None,
   "commits_requested": [
-    [
-      1,
-      "b9724d0ef63b346e77ba0316978beae6af63d823f0ebc1c8199e22d52a4274b0"
-    ]
+    {
+      "quantity": 1,
+      "revoke_secret": (
+        "b9724d0ef63b346e77ba0316978beae6af63d823f0ebc1c8199e22d52a4274b0"
+      )
+    }
   ],
   "commits_active": [],
   "deposit_script_hex": (
@@ -183,8 +185,8 @@ PAYEE_AFTER_SET_COMMIT = {
   ),
   "payer_wif": None,
   "commits_active": [
-    [
-      (
+    {
+      "rawtx": (
         "01000000017231934b8873769b325c090a99dd7e5a3d8708bf13e94f677228b907876"
         "31f0700000000fd4501483045022100ea61f098fdaf5b26f7b37b578ac0dcde84aec1"
         "169aa45f84a876ff97075e29c602205ec1abeb2be0efb3891e4b1cc88cc687ab8dd3c"
@@ -200,14 +202,16 @@ PAYEE_AFTER_SET_COMMIT = {
         "1e6a1c5144cf3299cdb4115af7e5b1a21ecac52fedaf164910f4fe4beb0a877c51000"
         "00000000017a9145c6f176aa8bab82688c8b07562595a622d7b889a8700000000"
       ),
-      (
+      "script": (
         "6355b275a9144cc776751eb4d41f23feaf94697cb7ec2fe597a4882103c7b09d53bdb"
         "0ef9cfea06c1e6f2192e6a91cdeac209402bc36c1c368021a8611ac67a914bcc82b07"
         "e3c1317a52d7adbff1ef869d4e46ac35882102a73443bc32f5fec6a551f71af75311b"
         "0876686156d16d367562d3d29987792d5ac68"
       ),
-      "b9724d0ef63b346e77ba0316978beae6af63d823f0ebc1c8199e22d52a4274b0"
-    ]
+      "revoke_secret": (
+        "b9724d0ef63b346e77ba0316978beae6af63d823f0ebc1c8199e22d52a4274b0"
+      )
+    }
   ],
   "change_rawtx": None,
   "spend_secret": (
@@ -292,7 +296,6 @@ class TestCommit(unittest.TestCase):
         self.payee.load(PAYEE_BEFORE_REQUEST)
 
         for quantity in range(1, 10):
-            print(quantity)
             amount, revoke_hash = self.payee.request_commit(quantity)
             commit = self.payer.create_commit(amount, revoke_hash, DELAY_TIME)
             self.payee.set_commit(commit["rawtx"], commit["script"])

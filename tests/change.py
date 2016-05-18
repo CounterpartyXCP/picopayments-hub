@@ -97,7 +97,7 @@ AFTER_STATE = {
 }
 
 
-class TestChange(unittest.TestCase):
+class TestRecoverChange(unittest.TestCase):
 
     def setUp(self):
         self.channel = picopayments.channel.Payer(
@@ -107,7 +107,7 @@ class TestChange(unittest.TestCase):
     def tearDown(self):
         self.channel.stop()
 
-    def test_change(self):
+    def test_recover_change(self):
         self.channel.load(BEFORE_STATE)
         self.assertFalse(self.channel.can_change_recover())
         self.channel.set_spend_secret(SPEND_SECRET)
