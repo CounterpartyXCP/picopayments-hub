@@ -134,12 +134,7 @@ PAYEE_AFTER_REQUEST = {
   "change_rawtx": None,
   "timeout_rawtx": None,
   "commits_requested": [
-    {
-      "quantity": 1,
-      "revoke_secret": (
-        "b9724d0ef63b346e77ba0316978beae6af63d823f0ebc1c8199e22d52a4274b0"
-      )
-    }
+    "b9724d0ef63b346e77ba0316978beae6af63d823f0ebc1c8199e22d52a4274b0"
   ],
   "commits_active": [],
   "deposit_script_hex": (
@@ -302,6 +297,9 @@ class TestCommit(unittest.TestCase):
 
         self.assertEqual(self.payer.get_transferred_amount(), 9)
         self.assertEqual(self.payee.get_transferred_amount(), 9)
+
+    def test_revoke_commit(self):
+        pass
 
         # print(json.dumps(self.payer.save(), indent=2))
         # print(json.dumps(self.payee.save(), indent=2))

@@ -20,10 +20,10 @@ class Base(util.UpdateThreadMixin):
     timeout_rawtx = None
     change_rawtx = None
 
-    commits_requested = []  # [{
-    #                             "quantity": int,
-    #                             "revoke_secret": hex
-    #                         }]
+    # Quantity not needed as payer may change it. If its heigher its against
+    # our self intrest to throw away money. If its lower it gives us a better
+    # resolution when reversing the channel.
+    commits_requested = []  # ["revoke_secret_hex"]
 
     commits_active = []     # [{
     #                             "rawtx": hex,

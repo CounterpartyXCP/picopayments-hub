@@ -70,16 +70,9 @@ class Payee(Base):
     def request_commit(self, quantity):
         with self.mutex:
             self.validate_transfer_quantity(quantity)
-
             secret = util.b2h(os.urandom(32))  # secure random number
             secret_hash = util.hash160hex(secret)
-
-            # add request to pending
-            self.commits_requested.append({
-                "quantity": quantity,
-                "revoke_secret": secret
-            })
-
+            self.commits_requested.append(secret)
             return quantity, secret_hash
 
     def validate_commit_secret_hash(self, script):
@@ -123,21 +116,14 @@ class Payee(Base):
 
             quantity = self.control.get_quantity(rawtx)
             revoke_secret_hash = get_commit_revoke_secret_hash(script)
-            for requested_commit in self.commits_requested[:]:
-                request_quantity = requested_commit["quantity"]
-                revoke_secret = requested_commit["revoke_secret"]
+            for revoke_secret in self.commits_requested[:]:
 
                 # revoke secret hash must match as it would
                 # otherwise break the channels reversability
                 if revoke_secret_hash == util.hash160hex(revoke_secret):
 
-                    # Except regardless if quantity matches or not. If its
-                    # heigher its against our self intrest to throw away money.
-                    # If its lower it gives us a better resolution when
-                    # reversing the channel.
-
                     # remove from requests
-                    self.commits_requested.remove(requested_commit)
+                    self.commits_requested.remove(revoke_secret)
 
                     # add to active and sort by quantity
                     self.commits_active.append({
@@ -148,6 +134,7 @@ class Payee(Base):
                     def sort_func(entry):  # FIXME move to base
                         return self.control.get_quantity(entry["rawtx"])
                     self.commits_active.sort(key=sort_func)
+
                     return self.get_transferred_amount()
 
             return None
