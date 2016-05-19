@@ -10,6 +10,9 @@ from pycoin.tx.pay_to.ScriptType import ScriptType
 from pycoin.tx.pay_to import SUBCLASSES
 from pycoin.encoding import hash160
 from pycoin.tx.pay_to.ScriptType import DEFAULT_PLACEHOLDER_SIGNATURE
+from pycoin.tx.script.check_signature import parse_signature_blob
+from pycoin.tx.script.der import UnexpectedDER
+from pycoin import ecdsa
 
 
 MAX_SEQUENCE = 0x0000FFFF
@@ -170,50 +173,87 @@ class AbsScriptChannelDeposit(ScriptType):
             return obj
         raise ValueError("bad script")
 
-    def solve(self, **kwargs):
+    def solve_timeout(self, **kwargs):
         hash160_lookup = kwargs["hash160_lookup"]
-        signature_type = kwargs["signature_type"]
-        sign_value = kwargs["sign_value"]
-        spend_secret = kwargs["spend_secret"]
-        spend_type = kwargs["spend_type"]
+        private_key = hash160_lookup.get(encoding.hash160(self.payer_sec))
+        secret_exponent, public_pair, compressed = private_key
+        sig = self._create_script_signature(
+            secret_exponent, kwargs["sign_value"], kwargs["signature_type"]
+        )
+        return tools.compile("{sig} OP_0 OP_0".format(sig=b2h(sig)))
 
+    def solve_change(self, **kwargs):
+        hash160_lookup = kwargs["hash160_lookup"]
+        spend_secret = kwargs["spend_secret"]
+        private_key = hash160_lookup.get(encoding.hash160(self.payer_sec))
+        secret_exponent, public_pair, compressed = private_key
+        sig = self._create_script_signature(
+            secret_exponent, kwargs["sign_value"], kwargs["signature_type"]
+        )
+        spend_secret_hash = get_deposit_spend_secret_hash(self.script)
+        provided_spend_secret_hash = b2h(hash160(h2b(spend_secret)))
+        assert(spend_secret_hash == provided_spend_secret_hash)
+        script_text = "{sig} {secret} OP_1 OP_0".format(
+            sig=b2h(sig), secret=spend_secret
+        )
+        return tools.compile(script_text)
+
+    def solve_create_commit(self, **kwargs):
+        hash160_lookup = kwargs["hash160_lookup"]
+        private_key = hash160_lookup.get(encoding.hash160(self.payer_sec))
+        secret_exponent, public_pair, compressed = private_key
+        sig = self._create_script_signature(
+            secret_exponent, kwargs["sign_value"], kwargs["signature_type"]
+        )
         signature_placeholder = kwargs.get("signature_placeholder",
                                            DEFAULT_PLACEHOLDER_SIGNATURE)
+        script_text = "OP_0 {payer_sig} {payee_sig} OP_1".format(
+            payer_sig=b2h(sig), payee_sig=b2h(signature_placeholder)
+        )
+        return tools.compile(script_text)
 
-        # get signing key
-        if spend_type == "finalize_commit":
-            private_key = hash160_lookup.get(encoding.hash160(self.payee_sec))
-        else:
-            private_key = hash160_lookup.get(encoding.hash160(self.payer_sec))
+    def solve_finalize_commit(self, **kwargs):
+        hash160_lookup = kwargs.get("hash160_lookup")
+        sign_value = kwargs.get("sign_value")
+        signature_type = kwargs.get("signature_type")
+        existing_script = kwargs.get("existing_script")
 
+        # FIXME validate on receiving the commit
+        # validate payer sig
+        opcode, data, pc = tools.get_opcode(existing_script, 0)  # OP_0
+        opcode, payer_sig, pc = tools.get_opcode(existing_script, pc)
+        sig_pair, actual_signature_type = parse_signature_blob(payer_sig)
+        try:
+            public_pair = encoding.sec_to_public_pair(self.payer_sec)
+            sig_pair, signature_type = parse_signature_blob(payer_sig)
+            valid = ecdsa.verify(ecdsa.generator_secp256k1, public_pair,
+                                 sign_value, sig_pair)
+            if not valid:
+                raise Exception("Invalid payer public_pair!")
+        except (encoding.EncodingError, UnexpectedDER):
+            raise Exception("Invalid payer public_pair!")
+
+        # sign
+        private_key = hash160_lookup.get(encoding.hash160(self.payee_sec))
         secret_exponent, public_pair, compressed = private_key
-        sig = self._create_script_signature(secret_exponent, sign_value,
-                                            signature_type)
-        if spend_type == "timeout":
-            script_sig = "{sig} OP_0 OP_0".format(sig=b2h(sig))
-        elif spend_secret is not None:  # change tx
-            spend_secret_hash = get_deposit_spend_secret_hash(self.script)
-            provided_spend_secret_hash = b2h(hash160(h2b(spend_secret)))
-            assert(spend_secret_hash == provided_spend_secret_hash)
-            script_sig = "{sig} {secret} OP_1 OP_0".format(
-                sig=b2h(sig), secret=spend_secret
-            )
-        elif spend_type == "create_commit":
-            script_sig = "{payer_sig} {payee_sig} OP_1".format(
-                payer_sig=b2h(sig), payee_sig=b2h(signature_placeholder)
-            )
-        elif spend_type == "finalize_commit":
+        payee_sig = self._create_script_signature(
+            secret_exponent, sign_value, signature_type
+        )
 
-            # extract payer sig
-            existing_script = kwargs.get("existing_script")
-            opcode, payer_sig, text = get_word(existing_script, 0)
+        script_text = "OP_0 {payer_sig} {payee_sig} OP_1".format(
+            payer_sig=b2h(payer_sig), payee_sig=b2h(payee_sig)
+        )
+        return tools.compile(script_text)
 
-            script_sig = "{payer_sig} {payee_sig} OP_1".format(
-                payer_sig=b2h(payer_sig), payee_sig=b2h(sig)
-            )
-        else:
-            raise Exception("Illegal State!")
-        return tools.compile(script_sig)
+    def solve(self, **kwargs):
+        solve_methods = {
+            "timeout": self.solve_timeout,
+            "change": self.solve_change,
+            "create_commit": self.solve_create_commit,
+            "finalize_commit": self.solve_finalize_commit
+        }
+        solve_method = solve_methods[kwargs["spend_type"]]
+        return solve_method(**kwargs)
 
     def __repr__(self):
         script_text = tools.disassemble(self.script)

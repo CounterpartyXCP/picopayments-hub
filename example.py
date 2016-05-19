@@ -3,8 +3,8 @@ import json
 from picopayments.channel import Payer, Payee
 
 
-PAYER_WIF = "cSthi1Ye1sbHepC5s8rNukQBAKLCyct6hLg6MCH9Ybk1cKfGcPb2"
-PAYEE_WIF = "cVmyYsHfeJWmCFy7N6DUeC4aXMS8vRR57aW7eGmpFVLfSHWjZ4jc"
+PAYER_WIF = "cSEAvYo5yDPzuBCZcttaxBpH4UpxYCPtaZSy8iRXxDG4J9snisJZ"
+PAYEE_WIF = "cNjNTW74gPNat6Svc7hdpxr3P1zSMNhC2vAhCLk5546dW2w3hZFc"
 ASSET = "A14456548018133352000"
 URL = "http://127.0.0.1:14000/api/"
 
@@ -27,6 +27,11 @@ deposit = payer.deposit(PAYER_WIF, payee_pubkey, spend_secret_hash,
 # payer publishes deposit rawtx and script
 payee.set_deposit(deposit["rawtx"], deposit["script"])
 
+
+print(json.dumps(payer.save(), indent=2))
+print(json.dumps(payee.save(), indent=2))
+
+
 # wait until deposit is confirmed
 while not payer.is_deposit_confirmed():  # FIXME pass minconfirms
     time.sleep(1)
@@ -42,7 +47,8 @@ for quantity in range(1, 10):
     quantity, revoke_secret_hash = payee.request_commit(quantity)
 
     # payer creates and sign commit
-    commit = payer.create_commit(quantity, revoke_secret_hash)
+    delay_time = 5
+    commit = payer.create_commit(quantity, revoke_secret_hash, delay_time)
 
     # payer publishes commit and payee updates its state
     payee.set_commit(commit["rawtx"], commit["script"])

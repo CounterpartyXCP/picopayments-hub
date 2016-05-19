@@ -159,7 +159,6 @@ class Payee(Base):
                 util.h2b(self.deposit_script_hex)
             )
             commit["rawtx"] = rawtx  # update commit
-            # TODO publish
             return util.gettxid(rawtx)
 
     def update(self):

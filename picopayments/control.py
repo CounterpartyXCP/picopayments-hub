@@ -54,6 +54,7 @@ class Control(object):
         else:
             default_url = DEFAULT_COUNTERPARTY_RPC_MAINNET_URL
 
+        self.dryrun = dryrun
         self.fee = fee
         self.dust_size = dust_size
         self.api_url = api_url or default_url
@@ -113,8 +114,11 @@ class Control(object):
         return asset_balance, btc_balance
 
     def publish(self, rawtx):
-        raise NotImplementedError()
-        # see http://counterparty.io/docs/api/#wallet-integration
+        if self.dryrun:
+            print("PUBLISH:", rawtx)
+        else:
+            raise NotImplementedError()
+            # see http://counterparty.io/docs/api/#wallet-integration
 
     def get_quantity(self, rawtx):
         result = self._rpc_call({
@@ -184,7 +188,7 @@ class Control(object):
         rawtx = self.create_tx(payer_address, dest_address,
                                quantity, extra_btc=extra_btc)
         rawtx = self.btctxstore.sign_tx(rawtx, [payer_wif])
-        self.btctxstore.publish(rawtx)
+        self.publish(rawtx)
         return rawtx, script
 
     def create_commit(self, payer_wif, deposit_script, quantity,
@@ -247,7 +251,9 @@ class Control(object):
             tx.sign(hash160_lookup, p2sh_lookup=p2sh_lookup,
                     spend_type="finalize_commit", spend_secret=None)
 
-        return tx.as_hex()
+        rawtx = tx.as_hex()
+        self.publish(rawtx)
+        return rawtx
 
     def _recover(self, payer_wif, deposit_rawtx,
                  script, spend_type, spend_secret):
@@ -285,7 +291,7 @@ class Control(object):
         # assert(tx.bad_signature_count() == 0)
 
         rawtx = tx.as_hex()
-        self.btctxstore.publish(rawtx)
+        self.publish(rawtx)
         return rawtx
 
     def timeout_recover(self, payer_wif, deposit_rawtx, script):

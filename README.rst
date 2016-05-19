@@ -146,7 +146,7 @@ script sig:
 
 ::
     
-    <payer signature> <payee signature> OP_TRUE
+    OP_FALSE <payer signature> <payee signature> OP_TRUE
 
 pay to script:
 
