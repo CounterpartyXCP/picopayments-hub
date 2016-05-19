@@ -24,9 +24,9 @@ setup(
     tests_require=open("test_requirements.txt").readlines(),
     packages=find_packages(),
     classifiers=[
-         "Development Status :: 1 - Planning",
+        # "Development Status :: 1 - Planning",
         # "Development Status :: 2 - Pre-Alpha",
-        # "Development Status :: 3 - Alpha",
+        "Development Status :: 3 - Alpha",
         # "Development Status :: 4 - Beta",
         # "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",

@@ -106,6 +106,7 @@ class Payee(Base):
 
             # TODO validate rawtx
             # TODO validate script
+            # TODO validate rawtx signed by payer
             # TODO check it is for the current deposit
             # TODO check given script and rawtx match
             # TODO check given script is commit script
@@ -146,6 +147,20 @@ class Payee(Base):
                     break
             self.revoke_all(secrets)
             return secrets
+
+    def close_channel(self):
+        with self.mutex:
+            self._assert_open_state()
+            assert(len(self.commits_active) > 0)
+            self._order_active()
+            commit = self.commits_active[-1]
+            rawtx = self.control.finalize_commit(
+                self.payee_wif, commit["rawtx"],
+                util.h2b(self.deposit_script_hex)
+            )
+            commit["rawtx"] = rawtx  # update commit
+            # TODO publish
+            return util.gettxid(rawtx)
 
     def update(self):
         pass

@@ -227,10 +227,27 @@ class Control(object):
             tx.sign(hash160_lookup, p2sh_lookup=p2sh_lookup,
                     spend_type="create_commit", spend_secret=None)
 
-        # publish tx
-        rawtx = tx.as_hex()
-        self.btctxstore.publish(rawtx)
-        return rawtx, commit_script
+        return tx.as_hex(), commit_script
+
+    def finalize_commit(self, payee_wif, commit_rawtx, deposit_script):
+
+        # prep for signing
+        tx = pycoin.tx.Tx.from_hex(commit_rawtx)
+        for txin in tx.txs_in:
+            utxo_tx = self.btctxstore.service.get_tx(txin.previous_hash)
+            tx.unspents.append(utxo_tx.txs_out[txin.previous_index])
+
+        # sign tx
+        hash160_lookup = pycoin.tx.pay_to.build_hash160_lookup(
+            [util.wif2secretexponent(payee_wif)]
+        )
+        p2sh_lookup = pycoin.tx.pay_to.build_p2sh_lookup([deposit_script])
+        expire_time = get_deposit_expire_time(deposit_script)
+        with DepositScriptHandler(expire_time):
+            tx.sign(hash160_lookup, p2sh_lookup=p2sh_lookup,
+                    spend_type="finalize_commit", spend_secret=None)
+
+        return tx.as_hex()
 
     def _recover(self, payer_wif, deposit_rawtx,
                  script, spend_type, spend_secret):

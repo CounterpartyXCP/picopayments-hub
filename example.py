@@ -1,67 +1,66 @@
 import time
-import picopayments
+import json
+from picopayments.channel import Payer, Payee
 
-
-ASSET = "A14456548018133352000"
-USER = "rpc"
-PASSWORD = "1234"
-API_URL = "http://127.0.0.1:14000/api/"
-TESTNET = True
-DRYRUN = True
 
 PAYER_WIF = "cSthi1Ye1sbHepC5s8rNukQBAKLCyct6hLg6MCH9Ybk1cKfGcPb2"
 PAYEE_WIF = "cVmyYsHfeJWmCFy7N6DUeC4aXMS8vRR57aW7eGmpFVLfSHWjZ4jc"
+ASSET = "A14456548018133352000"
+URL = "http://127.0.0.1:14000/api/"
 
-payer = picopayments.channel.Payer(
-    ASSET, api_url=API_URL, testnet=TESTNET, dryrun=DRYRUN
-)
-payee = picopayments.channel.Payee(
-    ASSET, api_url=API_URL, testnet=TESTNET, dryrun=DRYRUN
-)
+payer = Payer(ASSET, api_url=URL, user="rpc", password="1234", testnet=True)
+payee = Payee(ASSET, api_url=URL, user="rpc", password="1234", testnet=True)
 
 
-###########################
-# SETUP CHANNEL (DEPOSIT) #
-###########################
+# SETUP CHANNEL (DEPOSIT FUNDS)
 
 
-# payee published its pubkey and declares the spend secret hash
+# payee publishes pubkey and spend secret hash
 payee_pubkey, spend_secret_hash = payee.setup(PAYEE_WIF)
 
-# payer deposits funds and choose expire time
+# payer chooses an expire time and deposits funds
+deposit_expire_time = 6 * 24 * 7  # one week with avg block gen speed
+deposit_quantity = 1337  # in satoshi
 deposit = payer.deposit(PAYER_WIF, payee_pubkey, spend_secret_hash,
-                        picopayments.scripts.MAX_SEQUENCE, 1337)
+                        deposit_expire_time, deposit_quantity)
 
 # payer publishes deposit rawtx and script
-deposit_rawtx = deposit["rawtx"]
-deposit_script_hex = deposit["script"]
-payee.set_deposit(deposit_rawtx, deposit_script_hex)
+payee.set_deposit(deposit["rawtx"], deposit["script"])
 
 # wait until deposit is confirmed
-while not payer.is_deposit_confirmed():
+while not payer.is_deposit_confirmed():  # FIXME pass minconfirms
     time.sleep(1)
 
 
-##################################
-# MOVE FUNDS FROM PAYER TO PAYEE #
-##################################
+# MOVE FUNDS BETWEEN PAYER TO PAYEE
 
 
-# payee requests amount and provides revoke secret hash for commit tx
-amount, revoke_secret_hash = payee.request_commit(1)
+# payer send funds to payee
+for quantity in range(1, 10):
 
-# payer creates and sign commit
-commit = payer.create_commit(amount, revoke_secret_hash)
+    # payee requests quantity and provides revoke secret hash for commit tx
+    quantity, revoke_secret_hash = payee.request_commit(quantity)
 
-# payer publishes commit rawtx and script
-commit_rawtx = commit["rawtx"]
-commit_script = commit["script"]
-payee.set_commit(commit_rawtx, commit_script)
+    # payer creates and sign commit
+    commit = payer.create_commit(quantity, revoke_secret_hash)
+
+    # payer publishes commit and payee updates its state
+    payee.set_commit(commit["rawtx"], commit["script"])
 
 
-# import json
-# print(json.dumps(payer.save(), indent=2))
-# print(json.dumps(payee.save(), indent=2))
+# payee returns funds by revealing revoke secrets
+revoke_secrets = payee.revoke_until(4)
+payer.revoke_all(revoke_secrets)
+
+
+# CLOSE CHANNEL (PUBLISH COMMIT)
+
+# payee signs and publishes commit
+txid = payee.close_channel()
+
+
+print(json.dumps(payer.save(), indent=2))
+print(json.dumps(payee.save(), indent=2))
 
 
 payer.stop()

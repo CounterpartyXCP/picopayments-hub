@@ -180,22 +180,36 @@ class AbsScriptChannelDeposit(ScriptType):
         signature_placeholder = kwargs.get("signature_placeholder",
                                            DEFAULT_PLACEHOLDER_SIGNATURE)
 
-        private_key = hash160_lookup.get(encoding.hash160(self.payer_sec))
+        # get signing key
+        if spend_type == "finalize_commit":
+            private_key = hash160_lookup.get(encoding.hash160(self.payee_sec))
+        else:
+            private_key = hash160_lookup.get(encoding.hash160(self.payer_sec))
+
         secret_exponent, public_pair, compressed = private_key
-        sig = b2h(self._create_script_signature(secret_exponent, sign_value,
-                                                signature_type))
+        sig = self._create_script_signature(secret_exponent, sign_value,
+                                            signature_type)
         if spend_type == "timeout":
-            script_sig = "{sig} OP_0 OP_0".format(sig=sig)
+            script_sig = "{sig} OP_0 OP_0".format(sig=b2h(sig))
         elif spend_secret is not None:  # change tx
             spend_secret_hash = get_deposit_spend_secret_hash(self.script)
             provided_spend_secret_hash = b2h(hash160(h2b(spend_secret)))
             assert(spend_secret_hash == provided_spend_secret_hash)
             script_sig = "{sig} {secret} OP_1 OP_0".format(
-                sig=sig, secret=spend_secret
+                sig=b2h(sig), secret=spend_secret
             )
         elif spend_type == "create_commit":
             script_sig = "{payer_sig} {payee_sig} OP_1".format(
-                payer_sig=sig, payee_sig=b2h(signature_placeholder)
+                payer_sig=b2h(sig), payee_sig=b2h(signature_placeholder)
+            )
+        elif spend_type == "finalize_commit":
+
+            # extract payer sig
+            existing_script = kwargs.get("existing_script")
+            opcode, payer_sig, text = get_word(existing_script, 0)
+
+            script_sig = "{payer_sig} {payee_sig} OP_1".format(
+                payer_sig=b2h(payer_sig), payee_sig=b2h(sig)
             )
         else:
             raise Exception("Illegal State!")
