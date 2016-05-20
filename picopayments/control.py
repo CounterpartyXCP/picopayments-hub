@@ -33,35 +33,6 @@ DEFAULT_COUNTERPARTY_RPC_USER = "rpc"
 DEFAULT_COUNTERPARTY_RPC_PASSWORD = "1234"
 
 
-# from counterpartylib.lib import util
-# from counterpartylib.lib import config
-# from counterpartylib.lib.backend import addrindex
-#
-# config.TESTNET =
-# config.RPC =
-# config.BACKEND_URL =
-# config.BACKEND_SSL_NO_VERIFY =
-#
-# def counterparty_api(method, params):
-#     return util.api(method, params)
-#
-# def bitcoin_api(method, params):
-#     return addrindex.rpc(method, params)
-#
-# def do_send(source, destination, asset, quantity, fee, encoding):
-#     validateaddress = bitcoin_api('validateaddress', [source])
-#     assert validateaddress['ismine']
-#     pubkey = validateaddress['pubkey']
-#     unsigned_tx = counterparty_api('create_send', {
-#         'source': source, 'destination': destination,
-#         'asset': asset, 'quantity': quantity,
-#         'pubkey': pubkey, 'allow_unconfirmed_inputs': True
-#     })
-#     signed_tx = bitcoin_api('signrawtransaction', [unsigned_tx])['hex']
-#     tx_hash = bitcoin_api('sendrawtransaction', [signed_tx])
-#     return tx_hash
-
-
 class Control(object):
 
     def __init__(self, asset, user=DEFAULT_COUNTERPARTY_RPC_USER,
@@ -153,7 +124,6 @@ class Control(object):
             print("PUBLISH:", rawtx)
         else:
             self.bitcoind_rpc.sendrawtransaction(rawtx)
-            # see http://counterparty.io/docs/api/#wallet-integration
 
     def get_quantity(self, rawtx):
         result = self._rpc_call({
@@ -329,10 +299,8 @@ class Control(object):
                     spend_type=spend_type, spend_secret=spend_secret,
                     revoke_secret=revoke_secret)
 
-        # FIXME patch pycoin so it works
-        assert(tx.bad_signature_count() == 0)
-
         rawtx = tx.as_hex()
+        assert(self.can_publish(rawtx))
         self.publish(rawtx)
         return rawtx
 
@@ -352,10 +320,8 @@ class Control(object):
             tx.sign(hash160_lookup, p2sh_lookup=p2sh_lookup,
                     spend_type=spend_type, spend_secret=spend_secret)
 
-        # FIXME patch pycoin so it works
-        assert(tx.bad_signature_count() == 0)
-
         rawtx = tx.as_hex()
+        assert(self.can_publish(rawtx))
         self.publish(rawtx)
         return rawtx
 
@@ -370,3 +336,7 @@ class Control(object):
 
     def change_recover(self, wif, script, spend_secret):
         return self._recover_deposit(wif, script, "change", spend_secret)
+
+    def can_publish(self, rawtx):
+        tx = pycoin.tx.Tx.from_hex(rawtx)
+        return tx.bad_signature_count() == 0

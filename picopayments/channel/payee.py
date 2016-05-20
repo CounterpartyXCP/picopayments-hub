@@ -10,6 +10,7 @@ from picopayments.scripts import get_deposit_payee_pubkey
 from picopayments.scripts import get_commit_spend_secret_hash
 from picopayments.scripts import get_commit_payee_pubkey
 from picopayments.scripts import get_commit_revoke_secret_hash
+from picopayments.scripts import get_commit_delay_time
 from picopayments.channel.base import Base
 
 
@@ -162,12 +163,21 @@ class Payee(Base):
             return util.gettxid(rawtx)
 
     def update(self):
+        with self.mutex:
 
-        if self.can_payout_recover():
-            self.payout_recover()
+            if self.can_payout_recover():
+                self.payout_recover()
 
     def can_payout_recover(self):
-        pass
+        with self.mutex:
+            for commit in (self.commits_active + self.commits_revoked):
+                rawtx = commit["rawtx"]
+                if self.control.can_publish(rawtx):
+                    delay_time = get_commit_delay_time(commit["script"])
+                    confirms = self.get_confirms(rawtx)
+                    if confirms >= delay_time:
+                        return True
+            return False
 
     def payout_recover(self):
         pass

@@ -112,6 +112,7 @@ class TestRecoverChange(unittest.TestCase):
         self.assertFalse(self.channel.can_change_recover())
         self.channel.set_spend_secret(SPEND_SECRET)
         self.assertTrue(self.channel.can_change_recover())
+        import pudb;pu.db
         self.channel.update()
         self.assertEqual(self.channel.save(), AFTER_STATE)
 
