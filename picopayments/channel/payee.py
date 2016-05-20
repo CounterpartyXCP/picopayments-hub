@@ -162,4 +162,12 @@ class Payee(Base):
             return util.gettxid(rawtx)
 
     def update(self):
+
+        if self.can_payout_recover():
+            self.payout_recover()
+
+    def can_payout_recover(self):
+        pass
+
+    def payout_recover(self):
         pass

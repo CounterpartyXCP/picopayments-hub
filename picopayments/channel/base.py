@@ -35,7 +35,7 @@ class Base(util.UpdateThreadMixin):
     #                         }]
 
     commits_revoked = []    # [{
-    #                            "rawtx": hex,
+    #                            "rawtx": hex,  # unneeded?
     #                            "script": hex,
     #                            "revoke_secret": hex
     #                         }]

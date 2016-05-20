@@ -148,6 +148,72 @@ def compile_commit_script(payer_pubkey, payee_pubkey, spend_secret_hash,
     return tools.compile(script_text)
 
 
+class AbsScriptChannelCommit(ScriptType):
+
+    def __init__(self, delay_time, spend_secret_hash,
+                 payee_sec, payer_sec, revoke_secret_hash):
+        self.delay_time = delay_time
+        self.spend_secret_hash = spend_secret_hash
+        self.payee_sec = payee_sec
+        self.payer_sec = payer_sec
+        self.revoke_secret_hash = revoke_secret_hash
+        self.script = compile_commit_script(
+            b2h(payer_sec), b2h(payee_sec), spend_secret_hash,
+            revoke_secret_hash, delay_time
+        )
+
+    @classmethod
+    def from_script(cls, script):
+        r = cls.match(script)
+        if r:
+            delay_time = get_commit_delay_time(cls.TEMPLATE)
+            spend_secret_hash = b2h(r["PUBKEYHASH_LIST"][0])
+            payee_sec = r["PUBKEY_LIST"][0]
+            revoke_secret_hash = b2h(r["PUBKEYHASH_LIST"][1])
+            payer_sec = r["PUBKEY_LIST"][1]
+            obj = cls(delay_time, spend_secret_hash,
+                      payee_sec, payer_sec, revoke_secret_hash)
+            assert(obj.script == script)
+            return obj
+        raise ValueError("bad script")
+
+    def solve_payout(self, **kwargs):
+        hash160_lookup = kwargs["hash160_lookup"]
+        spend_secret = kwargs["spend_secret"]
+        private_key = hash160_lookup.get(encoding.hash160(self.payee_sec))
+        secret_exponent, public_pair, compressed = private_key
+        sig = self._create_script_signature(
+            secret_exponent, kwargs["sign_value"], kwargs["signature_type"]
+        )
+        return tools.compile("{sig} {spend_secret} OP_1".format(
+            sig=b2h(sig), spend_secret=spend_secret
+        ))
+
+    def solve_revoke(self, **kwargs):
+        hash160_lookup = kwargs["hash160_lookup"]
+        revoke_secret = kwargs["revoke_secret"]
+        private_key = hash160_lookup.get(encoding.hash160(self.payer_sec))
+        secret_exponent, public_pair, compressed = private_key
+        sig = self._create_script_signature(
+            secret_exponent, kwargs["sign_value"], kwargs["signature_type"]
+        )
+        return tools.compile("{sig} {revoke_secret} OP_0".format(
+            sig=b2h(sig), revoke_secret=revoke_secret
+        ))
+
+    def solve(self, **kwargs):
+        solve_methods = {
+            "payout": self.solve_payout,
+            "revoke": self.solve_revoke,
+        }
+        solve_method = solve_methods[kwargs["spend_type"]]
+        return solve_method(**kwargs)
+
+    def __repr__(self):
+        script_text = tools.disassemble(self.script)
+        return "<ScriptChannelCommit: {0}".format(script_text)
+
+
 class AbsScriptChannelDeposit(ScriptType):
 
     def __init__(self, payer_sec, payee_sec, spend_secret_hash, expire_time):
@@ -258,6 +324,23 @@ class AbsScriptChannelDeposit(ScriptType):
     def __repr__(self):
         script_text = tools.disassemble(self.script)
         return "<ScriptChannelDeposit: {0}".format(script_text)
+
+
+class CommitScriptHandler():
+
+    def __init__(self, delay_time):
+        class ScriptChannelCommit(AbsScriptChannelCommit):
+            TEMPLATE = compile_deposit_script(
+                "OP_PUBKEY", "OP_PUBKEY",
+                "OP_PUBKEYHASH", delay_time
+            )
+        self.script_handler = ScriptChannelCommit
+
+    def __enter__(self):
+        SUBCLASSES.insert(0, self.script_handler)
+
+    def __exit__(self, type, value, traceback):
+        SUBCLASSES.pop(0)
 
 
 class DepositScriptHandler():

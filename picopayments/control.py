@@ -16,9 +16,11 @@ from .scripts import get_deposit_spend_secret_hash
 from .scripts import get_deposit_payee_pubkey
 from .scripts import get_deposit_payer_pubkey
 from .scripts import get_deposit_expire_time
+from .scripts import get_commit_delay_time
 from .scripts import compile_commit_script
 from .scripts import compile_deposit_script
 from .scripts import DepositScriptHandler
+from .scripts import CommitScriptHandler
 
 
 # FIXME make fees per kb and auto adjust to market price
@@ -288,32 +290,62 @@ class Control(object):
         self.publish(rawtx)
         return rawtx
 
-    def _recover(self, payer_wif, deposit_rawtx,
-                 script, spend_type, spend_secret):
+    def _recover_tx(self, dest_address, script, sequence=None):
 
         # get channel info
-        channel_address = util.script2address(script, self.netcode)
-        asset_balance, btc_balance = self.get_balance(channel_address)
-        expire_time = get_deposit_expire_time(script)
+        src_address = util.script2address(script, self.netcode)
+        asset_balance, btc_balance = self.get_balance(src_address)
 
         # create timeout tx
-        payer_address = util.wif2address(payer_wif)
-        rawtx = self.create_tx(channel_address, payer_address, asset_balance,
+        rawtx = self.create_tx(src_address, dest_address, asset_balance,
                                extra_btc=btc_balance - self.fee)
 
         # prep for script compliance and signing
         tx = pycoin.tx.Tx.from_hex(rawtx)
-        if spend_type == "timeout":
+        if sequence:
             tx.version = 2  # enable relative lock-time, see bip68 & bip112
         for txin in tx.txs_in:
-            if spend_type == "timeout":
-                txin.sequence = expire_time  # relative lock-time
+            if sequence:
+                txin.sequence = sequence  # relative lock-time
             utxo_tx = self.btctxstore.service.get_tx(txin.previous_hash)
             tx.unspents.append(utxo_tx.txs_out[txin.previous_index])
 
+        return tx
+
+    def _recover_commit(self, wif, script, revoke_secret,
+                        spend_secret, spend_type):
+
+        dest_address = util.wif2address(wif)
+        delay_time = get_commit_delay_time(script)
+        tx = self._recover_tx(dest_address, script, delay_time)
+
         # sign
         hash160_lookup = pycoin.tx.pay_to.build_hash160_lookup(
-            [util.wif2secretexponent(payer_wif)]
+            [util.wif2secretexponent(wif)]
+        )
+        p2sh_lookup = pycoin.tx.pay_to.build_p2sh_lookup([script])
+        with CommitScriptHandler(delay_time):
+            tx.sign(hash160_lookup, p2sh_lookup=p2sh_lookup,
+                    spend_type=spend_type, spend_secret=spend_secret,
+                    revoke_secret=revoke_secret)
+
+        # FIXME patch pycoin so it works
+        assert(tx.bad_signature_count() == 0)
+
+        rawtx = tx.as_hex()
+        self.publish(rawtx)
+        return rawtx
+
+    def _recover_deposit(self, wif, script, spend_type, spend_secret):
+
+        dest_address = util.wif2address(wif)
+        expire_time = get_deposit_expire_time(script)
+        tx = self._recover_tx(dest_address, script,
+                              expire_time if spend_type == "timeout" else None)
+
+        # sign
+        hash160_lookup = pycoin.tx.pay_to.build_hash160_lookup(
+            [util.wif2secretexponent(wif)]
         )
         p2sh_lookup = pycoin.tx.pay_to.build_p2sh_lookup([script])
         with DepositScriptHandler(expire_time):
@@ -321,15 +353,20 @@ class Control(object):
                     spend_type=spend_type, spend_secret=spend_secret)
 
         # FIXME patch pycoin so it works
-        # assert(tx.bad_signature_count() == 0)
+        assert(tx.bad_signature_count() == 0)
 
         rawtx = tx.as_hex()
         self.publish(rawtx)
         return rawtx
 
-    def timeout_recover(self, payer_wif, deposit_rawtx, script):
-        return self._recover(payer_wif, deposit_rawtx, script, "timeout", None)
+    def payout_recover(self, wif, script, spend_secret):
+        return self._recover_commit(wif, script, None, spend_secret, "payout")
 
-    def change_recover(self, payer_wif, deposit_rawtx, script, spend_secret):
-        return self._recover(payer_wif, deposit_rawtx,
-                             script, "change", spend_secret)
+    def revoke_recover(self, wif, script, revoke_secret):
+        return self._recover_commit(wif, script, revoke_secret, None, "revoke")
+
+    def timeout_recover(self, wif, script):
+        return self._recover_deposit(wif, script, "timeout", None)
+
+    def change_recover(self, wif, script, spend_secret):
+        return self._recover_deposit(wif, script, "change", spend_secret)

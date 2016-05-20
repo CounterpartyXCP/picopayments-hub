@@ -3,13 +3,6 @@
 # License: MIT (see LICENSE file)
 
 
-class IllegalStateError(Exception):
-
-    def __init__(self, expected, got):
-        msg = "Expected state '{0}' instead of '{1}'"
-        super(IllegalStateError, self).__init__(msg.format(expected, got))
-
-
 class InsufficientFunds(Exception):
 
     def __init__(self, needed, available):

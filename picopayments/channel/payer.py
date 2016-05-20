@@ -20,7 +20,7 @@ class Payer(Base):
                 self.deposit_script_hex is not None and
 
                 # we know the spend secret
-                self.spend_secret is not None
+                self.spend_secret is not None  # FIXME check for payout instead
             )
 
     def can_timeout_recover(self):
@@ -42,7 +42,6 @@ class Payer(Base):
 
     def update(self):
         with self.mutex:
-            # FIXME monitor commit output for reveal of spend secret
 
             # If deposit expired recover the coins!
             if self.can_timeout_recover():
@@ -51,6 +50,16 @@ class Payer(Base):
             # If spend secret exposed recover the coins!
             if self.can_change_recover():
                 self.change_recover()
+
+            # If revoked commit published, recover funds asap!
+            # if self.can_revoke_recover():
+            #     self.revoke_recover()
+
+    def can_revoke_recover(self):
+        raise NotImplementedError()
+
+    def revoke_recover(self):
+        raise NotImplementedError()
 
     def deposit(self, payer_wif, payee_pubkey, spend_secret_hash,
                 expire_time, quantity):
@@ -68,7 +77,6 @@ class Payer(Base):
 
         Raises:
             ValueError if invalid quantity
-            IllegalStateError if not called directly after initialization.
             InsufficientFunds if not enough funds to cover requested quantity.
         """
 
@@ -90,15 +98,14 @@ class Payer(Base):
         with self.mutex:
             script = util.h2b(self.deposit_script_hex)
             self.timeout_rawtx = self.control.timeout_recover(
-                self.payer_wif, self.deposit_rawtx, script
+                self.payer_wif, script
             )
 
     def change_recover(self):
         with self.mutex:
             script = util.h2b(self.deposit_script_hex)
             self.change_rawtx = self.control.change_recover(
-                self.payer_wif, self.deposit_rawtx,
-                script, self.spend_secret
+                self.payer_wif, script, self.spend_secret
             )
 
     def create_commit(self, quantity, revoke_secret_hash, delay_time):
