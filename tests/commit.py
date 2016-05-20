@@ -256,8 +256,6 @@ class TestCommit(unittest.TestCase):
     def test_publish(self):
         self.payee.load(PAYEE_BEFORE_CLOSE)
         txid = self.payee.close_channel()
-        # print(txid)
-        # print(json.dumps(self.payee.save(), indent=2))
         self.assertEqual(txid, CLOSE_TXID)
         self.assertEqual(PAYEE_AFTER_CLOSE, self.payee.save())
 

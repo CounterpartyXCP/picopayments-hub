@@ -9,6 +9,7 @@ import json
 import requests
 from btctxstore import BtcTxStore
 from requests.auth import HTTPBasicAuth
+from bitcoinrpc.authproxy import AuthServiceProxy
 from . import util
 from . import exceptions
 from .scripts import get_deposit_spend_secret_hash
@@ -28,6 +29,35 @@ DEFAULT_COUNTERPARTY_RPC_MAINNET_URL = "http://public.coindaddy.io:4000/api/"
 DEFAULT_COUNTERPARTY_RPC_TESTNET_URL = "http://public.coindaddy.io:14000/api/"
 DEFAULT_COUNTERPARTY_RPC_USER = "rpc"
 DEFAULT_COUNTERPARTY_RPC_PASSWORD = "1234"
+
+
+# from counterpartylib.lib import util
+# from counterpartylib.lib import config
+# from counterpartylib.lib.backend import addrindex
+#
+# config.TESTNET =
+# config.RPC =
+# config.BACKEND_URL =
+# config.BACKEND_SSL_NO_VERIFY =
+#
+# def counterparty_api(method, params):
+#     return util.api(method, params)
+#
+# def bitcoin_api(method, params):
+#     return addrindex.rpc(method, params)
+#
+# def do_send(source, destination, asset, quantity, fee, encoding):
+#     validateaddress = bitcoin_api('validateaddress', [source])
+#     assert validateaddress['ismine']
+#     pubkey = validateaddress['pubkey']
+#     unsigned_tx = counterparty_api('create_send', {
+#         'source': source, 'destination': destination,
+#         'asset': asset, 'quantity': quantity,
+#         'pubkey': pubkey, 'allow_unconfirmed_inputs': True
+#     })
+#     signed_tx = bitcoin_api('signrawtransaction', [unsigned_tx])['hex']
+#     tx_hash = bitcoin_api('sendrawtransaction', [signed_tx])
+#     return tx_hash
 
 
 class Control(object):
@@ -65,6 +95,9 @@ class Control(object):
         self.netcode = "BTC" if not self.testnet else "XTN"
         self.btctxstore = BtcTxStore(testnet=self.testnet, dryrun=dryrun,
                                      service="insight")
+        self.bitcoind_rpc = AuthServiceProxy(  # XXX to publish
+            "http://bitcoinrpcuser:bitcoinrpcpass@127.0.0.1:18332"
+        )
 
     def _rpc_call(self, payload):
         headers = {'content-type': 'application/json'}
@@ -117,7 +150,7 @@ class Control(object):
         if self.dryrun:
             print("PUBLISH:", rawtx)
         else:
-            raise NotImplementedError()
+            self.bitcoind_rpc.sendrawtransaction(rawtx)
             # see http://counterparty.io/docs/api/#wallet-integration
 
     def get_quantity(self, rawtx):
