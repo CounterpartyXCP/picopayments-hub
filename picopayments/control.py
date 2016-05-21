@@ -300,10 +300,8 @@ class Control(object):
                     spend_type=spend_type, spend_secret=spend_secret,
                     revoke_secret=revoke_secret)
 
-        # FIXME patch pycoin so it works
-        assert(tx.bad_signature_count() == 0)
-
         rawtx = tx.as_hex()
+        assert(self.transaction_complete(rawtx))
         self.publish(rawtx)
         return rawtx
 
@@ -323,12 +321,17 @@ class Control(object):
             tx.sign(hash160_lookup, p2sh_lookup=p2sh_lookup,
                     spend_type=spend_type, spend_secret=spend_secret)
 
-        # FIXME patch pycoin so it works
-        assert(tx.bad_signature_count() == 0)
-
         rawtx = tx.as_hex()
+        assert(self.transaction_complete(rawtx))
         self.publish(rawtx)
         return rawtx
+
+    def transaction_complete(self, rawtx):
+        tx = pycoin.tx.Tx.from_hex(rawtx)
+        for txin in tx.txs_in:
+            utxo_tx = self.btctxstore.service.get_tx(txin.previous_hash)
+            tx.unspents.append(utxo_tx.txs_out[txin.previous_index])
+        return tx.bad_signature_count() == 0
 
     def payout_recover(self, wif, script, spend_secret):
         return self._recover_commit(wif, script, None, spend_secret, "payout")
