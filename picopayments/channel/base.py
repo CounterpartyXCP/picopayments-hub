@@ -103,24 +103,25 @@ class Base(util.UpdateThreadMixin):
             self.commits_active = []
             self.commits_revoked = []
 
+    def get_confirms(self, rawtx):
+        with self.mutex:
+            return self.control.btctxstore.confirms(util.gettxid(rawtx)) or 0
+
     def get_deposit_confirms(self):
         with self.mutex:
             assert(self.deposit_rawtx is not None)
             assert(self.deposit_script_hex is not None)
-            txid = util.gettxid(self.deposit_rawtx)
-            return self.control.btctxstore.confirms(txid) or 0
+            return self.get_confirms(self.deposit_rawtx)
 
     def get_timeout_confirms(self):
         with self.mutex:
             assert(self.timeout_rawtx is not None)
-            txid = util.gettxid(self.timeout_rawtx)
-            return self.control.btctxstore.confirms(txid) or 0
+            return self.get_confirms(self.timeout_rawtx)
 
     def get_change_confirms(self):
         with self.mutex:
             assert(self.change_rawtx is not None)
-            txid = util.gettxid(self.change_rawtx)
-            return self.control.btctxstore.confirms(txid) or 0
+            return self.get_confirms(self.change_rawtx)
 
     def get_spend_secret_hash(self):
         with self.mutex:
