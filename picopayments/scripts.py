@@ -330,8 +330,8 @@ class CommitScriptHandler():
 
     def __init__(self, delay_time):
         class ScriptChannelCommit(AbsScriptChannelCommit):
-            TEMPLATE = compile_deposit_script(
-                "OP_PUBKEY", "OP_PUBKEY",
+            TEMPLATE = compile_commit_script(
+                "OP_PUBKEY", "OP_PUBKEY", "OP_PUBKEYHASH",
                 "OP_PUBKEYHASH", delay_time
             )
         self.script_handler = ScriptChannelCommit

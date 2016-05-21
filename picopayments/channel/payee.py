@@ -164,11 +164,13 @@ class Payee(Base):
     def update(self):
         with self.mutex:
 
-            if self.can_payout_recover():
-                self.payout_recover()
+            scripts = self.get_payout_recoverable()
+            if len(scripts) > 0:
+                self.payout_recover(scripts)
 
-    def can_payout_recover(self):
+    def get_payout_recoverable(self):
         with self.mutex:
+            scripts = []
             for commit in self.commits_active + self.commits_revoked:
                 script = util.h2b(commit["script"])
                 delay_time = get_commit_delay_time(script)
@@ -177,10 +179,18 @@ class Payee(Base):
                 )
                 utxos = self.control.btctxstore.retrieve_utxos([address])
                 for utxo in utxos:
+                    # TODO test it returns 0 for unconfirmed spends
                     confirms = self.control.btctxstore.confirms(utxo["txid"])
                     if confirms >= delay_time:
-                        return True
-            return False
+                        scripts.append(script)
+            return scripts
 
-    def payout_recover(self):
-        pass
+    def payout_recover(self, scripts):
+        with self.mutex:
+            rawtxs = []
+            for script in scripts:
+                rawtx = self.control.payout_recover(
+                    self.payee_wif, script, self.spend_secret
+                )
+                rawtxs.append(rawtx)
+            return rawtxs  # add to state?
