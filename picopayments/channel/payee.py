@@ -187,10 +187,8 @@ class Payee(Base):
 
     def payout_recover(self, scripts):
         with self.mutex:
-            rawtxs = []
             for script in scripts:
                 rawtx = self.control.payout_recover(
                     self.payee_wif, script, self.spend_secret
                 )
-                rawtxs.append(rawtx)
-            return rawtxs  # add to state?
+                self.payout_rawtxs.append(rawtx)
