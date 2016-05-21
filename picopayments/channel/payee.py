@@ -10,6 +10,7 @@ from picopayments.scripts import get_deposit_payee_pubkey
 from picopayments.scripts import get_commit_spend_secret_hash
 from picopayments.scripts import get_commit_payee_pubkey
 from picopayments.scripts import get_commit_revoke_secret_hash
+from picopayments.scripts import get_commit_delay_time
 from picopayments.channel.base import Base
 
 
@@ -115,7 +116,6 @@ class Payee(Base):
             self._validate_commit_secret_hash(script)
             self._validate_commit_payee_pubkey(script)
 
-            quantity = self.control.get_quantity(rawtx)
             revoke_secret_hash = get_commit_revoke_secret_hash(script)
             for revoke_secret in self.commits_requested[:]:
 
@@ -162,12 +162,25 @@ class Payee(Base):
             return util.gettxid(rawtx)
 
     def update(self):
+        with self.mutex:
 
-        if self.can_payout_recover():
-            self.payout_recover()
+            if self.can_payout_recover():
+                self.payout_recover()
 
     def can_payout_recover(self):
-        pass
+        with self.mutex:
+            for commit in self.commits_active + self.commits_revoked:
+                script = util.h2b(commit["script"])
+                delay_time = get_commit_delay_time(script)
+                address = util.script2address(
+                    script, netcode=self.control.netcode
+                )
+                utxos = self.control.btctxstore.retrieve_utxos([address])
+                for utxo in utxos:
+                    confirms = self.control.btctxstore.confirms(utxo["txid"])
+                    if confirms >= delay_time:
+                        return True
+            return False
 
     def payout_recover(self):
         pass
