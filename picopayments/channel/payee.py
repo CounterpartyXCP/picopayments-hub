@@ -164,6 +164,7 @@ class Payee(Base):
     def update(self):
         with self.mutex:
 
+            # payout recoverable commits
             scripts = self.get_payout_recoverable()
             if len(scripts) > 0:
                 self.payout_recover(scripts)

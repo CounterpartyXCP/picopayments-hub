@@ -3,7 +3,7 @@ import json
 from picopayments.channel import Payer, Payee
 
 
-PAYER_WIF = "cW3L2Pr7oDxQzL9zXdKqwXwvpoEbvTD5LZqcXMJGQNx3sA8kLUTf"
+PAYER_WIF = "cT9pEqELRn5v67hJmmmYQmPnsuezJeup7CqQiJBUTZnLLoxdydAb"
 PAYEE_WIF = "cNXoRUC2eqcBEv1AmvPgM6NgCYV1ReTTHuAmVxaAh6AvVLHroSfU"
 ASSET = "A14456548018133352000"
 URL = "http://127.0.0.1:14000/api/"

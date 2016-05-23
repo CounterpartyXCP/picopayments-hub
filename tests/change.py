@@ -24,6 +24,7 @@ PAYEE_PUBKEY = (
 BEFORE_STATE = {
     "timeout_rawtx": None,
     "payout_rawtxs": [],
+    "revoke_rawtxs": [],
     "payer_wif": "cNEC8Ftb6g8gmpthaSJd1bqFP811FFhykF4SK1jdByPJbxzbLGGw",
     "deposit_rawtx": (
         "0100000001ea7d3ea588bd8f2bedd28e3b34c9e1d2e9e07abbf36401a0a789df10"
@@ -54,6 +55,7 @@ BEFORE_STATE = {
 
 AFTER_STATE = {
     "payout_rawtxs": [],
+    "revoke_rawtxs": [],
     "deposit_rawtx": (
         "0100000001ea7d3ea588bd8f2bedd28e3b34c9e1d2e9e07abbf36401a0a789df10"
         "f7a101d7000000006b483045022100e4ec3f3e75f35ee1afb581c52b19feb14794"

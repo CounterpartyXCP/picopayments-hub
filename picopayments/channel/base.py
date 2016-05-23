@@ -21,7 +21,8 @@ class Base(util.UpdateThreadMixin):
     deposit_rawtx = None
     timeout_rawtx = None
     change_rawtx = None
-    payout_rawtxs = []
+    revoke_rawtxs = []  # ["rawtx", ...]
+    payout_rawtxs = []  # ["rawtx", ...]
 
     # Quantity not needed as payer may change it. If its heigher its against
     # our self intrest to throw away money. If its lower it gives us a better
@@ -70,6 +71,7 @@ class Base(util.UpdateThreadMixin):
                 "deposit_rawtx": self.deposit_rawtx,
                 "timeout_rawtx": self.timeout_rawtx,
                 "change_rawtx": self.change_rawtx,
+                "revoke_rawtxs": self.revoke_rawtxs,
                 "payout_rawtxs": self.payout_rawtxs,
                 "commits_requested": self.commits_requested,
                 "commits_active": self.commits_active,
@@ -87,6 +89,7 @@ class Base(util.UpdateThreadMixin):
             self.deposit_rawtx = data["deposit_rawtx"]
             self.timeout_rawtx = data["timeout_rawtx"]
             self.change_rawtx = data["change_rawtx"]
+            self.revoke_rawtxs = data["revoke_rawtxs"]
             self.payout_rawtxs = data["payout_rawtxs"]
             self.commits_requested = data["commits_requested"]
             self.commits_active = data["commits_active"]
@@ -103,6 +106,7 @@ class Base(util.UpdateThreadMixin):
             self.timeout_rawtx = None
             self.change_rawtx = None
             self.payout_rawtxs = []
+            self.revoke_rawtxs = []
             self.commits_requested = []
             self.commits_active = []
             self.commits_revoked = []

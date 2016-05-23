@@ -37,6 +37,7 @@ EXPECTED_DEPOSIT = {
 
 EXPECTED_STATE = {
     "payout_rawtxs": [],
+    "revoke_rawtxs": [],
     "payer_wif": "cT5RVbfLsgdUv2EAmbckFXNcsj9EmdAVvU9m6aarXb3fUpt9xkjX",
     "payee_wif": None,
     "commits_revoked": [],

@@ -16,6 +16,7 @@ DRYRUN = True
 PAYER_CLOSED = {
     "timeout_rawtx": None,
     "payout_rawtxs": [],
+    "revoke_rawtxs": [],
     "commits_revoked": [
         {
             "revoke_secret": (
@@ -324,6 +325,7 @@ PAYER_CLOSED = {
 PAYEE_CLOSED = {
     "timeout_rawtx": None,
     "payout_rawtxs": [],
+    "revoke_rawtxs": [],
     "commits_revoked": [
         {
             "revoke_secret": (
@@ -971,6 +973,7 @@ PAYEE_AFTER = {
     ),
     "change_rawtx": None,
     "commits_requested": [],
+    "revoke_rawtxs": [],
     "payout_rawtxs": [
         "0200000001391814005e1098bcf161b8380923041dafef9e4a06578ffa4ccf06477f4f"
         "4da400000000e6473044022062bef3f4b21cd53dc248e08f9bb92021c7800d43f86a17"
@@ -987,7 +990,7 @@ PAYEE_AFTER = {
 }
 
 
-class TestDeposit(unittest.TestCase):
+class TestPayout(unittest.TestCase):
 
     def setUp(self):
         self.channel = picopayments.channel.Payee(

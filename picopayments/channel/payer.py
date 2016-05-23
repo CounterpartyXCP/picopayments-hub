@@ -43,6 +43,11 @@ class Payer(Base):
     def update(self):
         with self.mutex:
 
+            # If revoked commit published, recover funds asap!
+            revokable = self.get_revoke_recoverable()
+            if len(revokable) > 0:
+                self.revoke_recover(revokable)
+
             # If deposit expired recover the coins!
             if self.can_timeout_recover():
                 self.timeout_recover()
@@ -50,16 +55,6 @@ class Payer(Base):
             # If spend secret exposed recover the coins!
             if self.can_change_recover():
                 self.change_recover()
-
-            # If revoked commit published, recover funds asap!
-            # if self.can_revoke_recover():
-            #     self.revoke_recover()
-
-    def can_revoke_recover(self):
-        raise NotImplementedError()
-
-    def revoke_recover(self):
-        raise NotImplementedError()
 
     def deposit(self, payer_wif, payee_pubkey, spend_secret_hash,
                 expire_time, quantity):
@@ -121,3 +116,24 @@ class Payer(Base):
                 "rawtx": rawtx, "script": script_hex, "revoke_secret": None
             })
             return {"rawtx": rawtx, "script": script_hex}
+
+    def get_revoke_recoverable(self):
+        with self.mutex:
+            revokable = []  # (secret, script)
+            for commit in self.commits_revoked:
+                script = util.h2b(commit["script"])
+                address = util.script2address(
+                    script, netcode=self.control.netcode
+                )
+                utxos = self.control.btctxstore.retrieve_utxos([address])
+                if len(utxos) > 0:
+                    revokable.append((script, commit["revoke_secret"]))
+            return revokable
+
+    def revoke_recover(self, revokable):
+        with self.mutex:
+            for script, secret in revokable:
+                rawtx = self.control.revoke_recover(
+                    self.payer_wif, script, secret
+                )
+                self.revoke_rawtxs.append(rawtx)

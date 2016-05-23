@@ -12,6 +12,7 @@ DRYRUN = True
 
 EXPIRED_STATE = {
     "payout_rawtxs": [],
+    "revoke_rawtxs": [],
     "payer_wif": "cMtErY7rdk8gycybQ9nPVQ4FchyvsMYMyQHjdgobnFMFfMU6eFj3",
     "deposit_rawtx": (
         "010000000103fb314b25de6a000de0b9227a1fbf1439d355fb5f1b5bfd1d1e057f"
@@ -42,6 +43,7 @@ EXPIRED_STATE = {
 
 RECOVERING_STATE = {
     "payout_rawtxs": [],
+    "revoke_rawtxs": [],
     "deposit_script_hex": (
         "6352210399e3dde1d1853dbd99c81ba4f2c0cca351b3cceecce7cd0bd59acc57896721"
         "35210327f017c35a46b759536309e6de256ad44ad609c1c4aed0e2cdb82f62490f75f8"
