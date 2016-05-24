@@ -28,6 +28,10 @@ def wif2secretexponent(wif):
     return pycoin.key.Key.from_text(wif).secret_exponent()
 
 
+def pubkey2address(pubkey, netcode="BTC"):
+    return sec2address(h2b(pubkey), netcode=netcode)
+
+
 def sec2address(sec, netcode="BTC"):
     prefix = pycoin.networks.address_prefix_for_netcode(netcode)
     digest = pycoin.encoding.hash160(sec)

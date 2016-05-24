@@ -4,6 +4,7 @@
 
 
 from picopayments import util
+from picopayments import validate
 from picopayments.channel.base import Base
 
 
@@ -56,6 +57,20 @@ class Payer(Base):
             if self.can_change_recover():
                 self.change_recover()
 
+    def _validate_deposit(self, payer_wif, payee_pubkey, spend_secret_hash,
+                          expire_time, quantity):
+
+        validate.wif(payer_wif, self.control.netcode)
+        validate.pubkey(payee_pubkey)
+        validate.hash160(spend_secret_hash)
+        validate.sequence(expire_time)
+        validate.quantity(quantity)
+
+        # FIXME requirement to be published on blockchain valid?
+        # TODO test with unpublished and provide proof for each protocol tx
+        # validate.pubkey_published(payee_pubkey, self.control)
+        # validate.pubkey_published(util.wif2pubkey(payer_wif), self.control)
+
     def deposit(self, payer_wif, payee_pubkey, spend_secret_hash,
                 expire_time, quantity):
         """Create deposit for given quantity.
@@ -75,8 +90,8 @@ class Payer(Base):
             InsufficientFunds if not enough funds to cover requested quantity.
         """
 
-        # TODO validate input
-        # TODO validate pubkeys on blockchain (required by counterparty)
+        self._validate_deposit(payer_wif, payee_pubkey, spend_secret_hash,
+                               expire_time, quantity)
 
         with self.mutex:
             self.clear()

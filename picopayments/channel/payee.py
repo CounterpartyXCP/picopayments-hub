@@ -4,6 +4,7 @@
 
 
 import os
+import pycoin
 from picopayments import util
 from picopayments.scripts import get_deposit_spend_secret_hash
 from picopayments.scripts import get_deposit_payee_pubkey
@@ -53,14 +54,28 @@ class Payee(Base):
         assert(len(self.commits_active) == 0)
         assert(len(self.commits_revoked) == 0)
 
+    def _validate_payer_deposit(self, rawtx, script_hex):
+        tx = pycoin.tx.Tx.from_hex(rawtx)
+        assert(tx.bad_signature_count() == 1)
+
+        # TODO validate script
+        # TODO check given script and rawtx match
+        # TODO check given script is deposit script
+
+    def _validate_payer_commit(self, rawtx, script_hex):
+        tx = pycoin.tx.Tx.from_hex(rawtx)
+        assert(tx.bad_signature_count() == 1)
+
+        # TODO validate script
+        # TODO validate rawtx signed by payer
+        # TODO check it is for the current deposit
+        # TODO check given script and rawtx match
+        # TODO check given script is commit script
+
     def set_deposit(self, rawtx, script_hex):
         with self.mutex:
             self._assert_unopen_state()
-
-            # TODO validate rawtx
-            # TODO validate script
-            # TODO check given script and rawtx match
-            # TODO check given script is deposit script
+            self._validate_payer_deposit(rawtx, script_hex)
 
             script = util.h2b(script_hex)
             self._validate_deposit_spend_secret_hash(script)
@@ -104,13 +119,7 @@ class Payee(Base):
     def set_commit(self, rawtx, script_hex):
         with self.mutex:
             self._assert_open_state()
-
-            # TODO validate rawtx
-            # TODO validate script
-            # TODO validate rawtx signed by payer
-            # TODO check it is for the current deposit
-            # TODO check given script and rawtx match
-            # TODO check given script is commit script
+            self._validate_payer_commit(rawtx, script_hex)
 
             script = util.h2b(script_hex)
             self._validate_commit_secret_hash(script)

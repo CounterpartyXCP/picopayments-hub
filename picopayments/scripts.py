@@ -284,11 +284,11 @@ class AbsScriptChannelDeposit(ScriptType):
         signature_type = kwargs.get("signature_type")
         existing_script = kwargs.get("existing_script")
 
-        # FIXME validate on receiving the commit
         # validate payer sig
         opcode, data, pc = tools.get_opcode(existing_script, 0)  # OP_0
         opcode, payer_sig, pc = tools.get_opcode(existing_script, pc)
         sig_pair, actual_signature_type = parse_signature_blob(payer_sig)
+        assert(signature_type == actual_signature_type)
         try:
             public_pair = encoding.sec_to_public_pair(self.payer_sec)
             sig_pair, signature_type = parse_signature_blob(payer_sig)
