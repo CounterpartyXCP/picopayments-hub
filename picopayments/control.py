@@ -153,10 +153,13 @@ class Control(object):
             raise ValueError(msg.format(self.asset, unpacked["asset"]))
         return unpacked["quantity"]
 
+    def _valid_channel_unused(self, channel_address):
+        txs = self.btctxstore.get_transactions(channel_address)
+        if len(txs) > 0:
+            raise exceptions.ChannelAlreadyUsed(channel_address, txs)
+
     def _valid_deposit_request(self, payer_wif, payee_pubkey,
                                spend_secret_hash, expire_time, quantity):
-
-        # FIXME validate channel previously unused
 
         # quantity must be > 0
         if not isinstance(quantity, six.integer_types) or quantity <= 0:
@@ -185,6 +188,7 @@ class Control(object):
         script = compile_deposit_script(payer_pubkey, payee_pubkey,
                                         spend_secret_hash, expire_time)
         dest_address = util.script2address(script, self.netcode)
+        self._valid_channel_unused(dest_address)
         payer_address = util.wif2address(payer_wif)
 
         # provide extra btc for future closing channel fees
