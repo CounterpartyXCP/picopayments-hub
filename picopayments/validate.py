@@ -8,7 +8,6 @@ import re
 import pycoin
 from . import exceptions
 from . import scripts
-from . import util
 
 
 def string(s):
@@ -57,11 +56,3 @@ def quantity(number):
     integer(number)
     if not (0 <= number < 2100000000000000):
         raise exceptions.InvalidQuantity(number)
-
-
-def pubkey_published(pubkey_hex, control):
-    pubkey(pubkey_hex)
-    address = util.pubkey2address(pubkey_hex, netcode=control.netcode)
-    txs = control.btctxstore.get_transactions(address)
-    if len(txs) == 0:  # pubkey not on blockchain
-        raise exceptions.PubKeyUnpublished(pubkey_hex)

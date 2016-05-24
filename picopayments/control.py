@@ -3,7 +3,6 @@
 # License: MIT (see LICENSE file)
 
 
-import six
 import pycoin
 import json
 import requests
@@ -158,31 +157,8 @@ class Control(object):
         if len(txs) > 0:
             raise exceptions.ChannelAlreadyUsed(channel_address, txs)
 
-    def _valid_deposit_request(self, payer_wif, payee_pubkey,
-                               spend_secret_hash, expire_time, quantity):
-
-        # quantity must be > 0
-        if not isinstance(quantity, six.integer_types) or quantity <= 0:
-            raise ValueError()
-
-        # get balances
-        address = util.wif2address(payer_wif)
-        asset_balance, btc_balance = self.get_balance(address)
-
-        # check asset balance
-        if asset_balance < quantity:
-            raise exceptions.InsufficientFunds(quantity, asset_balance)
-
-        # check btc balance
-        extra_btc = (self.fee + self.dust_size) * 3
-        if btc_balance < extra_btc:
-            raise exceptions.InsufficientFunds(extra_btc, btc_balance)
-
     def deposit(self, payer_wif, payee_pubkey, spend_secret_hash,
                 expire_time, quantity):
-
-        self._valid_deposit_request(payer_wif, payee_pubkey, spend_secret_hash,
-                                    expire_time, quantity)
 
         payer_pubkey = util.wif2pubkey(payer_wif)
         script = compile_deposit_script(payer_pubkey, payee_pubkey,

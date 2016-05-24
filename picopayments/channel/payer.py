@@ -5,6 +5,7 @@
 
 from picopayments import util
 from picopayments import validate
+from picopayments import exceptions
 from picopayments.channel.base import Base
 
 
@@ -60,16 +61,25 @@ class Payer(Base):
     def _validate_deposit(self, payer_wif, payee_pubkey, spend_secret_hash,
                           expire_time, quantity):
 
+        # validate untrusted input data
         validate.wif(payer_wif, self.control.netcode)
         validate.pubkey(payee_pubkey)
         validate.hash160(spend_secret_hash)
         validate.sequence(expire_time)
         validate.quantity(quantity)
 
-        # FIXME requirement to be published on blockchain valid?
-        # TODO test with unpublished and provide proof for each protocol tx
-        # validate.pubkey_published(payee_pubkey, self.control)
-        # validate.pubkey_published(util.wif2pubkey(payer_wif), self.control)
+        # get balances
+        payer_address = util.wif2address(payer_wif)
+        asset_balance, btc_balance = self.control.get_balance(payer_address)
+
+        # check asset balance
+        if asset_balance < quantity:
+            raise exceptions.InsufficientFunds(quantity, asset_balance)
+
+        # check btc balance
+        extra_btc = (self.control.fee + self.control.dust_size) * 3
+        if btc_balance < extra_btc:
+            raise exceptions.InsufficientFunds(extra_btc, btc_balance)
 
     def deposit(self, payer_wif, payee_pubkey, spend_secret_hash,
                 expire_time, quantity):
@@ -90,10 +100,10 @@ class Payer(Base):
             InsufficientFunds if not enough funds to cover requested quantity.
         """
 
-        self._validate_deposit(payer_wif, payee_pubkey, spend_secret_hash,
-                               expire_time, quantity)
-
         with self.mutex:
+            self._validate_deposit(payer_wif, payee_pubkey, spend_secret_hash,
+                                   expire_time, quantity)
+
             self.clear()
             self.payer_wif = payer_wif
             rawtx, script = self.control.deposit(
