@@ -14,7 +14,7 @@ DRYRUN = True
 
 
 PAYER_CLOSED = {
-    "timeout_rawtx": None,
+    "expire_rawtx": None,
     "payout_rawtxs": [],
     "revoke_rawtxs": [],
     "commits_revoked": [
@@ -323,7 +323,7 @@ PAYER_CLOSED = {
 }
 
 PAYEE_CLOSED = {
-    "timeout_rawtx": None,
+    "expire_rawtx": None,
     "payout_rawtxs": [],
     "revoke_rawtxs": [],
     "commits_revoked": [
@@ -651,7 +651,7 @@ PAYEE_CLOSED = {
 
 
 PAYEE_AFTER = {
-    "timeout_rawtx": None,
+    "expire_rawtx": None,
     "commits_revoked": [
         {
             "revoke_secret": (

@@ -7,6 +7,7 @@ import copy
 from threading import RLock
 from picopayments import util
 from picopayments import control
+from picopayments import validate
 from picopayments.scripts import get_deposit_spend_secret_hash
 from picopayments.scripts import get_deposit_expire_time
 from picopayments.scripts import get_commit_revoke_secret_hash
@@ -19,7 +20,7 @@ class Base(util.UpdateThreadMixin):
     spend_secret = None
     deposit_script_hex = None
     deposit_rawtx = None
-    timeout_rawtx = None
+    expire_rawtx = None
     change_rawtx = None
     revoke_rawtxs = []  # ["rawtx", ...]
     payout_rawtxs = []  # ["rawtx", ...]
@@ -69,7 +70,7 @@ class Base(util.UpdateThreadMixin):
                 "spend_secret": self.spend_secret,
                 "deposit_script_hex": self.deposit_script_hex,
                 "deposit_rawtx": self.deposit_rawtx,
-                "timeout_rawtx": self.timeout_rawtx,
+                "expire_rawtx": self.expire_rawtx,
                 "change_rawtx": self.change_rawtx,
                 "revoke_rawtxs": self.revoke_rawtxs,
                 "payout_rawtxs": self.payout_rawtxs,
@@ -87,7 +88,7 @@ class Base(util.UpdateThreadMixin):
             self.spend_secret = data["spend_secret"]
             self.deposit_script_hex = data["deposit_script_hex"]
             self.deposit_rawtx = data["deposit_rawtx"]
-            self.timeout_rawtx = data["timeout_rawtx"]
+            self.expire_rawtx = data["expire_rawtx"]
             self.change_rawtx = data["change_rawtx"]
             self.revoke_rawtxs = data["revoke_rawtxs"]
             self.payout_rawtxs = data["payout_rawtxs"]
@@ -103,7 +104,7 @@ class Base(util.UpdateThreadMixin):
             self.spend_secret = None
             self.deposit_script_hex = None
             self.deposit_rawtx = None
-            self.timeout_rawtx = None
+            self.expire_rawtx = None
             self.change_rawtx = None
             self.payout_rawtxs = []
             self.revoke_rawtxs = []
@@ -121,10 +122,10 @@ class Base(util.UpdateThreadMixin):
             assert(self.deposit_script_hex is not None)
             return self.get_confirms(self.deposit_rawtx)
 
-    def get_timeout_confirms(self):
+    def get_expire_confirms(self):
         with self.mutex:
-            assert(self.timeout_rawtx is not None)
-            return self.get_confirms(self.timeout_rawtx)
+            assert(self.expire_rawtx is not None)
+            return self.get_confirms(self.expire_rawtx)
 
     def get_change_confirms(self):
         with self.mutex:
@@ -141,9 +142,10 @@ class Base(util.UpdateThreadMixin):
             else:  # undefined
                 raise Exception("Undefined state, not payee or payer.")
 
-    def is_deposit_confirmed(self):
+    def is_deposit_confirmed(self, minconfirms=1):
         with self.mutex:
-            return self.get_deposit_confirms() > 0
+            validate.unsigned(minconfirms)
+            return self.get_deposit_confirms() >= minconfirms
 
     def is_deposit_expired(self):
         with self.mutex:
@@ -151,10 +153,10 @@ class Base(util.UpdateThreadMixin):
             t = get_deposit_expire_time(script)
             return self.get_deposit_confirms() >= t
 
-    def is_timeout_confirmed(self):
+    def is_expire_confirmed(self):
         with self.mutex:
-            assert(self.timeout_rawtx is not None)
-            txid = util.gettxid(self.timeout_rawtx)
+            assert(self.expire_rawtx is not None)
+            txid = util.gettxid(self.expire_rawtx)
             return bool(self.control.btctxstore.confirms(txid))
 
     def is_change_confirmed(self):
@@ -169,17 +171,17 @@ class Base(util.UpdateThreadMixin):
                 self.change_rawtx is not None and
                 not self.is_change_confirmed()
             )
-            unconfirmed_timeout = (
-                self.timeout_rawtx is not None and
-                not self.is_timeout_confirmed()
+            unconfirmed_expire = (
+                self.expire_rawtx is not None and
+                not self.is_expire_confirmed()
             )
-            return unconfirmed_change or unconfirmed_timeout
+            return unconfirmed_change or unconfirmed_expire
 
     def is_closed(self):
         with self.mutex:
             return (
                 self.change_rawtx is not None and self.is_change_confirmed() or
-                self.timeout_rawtx is not None and self.is_timeout_confirmed()
+                self.expire_rawtx is not None and self.is_expire_confirmed()
             )
 
     def set_spend_secret(self, secret):
@@ -189,7 +191,6 @@ class Base(util.UpdateThreadMixin):
     def get_transferred_amount(self):
         """Returns funds transferred from payer to payee."""
         with self.mutex:
-            # FIXME sort first!
             if len(self.commits_active) == 0:
                 return 0
             self._order_active()
@@ -240,3 +241,12 @@ class Base(util.UpdateThreadMixin):
                     self.commits_revoked.append(commit)  # add to revoked
                     return copy.deepcopy(commit)
             return None
+
+    def payouts_confirmed(self, minconfirms=1):
+        with self.mutex:
+            validate.unsigned(minconfirms)
+            for rawtx in self.payout_rawtxs:
+                confirms = self.get_confirms(rawtx)
+                if confirms < minconfirms:
+                    return False
+            return True

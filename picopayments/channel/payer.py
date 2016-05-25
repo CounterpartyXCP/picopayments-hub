@@ -6,26 +6,13 @@
 from picopayments import util
 from picopayments import validate
 from picopayments import exceptions
+from picopayments import scripts
 from picopayments.channel.base import Base
 
 
 class Payer(Base):
 
-    def can_change_recover(self):
-        with self.mutex:
-            return (
-                # we know the payer wif
-                self.payer_wif is not None and
-
-                # deposit was made
-                self.deposit_rawtx is not None and
-                self.deposit_script_hex is not None and
-
-                # we know the spend secret
-                self.spend_secret is not None  # FIXME check for payout instead
-            )
-
-    def can_timeout_recover(self):
+    def can_expire_recover(self):
         with self.mutex:
             return (
                 # we know the payer wif
@@ -51,12 +38,13 @@ class Payer(Base):
                 self.revoke_recover(revokable)
 
             # If deposit expired recover the coins!
-            if self.can_timeout_recover():
-                self.timeout_recover()
+            if self.can_expire_recover():
+                self.expire_recover()
 
             # If spend secret exposed recover the coins!
-            if self.can_change_recover():
-                self.change_recover()
+            spend_secret = self.find_spend_secret()
+            if spend_secret is not None:
+                self.change_recover(spend_secret)
 
     def _validate_deposit(self, payer_wif, payee_pubkey, spend_secret_hash,
                           expire_time, quantity):
@@ -114,18 +102,34 @@ class Payer(Base):
             self.deposit_script_hex = util.b2h(script)
             return {"rawtx": rawtx, "script": util.b2h(script)}
 
-    def timeout_recover(self):
+    def expire_recover(self):
         with self.mutex:
             script = util.h2b(self.deposit_script_hex)
-            self.timeout_rawtx = self.control.timeout_recover(
+            self.expire_rawtx = self.control.expire_recover(
                 self.payer_wif, script
             )
 
-    def change_recover(self):
+    def find_spend_secret(self):
+        for commit in self.commits_active + self.commits_revoked:
+            script = util.h2b(commit["script"])
+            address = util.script2address(
+                script, netcode=self.control.netcode
+            )
+            txs = self.control.btctxstore.get_transactions(address)
+            # if len(txs) == 1:
+            #     continue  # only the commit, no payout
+            for txid in txs:
+                rawtx = self.control.btctxstore.retrieve_tx(txid)
+                spend_secret = scripts.get_spend_secret(rawtx, script)
+                if spend_secret is not None:
+                    return spend_secret
+        return None
+
+    def change_recover(self, spend_secret):
         with self.mutex:
             script = util.h2b(self.deposit_script_hex)
             self.change_rawtx = self.control.change_recover(
-                self.payer_wif, script, self.spend_secret
+                self.payer_wif, script, spend_secret
             )
 
     def create_commit(self, quantity, revoke_secret_hash, delay_time):

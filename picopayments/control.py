@@ -22,7 +22,7 @@ from .scripts import DepositScriptHandler
 from .scripts import CommitScriptHandler
 
 
-# FIXME make fees per kb and auto adjust to market price
+# FIXME fees per kb, auto adjust to market price or get from counterparty
 DEFAULT_TXFEE = 10000  # FIXME dont hardcode tx fee
 DEFAULT_DUSTSIZE = 5430  # FIXME dont hardcode dust size
 DEFAULT_TESTNET = False
@@ -113,6 +113,8 @@ class Control(object):
             "jsonrpc": "2.0",
             "id": 0,
         })
+        if not result:  # FIXME what causes this?
+            return 0, 0
         asset_balance = result[0]["quantity"]
         utxos = self.btctxstore.retrieve_utxos([address])
         btc_balance = sum(map(lambda utxo: utxo["value"], utxos))
@@ -123,6 +125,7 @@ class Control(object):
             print("PUBLISH:", rawtx)
         else:
             self.bitcoind_rpc.sendrawtransaction(rawtx)
+            return util.gettxid(rawtx)
             # see http://counterparty.io/docs/api/#wallet-integration
 
     def get_quantity(self, rawtx):
@@ -247,7 +250,7 @@ class Control(object):
         src_address = util.script2address(script, self.netcode)
         asset_balance, btc_balance = self.get_balance(src_address)
 
-        # create timeout tx
+        # create expire tx
         rawtx = self.create_tx(src_address, dest_address, asset_balance,
                                extra_btc=btc_balance - self.fee)
 
@@ -290,7 +293,7 @@ class Control(object):
         dest_address = util.wif2address(wif)
         expire_time = get_deposit_expire_time(script)
         tx = self._recover_tx(dest_address, script,
-                              expire_time if spend_type == "timeout" else None)
+                              expire_time if spend_type == "expire" else None)
 
         # sign
         hash160_lookup = pycoin.tx.pay_to.build_hash160_lookup(
@@ -319,8 +322,8 @@ class Control(object):
     def revoke_recover(self, wif, script, revoke_secret):
         return self._recover_commit(wif, script, revoke_secret, None, "revoke")
 
-    def timeout_recover(self, wif, script):
-        return self._recover_deposit(wif, script, "timeout", None)
+    def expire_recover(self, wif, script):
+        return self._recover_deposit(wif, script, "expire", None)
 
     def change_recover(self, wif, script, spend_secret):
         return self._recover_deposit(wif, script, "change", spend_secret)

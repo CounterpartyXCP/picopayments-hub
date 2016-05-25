@@ -92,13 +92,13 @@ pay to script:
     OP_ENDIF
 
 
--------------------
-Timeout Transaction 
--------------------
+------------------
+Expire Transaction 
+------------------
 
-The timeout transaction is used by the payee to recover the and funds after
-the channel reaches a timeout. This is to prevent funds being lost should
-the payee be hit by a bus.
+The expire transaction is used by the payee to recover the and funds after
+the channel expires. This is to prevent funds being lost should the payee
+be hit by a bus.
 
 script sig:
 
@@ -133,7 +133,7 @@ Every time the payer wishes to transfer funds to the payee, the output amount
 of the transaction is increased. The payee then signs and shares it.
 
 To ensure the payer can recover the change without having to wait for the
-channel to timeout, the payee must reveal the spend secret when spending the
+channel to expire, the payee must reveal the spend secret when spending the
 payout. **The commit transaction spend secret must be the same as the deposit
 transaction spend secret!**
 

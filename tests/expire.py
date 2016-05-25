@@ -28,7 +28,7 @@ EXPIRED_STATE = {
     "commits_active": [],
     "commits_requested": [],
     "change_rawtx": None,
-    "timeout_rawtx": None,
+    "expire_rawtx": None,
     "payee_wif": None,
     "spend_secret": None,
     "deposit_script_hex": (
@@ -67,7 +67,7 @@ RECOVERING_STATE = {
         "257191d2cbb31f9b056d79191f04fad8aab4676f8a87de13bf2e5e310200000000"
         "001976a914d36d5a91d3f05b2c23cf4fdcac88e4f8b50cec9088ac00000000"
     ),
-    "timeout_rawtx": (
+    "expire_rawtx": (
         "0200000001f4db00105cdc7cab7d26ae018154540faa2a20872a1e263c6948c5a4"
         "e44d060f00000000f947304402204c7cbcc610ac5ee744dc7de6fc31421217dbd0"
         "66e41fd377dbe16dbd70372d3d02201e74b66967b44548c007a011d98bb42a9f22"
@@ -98,7 +98,7 @@ class TestRecover(unittest.TestCase):
     def test_expired_to_recovering(self):
         self.channel.load(EXPIRED_STATE)
         self.assertFalse(self.channel.is_closing())
-        self.channel.update()  # publish timeout tx
+        self.channel.update()  # publish expire tx
         self.assertTrue(self.channel.is_closing())
 
     def test_recovering_to_closed(self):

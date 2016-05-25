@@ -6,6 +6,7 @@
 from pycoin.serialize import b2h, h2b
 from pycoin import encoding
 from pycoin.tx.script import tools
+from pycoin.tx import Tx
 from pycoin.tx.pay_to.ScriptType import ScriptType
 from pycoin.tx.pay_to import SUBCLASSES
 from pycoin.encoding import hash160
@@ -16,7 +17,6 @@ from pycoin import ecdsa
 
 
 MAX_SEQUENCE = 0x0000FFFF
-DEFAULT_EXPIRE_TIME = 5
 DEPOSIT_SCRIPT = """
     OP_IF
         2 {payer_pubkey} {payee_pubkey} 2 OP_CHECKMULTISIG
@@ -40,6 +40,11 @@ COMMIT_SCRIPT = """
         {payer_pubkey} OP_CHECKSIG
     OP_ENDIF
 """
+EXPIRE_SCRIPTSIG = "{sig} OP_0 OP_0"
+CHANGE_SCRIPTSIG = "{sig} {secret} OP_1 OP_0"
+COMMIT_SCRIPTSIG = "OP_0 {payer_sig} {payee_sig} OP_1"
+PAYOUT_SCRIPTSIG = "{sig} {spend_secret} OP_1"
+REVOKE_SCRIPTSIG = "{sig} {revoke_secret} OP_0"
 
 
 def get_word(script, index):
@@ -51,6 +56,18 @@ def get_word(script, index):
     if i != index + 1:
         raise ValueError(index)
     return opcode, data, tools.disassemble_for_opcode_data(opcode, data)
+
+
+def get_spend_secret(payout_rawtx, commit_script):
+    tx = Tx.from_hex(payout_rawtx)
+    spend_script = tx.txs_in[0].script
+    try:
+        opcode, data, disassembled = get_word(spend_script, 3)
+        if data == commit_script:  # is payout tx
+            opcode, spend_secret, disassembled = get_word(spend_script, 1)
+            return b2h(spend_secret)
+    except ValueError:
+        return None
 
 
 def parse_sequence_value(opcode, data, disassembled):
@@ -185,7 +202,7 @@ class AbsScriptChannelCommit(ScriptType):
         sig = self._create_script_signature(
             secret_exponent, kwargs["sign_value"], kwargs["signature_type"]
         )
-        return tools.compile("{sig} {spend_secret} OP_1".format(
+        return tools.compile(PAYOUT_SCRIPTSIG.format(
             sig=b2h(sig), spend_secret=spend_secret
         ))
 
@@ -197,7 +214,7 @@ class AbsScriptChannelCommit(ScriptType):
         sig = self._create_script_signature(
             secret_exponent, kwargs["sign_value"], kwargs["signature_type"]
         )
-        return tools.compile("{sig} {revoke_secret} OP_0".format(
+        return tools.compile(REVOKE_SCRIPTSIG.format(
             sig=b2h(sig), revoke_secret=revoke_secret
         ))
 
@@ -239,14 +256,14 @@ class AbsScriptChannelDeposit(ScriptType):
             return obj
         raise ValueError("bad script")
 
-    def solve_timeout(self, **kwargs):
+    def solve_expire(self, **kwargs):
         hash160_lookup = kwargs["hash160_lookup"]
         private_key = hash160_lookup.get(encoding.hash160(self.payer_sec))
         secret_exponent, public_pair, compressed = private_key
         sig = self._create_script_signature(
             secret_exponent, kwargs["sign_value"], kwargs["signature_type"]
         )
-        return tools.compile("{sig} OP_0 OP_0".format(sig=b2h(sig)))
+        return tools.compile(EXPIRE_SCRIPTSIG.format(sig=b2h(sig)))
 
     def solve_change(self, **kwargs):
         hash160_lookup = kwargs["hash160_lookup"]
@@ -259,7 +276,7 @@ class AbsScriptChannelDeposit(ScriptType):
         spend_secret_hash = get_deposit_spend_secret_hash(self.script)
         provided_spend_secret_hash = b2h(hash160(h2b(spend_secret)))
         assert(spend_secret_hash == provided_spend_secret_hash)
-        script_text = "{sig} {secret} OP_1 OP_0".format(
+        script_text = CHANGE_SCRIPTSIG.format(
             sig=b2h(sig), secret=spend_secret
         )
         return tools.compile(script_text)
@@ -273,7 +290,7 @@ class AbsScriptChannelDeposit(ScriptType):
         )
         signature_placeholder = kwargs.get("signature_placeholder",
                                            DEFAULT_PLACEHOLDER_SIGNATURE)
-        script_text = "OP_0 {payer_sig} {payee_sig} OP_1".format(
+        script_text = COMMIT_SCRIPTSIG.format(
             payer_sig=b2h(sig), payee_sig=b2h(signature_placeholder)
         )
         return tools.compile(script_text)
@@ -306,14 +323,14 @@ class AbsScriptChannelDeposit(ScriptType):
             secret_exponent, sign_value, signature_type
         )
 
-        script_text = "OP_0 {payer_sig} {payee_sig} OP_1".format(
+        script_text = COMMIT_SCRIPTSIG.format(
             payer_sig=b2h(payer_sig), payee_sig=b2h(payee_sig)
         )
         return tools.compile(script_text)
 
     def solve(self, **kwargs):
         solve_methods = {
-            "timeout": self.solve_timeout,
+            "expire": self.solve_expire,
             "change": self.solve_change,
             "create_commit": self.solve_create_commit,
             "finalize_commit": self.solve_finalize_commit

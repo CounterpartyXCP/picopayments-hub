@@ -30,7 +30,7 @@ def wif(wif, netcode):
 def pubkey(pubkey_hex):
     hexdata(pubkey_hex)
     sec = pycoin.serialize.h2b(pubkey_hex)
-    if len(sec) != 33:  # FIXME always 33?
+    if len(sec) != 33:  # compressed only!
         raise exceptions.InvalidPubKey(pubkey_hex)
 
 
@@ -44,6 +44,12 @@ def hash160(hash_hex):
 def integer(i):
     if not isinstance(i, six.integer_types):
         raise exceptions.InvalidString(i)
+
+
+def unsigned(number):
+    integer(number)
+    if number < 0:
+        raise exceptions.InvalidUnsigned(number)
 
 
 def sequence(number):

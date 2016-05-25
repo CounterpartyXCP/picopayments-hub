@@ -43,7 +43,7 @@ EXPECTED_STATE = {
     "commits_revoked": [],
     "commits_active": [],
     "commits_requested": [],
-    "timeout_rawtx": None,
+    "expire_rawtx": None,
     "deposit_script_hex": (
         "635221033faa57e0ed3a3bf89340a0a3074ce0ef403ebfb77cb3402d0daa29d808e2bd"
         "e0210327f017c35a46b759536309e6de256ad44ad609c1c4aed0e2cdb82f62490f75f8"

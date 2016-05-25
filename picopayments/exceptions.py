@@ -75,8 +75,8 @@ class InvalidQuantity(Exception):
         super(InvalidQuantity, self).__init__(msg.format(x))
 
 
-class PubKeyUnpublished(Exception):
+class InvalidUnsigned(Exception):
 
     def __init__(self, x):
-        msg = "PubKey unpublished: '{0}'"
-        super(PubKeyUnpublished, self).__init__(msg.format(x))
+        msg = "Invalid unsigned: '{0}'"
+        super(InvalidUnsigned, self).__init__(msg.format(x))

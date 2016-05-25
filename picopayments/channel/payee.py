@@ -5,6 +5,7 @@
 
 import os
 import pycoin
+from picopayments import validate
 from picopayments import util
 from picopayments.scripts import get_deposit_spend_secret_hash
 from picopayments.scripts import get_deposit_payee_pubkey
@@ -202,3 +203,15 @@ class Payee(Base):
                     self.payee_wif, script, self.spend_secret
                 )
                 self.payout_rawtxs.append(rawtx)
+                print("added payout rawtx")
+
+    def payouts_confirmed(self, minconfirms=1):
+        with self.mutex:
+            validate.unsigned(minconfirms)
+            if len(self.payout_rawtxs) == 0:
+                return False
+            for rawtx in self.payout_rawtxs:
+                confirms = self.get_confirms(rawtx)
+                if confirms < minconfirms:
+                    return False
+            return True
