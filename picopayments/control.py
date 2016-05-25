@@ -244,6 +244,10 @@ class Control(object):
         self.publish(rawtx)
         return rawtx
 
+    def get_script_balance(self, script):
+        src_address = util.script2address(script, self.netcode)
+        return self.get_balance(src_address)
+
     def _recover_tx(self, dest_address, script, sequence=None):
 
         # get channel info

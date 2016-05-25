@@ -14,7 +14,7 @@ DRYRUN = True
 
 
 PAYER_CLOSED = {
-    "expire_rawtx": None,
+    "expire_rawtxs": [],
     "payout_rawtxs": [],
     "revoke_rawtxs": [],
     "commits_revoked": [
@@ -318,12 +318,12 @@ PAYER_CLOSED = {
         "16c8e93108ad3875482af30cbcba626e2242842f44b08b76c636d95e3102000000"
         "00001976a914512ad68b8e735a67912c10587d83727aa59466f488ac00000000"
     ),
-    "change_rawtx": None,
+    "change_rawtxs": [],
     "commits_requested": []
 }
 
 PAYEE_CLOSED = {
-    "expire_rawtx": None,
+    "expire_rawtxs": [],
     "payout_rawtxs": [],
     "revoke_rawtxs": [],
     "commits_revoked": [
@@ -645,13 +645,13 @@ PAYEE_CLOSED = {
         "2f44b08b76c636d95e310200000000001976a914512ad68b8e735a67912c10"
         "587d83727aa59466f488ac00000000"
     ),
-    "change_rawtx": None,
+    "change_rawtxs": [],
     "commits_requested": []
 }
 
 
 PAYEE_AFTER = {
-    "expire_rawtx": None,
+    "expire_rawtxs": [],
     "commits_revoked": [
         {
             "revoke_secret": (
@@ -971,7 +971,7 @@ PAYEE_AFTER = {
         "2f44b08b76c636d95e310200000000001976a914512ad68b8e735a67912c10"
         "587d83727aa59466f488ac00000000"
     ),
-    "change_rawtx": None,
+    "change_rawtxs": [],
     "commits_requested": [],
     "revoke_rawtxs": [],
     "payout_rawtxs": [

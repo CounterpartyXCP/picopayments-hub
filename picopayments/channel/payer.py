@@ -8,6 +8,7 @@ from picopayments import validate
 from picopayments import exceptions
 from picopayments import scripts
 from picopayments.channel.base import Base
+from picopayments.scripts import get_deposit_expire_time
 
 
 class Payer(Base):
@@ -25,9 +26,19 @@ class Payer(Base):
                 # deposit expired
                 self.is_deposit_expired() and
 
-                # not already recovering
-                not self.is_closing()
+                # funds to recover
+                (self._get_deposit_balance() != (0, 0))
             )
+
+    def _get_deposit_balance(self):
+        script = util.h2b(self.deposit_script_hex)
+        return self.control.get_script_balance(script)
+
+    def is_deposit_expired(self):
+        with self.mutex:
+            script = util.h2b(self.deposit_script_hex)
+            t = get_deposit_expire_time(script)
+            return self.get_deposit_confirms() >= t
 
     def update(self):
         with self.mutex:
@@ -105,9 +116,10 @@ class Payer(Base):
     def expire_recover(self):
         with self.mutex:
             script = util.h2b(self.deposit_script_hex)
-            self.expire_rawtx = self.control.expire_recover(
+            rawtx = self.control.expire_recover(
                 self.payer_wif, script
             )
+            self.expire_rawtxs.append(rawtx)
 
     def find_spend_secret(self):
         for commit in self.commits_active + self.commits_revoked:
@@ -128,9 +140,11 @@ class Payer(Base):
     def change_recover(self, spend_secret):
         with self.mutex:
             script = util.h2b(self.deposit_script_hex)
-            self.change_rawtx = self.control.change_recover(
+            # FIXME check balance and recover any funds if they exist
+            rawtx = self.control.change_recover(
                 self.payer_wif, script, spend_secret
             )
+            self.change_rawtxs.append(rawtx)
 
     def create_commit(self, quantity, revoke_secret_hash, delay_time):
         with self.mutex:
@@ -166,3 +180,33 @@ class Payer(Base):
                     self.payer_wif, script, secret
                 )
                 self.revoke_rawtxs.append(rawtx)
+
+#    def payouts_confirmed(self, minconfirms=1):
+#        with self.mutex:
+#            validate.unsigned(minconfirms)
+#            if len(self.payout_rawtxs) == 0:
+#                return False
+#            for rawtx in self.payout_rawtxs:
+#                confirms = self.get_confirms(rawtx)
+#                if confirms < minconfirms:
+#                    return False
+#            return True
+
+#    def is_closing(self):
+#        with self.mutex:
+#            unconfirmed_change = (
+#                self.change_rawtx is not None and
+#                not self.is_change_confirmed()
+#            )
+#            unconfirmed_expire = (
+#                self.expire_rawtx is not None and
+#                not self.is_expire_confirmed()
+#            )
+#            return unconfirmed_change or unconfirmed_expire
+#
+#    def is_closed(self):
+#        with self.mutex:
+#            return (
+#                self.change_rawtx is not None and self.is_change_confirmed() or
+#                self.expire_rawtx is not None and self.is_expire_confirmed()
+#            )

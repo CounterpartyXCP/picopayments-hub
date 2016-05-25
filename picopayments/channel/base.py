@@ -9,7 +9,6 @@ from picopayments import util
 from picopayments import control
 from picopayments import validate
 from picopayments.scripts import get_deposit_spend_secret_hash
-from picopayments.scripts import get_deposit_expire_time
 from picopayments.scripts import get_commit_revoke_secret_hash
 
 
@@ -20,8 +19,8 @@ class Base(util.UpdateThreadMixin):
     spend_secret = None
     deposit_script_hex = None
     deposit_rawtx = None
-    expire_rawtx = None
-    change_rawtx = None
+    expire_rawtxs = []  # ["rawtx", ...]
+    change_rawtxs = []  # ["rawtx", ...]
     revoke_rawtxs = []  # ["rawtx", ...]
     payout_rawtxs = []  # ["rawtx", ...]
 
@@ -70,8 +69,8 @@ class Base(util.UpdateThreadMixin):
                 "spend_secret": self.spend_secret,
                 "deposit_script_hex": self.deposit_script_hex,
                 "deposit_rawtx": self.deposit_rawtx,
-                "expire_rawtx": self.expire_rawtx,
-                "change_rawtx": self.change_rawtx,
+                "expire_rawtxs": self.expire_rawtxs,
+                "change_rawtxs": self.change_rawtxs,
                 "revoke_rawtxs": self.revoke_rawtxs,
                 "payout_rawtxs": self.payout_rawtxs,
                 "commits_requested": self.commits_requested,
@@ -88,8 +87,8 @@ class Base(util.UpdateThreadMixin):
             self.spend_secret = data["spend_secret"]
             self.deposit_script_hex = data["deposit_script_hex"]
             self.deposit_rawtx = data["deposit_rawtx"]
-            self.expire_rawtx = data["expire_rawtx"]
-            self.change_rawtx = data["change_rawtx"]
+            self.expire_rawtxs = data["expire_rawtxs"]
+            self.change_rawtxs = data["change_rawtxs"]
             self.revoke_rawtxs = data["revoke_rawtxs"]
             self.payout_rawtxs = data["payout_rawtxs"]
             self.commits_requested = data["commits_requested"]
@@ -104,8 +103,8 @@ class Base(util.UpdateThreadMixin):
             self.spend_secret = None
             self.deposit_script_hex = None
             self.deposit_rawtx = None
-            self.expire_rawtx = None
-            self.change_rawtx = None
+            self.expire_rawtxs = []
+            self.change_rawtxs = []
             self.payout_rawtxs = []
             self.revoke_rawtxs = []
             self.commits_requested = []
@@ -122,16 +121,6 @@ class Base(util.UpdateThreadMixin):
             assert(self.deposit_script_hex is not None)
             return self.get_confirms(self.deposit_rawtx)
 
-    def get_expire_confirms(self):
-        with self.mutex:
-            assert(self.expire_rawtx is not None)
-            return self.get_confirms(self.expire_rawtx)
-
-    def get_change_confirms(self):
-        with self.mutex:
-            assert(self.change_rawtx is not None)
-            return self.get_confirms(self.change_rawtx)
-
     def get_spend_secret_hash(self):
         with self.mutex:
             if self.spend_secret is not None:  # payee
@@ -146,43 +135,6 @@ class Base(util.UpdateThreadMixin):
         with self.mutex:
             validate.unsigned(minconfirms)
             return self.get_deposit_confirms() >= minconfirms
-
-    def is_deposit_expired(self):
-        with self.mutex:
-            script = util.h2b(self.deposit_script_hex)
-            t = get_deposit_expire_time(script)
-            return self.get_deposit_confirms() >= t
-
-    def is_expire_confirmed(self):
-        with self.mutex:
-            assert(self.expire_rawtx is not None)
-            txid = util.gettxid(self.expire_rawtx)
-            return bool(self.control.btctxstore.confirms(txid))
-
-    def is_change_confirmed(self):
-        with self.mutex:
-            assert(self.change_rawtx is not None)
-            txid = util.gettxid(self.change_rawtx)
-            return bool(self.control.btctxstore.confirms(txid))
-
-    def is_closing(self):
-        with self.mutex:
-            unconfirmed_change = (
-                self.change_rawtx is not None and
-                not self.is_change_confirmed()
-            )
-            unconfirmed_expire = (
-                self.expire_rawtx is not None and
-                not self.is_expire_confirmed()
-            )
-            return unconfirmed_change or unconfirmed_expire
-
-    def is_closed(self):
-        with self.mutex:
-            return (
-                self.change_rawtx is not None and self.is_change_confirmed() or
-                self.expire_rawtx is not None and self.is_expire_confirmed()
-            )
 
     def set_spend_secret(self, secret):
         with self.mutex:

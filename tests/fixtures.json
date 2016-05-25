@@ -56,9 +56,9 @@
                 "commits_active": [],
                 "revoke_rawtxs": [],
                 "deposit_script_hex": "63522103ace51ceb3b6298812c7a643480ecd8d57c89625288f56898f6dbeb1f1431550f21028666087223829e3932b648e42df2caac57ce677f36ded247dd0cd7c1b229d05b52ae6763a914df73599d858adb83b57f88b187420c79d95d3481882103ace51ceb3b6298812c7a643480ecd8d57c89625288f56898f6dbeb1f1431550fac6702f003b2752103ace51ceb3b6298812c7a643480ecd8d57c89625288f56898f6dbeb1f1431550fac6868",
-                "change_rawtx": null,
+                "change_rawtxs": [],
                 "payer_wif": "cT9pEqELRn5v67hJmmmYQmPnsuezJeup7CqQiJBUTZnLLoxdydAb",
-                "expire_rawtx": null
+                "expire_rawtxs": []
         },
         "state_after": {
             "payee_wif": null,
@@ -66,8 +66,8 @@
             "commits_requested": [],
             "payout_rawtxs": [],
             "deposit_script_hex": "63522103ace51ceb3b6298812c7a643480ecd8d57c89625288f56898f6dbeb1f1431550f21028666087223829e3932b648e42df2caac57ce677f36ded247dd0cd7c1b229d05b52ae6763a914df73599d858adb83b57f88b187420c79d95d3481882103ace51ceb3b6298812c7a643480ecd8d57c89625288f56898f6dbeb1f1431550fac6702f003b2752103ace51ceb3b6298812c7a643480ecd8d57c89625288f56898f6dbeb1f1431550fac6868",
-            "change_rawtx": null,
-            "expire_rawtx": null,
+            "change_rawtxs": [],
+            "expire_rawtxs": [],
             "commits_revoked": [
             {
                 "script": "6355b275a914df73599d858adb83b57f88b187420c79d95d34818821028666087223829e3932b648e42df2caac57ce677f36ded247dd0cd7c1b229d05bac67a914efebcd267f4419dbefc5f564d41d2e1462e053c8882103ace51ceb3b6298812c7a643480ecd8d57c89625288f56898f6dbeb1f1431550fac68",
@@ -125,12 +125,12 @@
     },
     "test_change": {
         "payer_state": {
-            "expire_rawtx": null,
+            "expire_rawtxs": [],
             "payer_wif": "cPyuAiErG8RB3F7n7FnnkzdKaFQ78bDV8wBNChsxPrGRpUgjivTX",
             "deposit_rawtx": "0100000001d222486b031d3dd57545a49b644fa5aeeb0be8499e5abd06549af42507702f38000000006a4730440220507e78d0b15cdf810054bd9f9722f41cec6d0d8bf6e6abb89482dda09932a5ba0220437fe75f967f431d8b2f57a0a9f1e9c8209daab3b4356fd9707bf1b84de49cbc0121027a3fcc723ae26c26a54b7cc45938ea405c88985b352a1412c501ef40aa0a1882ffffffff03d2b400000000000017a91430ad58343c508248153ed16a91be9a93c8fa5c478700000000000000001e6a1c39180c4ab08c3533ede2931c790655d6f0e118b37f914f35658c50a05e310200000000001976a914c4e93b3af1d633a60b8fb1fbe8fa6816a0e8060288ac00000000",
             "payee_wif": null,
             "commits_requested": [],
-            "change_rawtx": null,
+            "change_rawtxs": [],
             "deposit_script_hex": "635221027a3fcc723ae26c26a54b7cc45938ea405c88985b352a1412c501ef40aa0a1882210221d9cc7c466240a845b5fa0e914b4390752ee3afacf6e1639e3b1d8cb31bd74052ae6763a9143eb44a648c44da7a1a5dcb67694d96bac4c9a4178821027a3fcc723ae26c26a54b7cc45938ea405c88985b352a1412c501ef40aa0a1882ac6702f003b27521027a3fcc723ae26c26a54b7cc45938ea405c88985b352a1412c501ef40aa0a1882ac6868",
             "spend_secret": null,
             "payout_rawtxs": [],
@@ -186,12 +186,12 @@
             ]
         },
         "payee_state": {
-            "expire_rawtx": null,
+            "expire_rawtxs": [],
             "payer_wif": null,
             "deposit_rawtx": "0100000001d222486b031d3dd57545a49b644fa5aeeb0be8499e5abd06549af42507702f38000000006a4730440220507e78d0b15cdf810054bd9f9722f41cec6d0d8bf6e6abb89482dda09932a5ba0220437fe75f967f431d8b2f57a0a9f1e9c8209daab3b4356fd9707bf1b84de49cbc0121027a3fcc723ae26c26a54b7cc45938ea405c88985b352a1412c501ef40aa0a1882ffffffff03d2b400000000000017a91430ad58343c508248153ed16a91be9a93c8fa5c478700000000000000001e6a1c39180c4ab08c3533ede2931c790655d6f0e118b37f914f35658c50a05e310200000000001976a914c4e93b3af1d633a60b8fb1fbe8fa6816a0e8060288ac00000000",
             "payee_wif": "cPE2dbq1N1CwQuu6aDLePhPmw53Y6gdDTKw2wuhbytexCYqXUa22",
             "commits_requested": [],
-            "change_rawtx": null,
+            "change_rawtxs": [],
             "deposit_script_hex": "635221027a3fcc723ae26c26a54b7cc45938ea405c88985b352a1412c501ef40aa0a1882210221d9cc7c466240a845b5fa0e914b4390752ee3afacf6e1639e3b1d8cb31bd74052ae6763a9143eb44a648c44da7a1a5dcb67694d96bac4c9a4178821027a3fcc723ae26c26a54b7cc45938ea405c88985b352a1412c501ef40aa0a1882ac6702f003b27521027a3fcc723ae26c26a54b7cc45938ea405c88985b352a1412c501ef40aa0a1882ac6868",
             "spend_secret": "3bb067bd519bc123bdf3bf631db70ec169fb13e30257c4516368665ee68299d1",
             "payout_rawtxs": [],

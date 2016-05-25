@@ -27,7 +27,6 @@ class TestRecoverChange(unittest.TestCase):
 
     def test_find_spend_secret(self):
         self.payer.load(FIXTURES["test_change"]["payer_state"])
-
         secret = self.payer.find_spend_secret()
         self.assertEqual(secret, SPEND_SECRET)
 
