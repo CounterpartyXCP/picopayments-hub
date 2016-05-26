@@ -12,9 +12,10 @@ payer = Payer(ASSET, api_url=URL, user="rpc", password="1234", testnet=True)
 payee = Payee(ASSET, api_url=URL, user="rpc", password="1234", testnet=True)
 
 
-# SETUP CHANNEL (DEPOSIT FUNDS)
-
 try:
+    #################################
+    # SETUP CHANNEL (DEPOSIT FUNDS) #
+    #################################
 
     # payee publishes pubkey and spend secret hash
     payee_pubkey, spend_secret_hash = payee.setup(PAYEE_WIF)
@@ -47,7 +48,9 @@ try:
         payee.get_transferred_amount()
     ))
 
-    # MOVE FUNDS BETWEEN PAYER TO PAYEE
+    #####################################
+    # MOVE FUNDS BETWEEN PAYER TO PAYEE #
+    #####################################
 
     # payer send funds to payee
     for quantity in range(1, 10):

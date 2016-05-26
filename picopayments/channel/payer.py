@@ -52,7 +52,7 @@ class Payer(Base):
             if self.can_expire_recover():
                 self.expire_recover()
 
-            # If spend secret exposed recover the coins!
+            # If spend secret exposed by payout, recover change!
             spend_secret = self.find_spend_secret()
             if spend_secret is not None:
                 self.change_recover(spend_secret)
@@ -68,8 +68,8 @@ class Payer(Base):
         validate.quantity(quantity)
 
         # get balances
-        payer_address = util.wif2address(payer_wif)
-        asset_balance, btc_balance = self.control.get_balance(payer_address)
+        address = util.wif2address(payer_wif)
+        asset_balance, btc_balance = self.control.get_address_balance(address)
 
         # check asset balance
         if asset_balance < quantity:
@@ -140,11 +140,11 @@ class Payer(Base):
     def change_recover(self, spend_secret):
         with self.mutex:
             script = util.h2b(self.deposit_script_hex)
-            # FIXME check balance and recover any funds if they exist
-            rawtx = self.control.change_recover(
-                self.payer_wif, script, spend_secret
-            )
-            self.change_rawtxs.append(rawtx)
+            if self.control.get_script_balance(script) != (0, 0):
+                rawtx = self.control.change_recover(
+                    self.payer_wif, script, spend_secret
+                )
+                self.change_rawtxs.append(rawtx)
 
     def create_commit(self, quantity, revoke_secret_hash, delay_time):
         with self.mutex:
@@ -180,33 +180,3 @@ class Payer(Base):
                     self.payer_wif, script, secret
                 )
                 self.revoke_rawtxs.append(rawtx)
-
-#    def payouts_confirmed(self, minconfirms=1):
-#        with self.mutex:
-#            validate.unsigned(minconfirms)
-#            if len(self.payout_rawtxs) == 0:
-#                return False
-#            for rawtx in self.payout_rawtxs:
-#                confirms = self.get_confirms(rawtx)
-#                if confirms < minconfirms:
-#                    return False
-#            return True
-
-#    def is_closing(self):
-#        with self.mutex:
-#            unconfirmed_change = (
-#                self.change_rawtx is not None and
-#                not self.is_change_confirmed()
-#            )
-#            unconfirmed_expire = (
-#                self.expire_rawtx is not None and
-#                not self.is_expire_confirmed()
-#            )
-#            return unconfirmed_change or unconfirmed_expire
-#
-#    def is_closed(self):
-#        with self.mutex:
-#            return (
-#                self.change_rawtx is not None and self.is_change_confirmed() or
-#                self.expire_rawtx is not None and self.is_expire_confirmed()
-#            )

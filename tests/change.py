@@ -13,6 +13,8 @@ DRYRUN = True
 
 FIXTURES = json.load(open("tests/fixtures.json"))
 SPEND_SECRET = FIXTURES["test_change"]["payee_state"]["spend_secret"]
+PAYER_STATE = FIXTURES["test_change"]["payer_state"]
+PAYER_RECOVERED_CHANGE = FIXTURES["test_change"]["payer_recovered_change"]
 
 
 class TestRecoverChange(unittest.TestCase):
@@ -26,9 +28,14 @@ class TestRecoverChange(unittest.TestCase):
         self.payer.stop()
 
     def test_find_spend_secret(self):
-        self.payer.load(FIXTURES["test_change"]["payer_state"])
+        self.payer.load(PAYER_STATE)
         secret = self.payer.find_spend_secret()
         self.assertEqual(secret, SPEND_SECRET)
+
+    def test_recover_change(self):
+        self.payer.load(PAYER_STATE)
+        self.payer.update()  # recover change
+        self.assertEqual(self.payer.save(), PAYER_RECOVERED_CHANGE)
 
 
 if __name__ == "__main__":
