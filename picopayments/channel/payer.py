@@ -48,14 +48,14 @@ class Payer(Base):
             if len(revokable) > 0:
                 self.revoke_recover(revokable)
 
-            # If deposit expired recover the coins!
-            if self.can_expire_recover():
-                self.expire_recover()
-
             # If spend secret exposed by payout, recover change!
             spend_secret = self.find_spend_secret()
             if spend_secret is not None:
                 self.change_recover(spend_secret)
+
+            # If deposit expired recover the coins!
+            if self.can_expire_recover():
+                self.expire_recover()
 
     def _validate_deposit(self, payer_wif, payee_pubkey, spend_secret_hash,
                           expire_time, quantity):
@@ -120,6 +120,7 @@ class Payer(Base):
                 self.payer_wif, script
             )
             self.expire_rawtxs.append(rawtx)
+            print("expire recover:", rawtx)
 
     def find_spend_secret(self):
         for commit in self.commits_active + self.commits_revoked:
@@ -145,6 +146,7 @@ class Payer(Base):
                     self.payer_wif, script, spend_secret
                 )
                 self.change_rawtxs.append(rawtx)
+                print("Added change rawtx: {0}".format(rawtx))
 
     def create_commit(self, quantity, revoke_secret_hash, delay_time):
         with self.mutex:
@@ -180,3 +182,10 @@ class Payer(Base):
                     self.payer_wif, script, secret
                 )
                 self.revoke_rawtxs.append(rawtx)
+                print("revoke recover:", rawtx)
+
+    def change_confirmed(self, minconfirms=1):
+        with self.mutex:
+            validate.unsigned(minconfirms)
+            return self._all_confirmed(self.change_rawtxs,
+                                       minconfirms=minconfirms)

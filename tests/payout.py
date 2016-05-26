@@ -15,14 +15,8 @@ DRYRUN = True
 
 
 FIXTURES = json.load(open("tests/fixtures.json"))
-PAYER_CLOSED = FIXTURES["test_payout"]["payer_closed"]
 PAYEE_CLOSED = FIXTURES["test_payout"]["payee_closed"]
 PAYEE_AFTER = FIXTURES["test_payout"]["payee_after"]
-
-
-# print('"payer_closed":', json.dumps(PAYER_CLOSED, indent=2))
-# print('"payee_closed":', json.dumps(PAYEE_CLOSED, indent=2))
-# print('"payee_after":', json.dumps(PAYEE_AFTER, indent=2))
 
 
 class TestPayout(unittest.TestCase):

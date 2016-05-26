@@ -95,6 +95,7 @@ class Base(util.UpdateThreadMixin):
             self.commits_active = data["commits_active"]
             self.commits_revoked = data["commits_revoked"]
             self._order_active()
+            return self
 
     def clear(self):
         with self.mutex:
@@ -160,6 +161,10 @@ class Base(util.UpdateThreadMixin):
         with self.mutex:
             return self.get_deposit_total() - self.get_transferred_amount()
 
+    def get_deposit_txid(self):
+        with self.mutex:
+            return util.gettxid(self.deposit_rawtx)
+
     def _validate_transfer_quantity(self, quantity):
         with self.mutex:
 
@@ -194,10 +199,12 @@ class Base(util.UpdateThreadMixin):
                     return copy.deepcopy(commit)
             return None
 
-    def payouts_confirmed(self, minconfirms=1):
+    def _all_confirmed(self, rawtxs, minconfirms=1):
         with self.mutex:
             validate.unsigned(minconfirms)
-            for rawtx in self.payout_rawtxs:
+            if len(rawtxs) == 0:
+                return False
+            for rawtx in rawtxs:
                 confirms = self.get_confirms(rawtx)
                 if confirms < minconfirms:
                     return False

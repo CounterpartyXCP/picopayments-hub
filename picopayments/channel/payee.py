@@ -110,16 +110,8 @@ class Payee(Base):
                 given_payee_pubkey, own_payee_pubkey
             ))
 
-    def _assert_open_state(self):
-        assert(self.payer_wif is None)
-        assert(self.payee_wif is not None)
-        assert(self.spend_secret is not None)
-        assert(self.deposit_rawtx is not None)
-        assert(self.deposit_script_hex is not None)
-
     def set_commit(self, rawtx, script_hex):
         with self.mutex:
-            self._assert_open_state()
             self._validate_payer_commit(rawtx, script_hex)
 
             script = util.h2b(script_hex)
@@ -160,7 +152,6 @@ class Payee(Base):
 
     def close_channel(self):
         with self.mutex:
-            self._assert_open_state()
             assert(len(self.commits_active) > 0)
             self._order_active()
             commit = self.commits_active[-1]
@@ -203,15 +194,10 @@ class Payee(Base):
                     self.payee_wif, script, self.spend_secret
                 )
                 self.payout_rawtxs.append(rawtx)
-                print("added payout rawtx")
+                print("Added payout rawtx: {0}".format(rawtx))
 
-    def payouts_confirmed(self, minconfirms=1):
+    def payout_confirmed(self, minconfirms=1):
         with self.mutex:
             validate.unsigned(minconfirms)
-            if len(self.payout_rawtxs) == 0:
-                return False
-            for rawtx in self.payout_rawtxs:
-                confirms = self.get_confirms(rawtx)
-                if confirms < minconfirms:
-                    return False
-            return True
+            return self._all_confirmed(self.payout_rawtxs,
+                                       minconfirms=minconfirms)

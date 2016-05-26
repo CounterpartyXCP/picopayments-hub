@@ -166,7 +166,7 @@ class Control(object):
         payer_pubkey = util.wif2pubkey(payer_wif)
         script = compile_deposit_script(payer_pubkey, payee_pubkey,
                                         spend_secret_hash, expire_time)
-        dest_address = util.script2address(script, self.netcode)
+        dest_address = self.get_script_address(script)
         self._valid_channel_unused(dest_address)
         payer_address = util.wif2address(payer_wif)
 
@@ -194,8 +194,8 @@ class Control(object):
         )
 
         # create tx
-        src_address = util.script2address(deposit_script, self.netcode)
-        dest_address = util.script2address(commit_script, self.netcode)
+        src_address = self.get_script_address(deposit_script)
+        dest_address = self.get_script_address(commit_script)
         asset_balance, btc_balance = self.get_address_balance(src_address)
         if quantity == asset_balance:  # spend all btc as change tx not needed
             extra_btc = btc_balance - self.fee
@@ -244,14 +244,18 @@ class Control(object):
         self.publish(rawtx)
         return rawtx
 
+    def get_script_address(self, script):
+        return util.script2address(script, self.netcode)
+
     def get_script_balance(self, script):
-        src_address = util.script2address(script, self.netcode)
+        src_address = self.get_script_address(script)
         return self.get_address_balance(src_address)
 
     def _recover_tx(self, dest_address, script, sequence=None):
 
         # get channel info
-        src_address = util.script2address(script, self.netcode)
+        src_address = self.get_script_address(script)
+        print("src_address:", src_address)
         asset_balance, btc_balance = self.get_address_balance(src_address)
 
         # create expire tx
