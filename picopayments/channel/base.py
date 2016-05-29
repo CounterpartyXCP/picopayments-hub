@@ -15,33 +15,35 @@ from picopayments.scripts import get_commit_revoke_secret_hash
 
 class Base(util.UpdateThreadMixin):
 
-    payer_wif = None
-    payee_wif = None
-    spend_secret = None
-    deposit_script_hex = None
-    deposit_rawtx = None
-    expire_rawtxs = []  # ["rawtx", ...]
-    change_rawtxs = []  # ["rawtx", ...]
-    revoke_rawtxs = []  # ["rawtx", ...]
-    payout_rawtxs = []  # ["rawtx", ...]
+    state = {
+        "payer_wif": None,
+        "payee_wif": None,
+        "spend_secret": None,
+        "deposit_script": None,
+        "deposit_rawtx": None,
+        "expire_rawtxs": [],  # ["rawtx", ...]
+        "change_rawtxs": [],  # ["rawtx", ...]
+        "revoke_rawtxs": [],  # ["rawtx", ...]
+        "payout_rawtxs": [],  # ["rawtx", ...]
 
-    # Quantity not needed as payer may change it. If its heigher its against
-    # our self intrest to throw away money. If its lower it gives us a better
-    # resolution when reversing the channel.
-    commits_requested = []  # ["revoke_secret_hex"]
+        # Quantity not needed as payer may change it. If its heigher its
+        # against our self intrest to throw away money. If its lower it
+        # gives us a better resolution when reversing the channel.
+        "commits_requested": [],  # ["revoke_secret_hex"]
 
-    # must be ordered lowest to heighest at all times!
-    commits_active = []     # [{
-    #                             "rawtx": hex,
-    #                             "script": hex,
-    #                             "revoke_secret": hex
-    #                         }]
+        # must be ordered lowest to heighest at all times!
+        "commits_active": [],     # [{
+        #                             "rawtx": hex,
+        #                             "script": hex,
+        #                             "revoke_secret": hex
+        #                         }]
 
-    commits_revoked = []    # [{
-    #                            "rawtx": hex,  # unneeded?
-    #                            "script": hex,
-    #                            "revoke_secret": hex
-    #                         }]
+        "commits_revoked": [],    # [{
+        #                            "rawtx": hex,  # unneeded?
+        #                            "script": hex,
+        #                            "revoke_secret": hex
+        #                         }]
+    }
 
     def __init__(self, asset, user=control.DEFAULT_COUNTERPARTY_RPC_USER,
                  password=control.DEFAULT_COUNTERPARTY_RPC_PASSWORD,
@@ -64,70 +66,48 @@ class Base(util.UpdateThreadMixin):
     def save(self):
         with self.mutex:
             self._order_active()
-            return copy.deepcopy({
-                "payer_wif": self.payer_wif,
-                "payee_wif": self.payee_wif,
-                "spend_secret": self.spend_secret,
-                "deposit_script_hex": self.deposit_script_hex,
-                "deposit_rawtx": self.deposit_rawtx,
-                "expire_rawtxs": self.expire_rawtxs,
-                "change_rawtxs": self.change_rawtxs,
-                "revoke_rawtxs": self.revoke_rawtxs,
-                "payout_rawtxs": self.payout_rawtxs,
-                "commits_requested": self.commits_requested,
-                "commits_active": self.commits_active,
-                "commits_revoked": self.commits_revoked,
-            })
+            return copy.deepcopy(self.state)
 
-    def load(self, data):
+    def load(self, state):
         # TODO validate input
         with self.mutex:
-            data = copy.deepcopy(data)
-            self.payer_wif = data["payer_wif"]
-            self.payee_wif = data["payee_wif"]
-            self.spend_secret = data["spend_secret"]
-            self.deposit_script_hex = data["deposit_script_hex"]
-            self.deposit_rawtx = data["deposit_rawtx"]
-            self.expire_rawtxs = data["expire_rawtxs"]
-            self.change_rawtxs = data["change_rawtxs"]
-            self.revoke_rawtxs = data["revoke_rawtxs"]
-            self.payout_rawtxs = data["payout_rawtxs"]
-            self.commits_requested = data["commits_requested"]
-            self.commits_active = data["commits_active"]
-            self.commits_revoked = data["commits_revoked"]
-            self._order_active()
+            self.state = copy.deepcopy(state)
             return self
 
     def clear(self):
         with self.mutex:
-            self.payer_wif = None
-            self.payee_wif = None
-            self.spend_secret = None
-            self.deposit_script_hex = None
-            self.deposit_rawtx = None
-            self.expire_rawtxs = []
-            self.change_rawtxs = []
-            self.payout_rawtxs = []
-            self.revoke_rawtxs = []
-            self.commits_requested = []
-            self.commits_active = []
-            self.commits_revoked = []
+            self.state = {
+                "payer_wif": None,
+                "payee_wif": None,
+                "spend_secret": None,
+                "deposit_script": None,
+                "deposit_rawtx": None,
+                "expire_rawtxs": [],
+                "change_rawtxs": [],
+                "payout_rawtxs": [],
+                "revoke_rawtxs": [],
+                "commits_requested": [],
+                "commits_active": [],
+                "commits_revoked": []
+            }
 
     def get_confirms(self, rawtx):
         with self.mutex:
             return self.control.btctxstore.confirms(util.gettxid(rawtx)) or 0
 
     def _get_deposit_confirms(self):
-        assert(self.deposit_rawtx is not None)
-        assert(self.deposit_script_hex is not None)
-        return self.get_confirms(self.deposit_rawtx)
+        assert(self.state["deposit_rawtx"] is not None)
+        assert(self.state["deposit_script"] is not None)
+        return self.get_confirms(self.state["deposit_rawtx"])
 
     def get_spend_secret_hash(self):
         with self.mutex:
-            if self.spend_secret is not None:  # payee
-                return util.b2h(util.hash160(util.h2b(self.spend_secret)))
-            elif self.deposit_script_hex is not None:  # payer
-                script = util.h2b(self.deposit_script_hex)
+            if self.state["spend_secret"] is not None:  # payee
+                return util.b2h(
+                    util.hash160(util.h2b(self.state["spend_secret"]))
+                )
+            elif self.state["deposit_script"] is not None:  # payer
+                script = util.h2b(self.state["deposit_script"])
                 return get_deposit_spend_secret_hash(script)
             else:  # undefined
                 raise Exception("Undefined state, not payee or payer.")
@@ -135,29 +115,29 @@ class Base(util.UpdateThreadMixin):
     def is_deposit_confirmed(self, minconfirms=1):
         with self.mutex:
             validate.unsigned(minconfirms)
-            script = util.h2b(self.deposit_script_hex)
+            script = util.h2b(self.state["deposit_script"])
             if self.control.get_script_balance(script) == (0, 0):
                 return False
             return self._get_deposit_confirms() >= minconfirms
 
     def set_spend_secret(self, secret):
         with self.mutex:
-            self.spend_secret = secret
+            self.state["spend_secret"] = secret
 
     def get_transferred_amount(self):
         """Returns funds transferred from payer to payee."""
         with self.mutex:
-            if len(self.commits_active) == 0:
+            if len(self.state["commits_active"]) == 0:
                 return 0
             self._order_active()
-            commit = self.commits_active[-1]
+            commit = self.state["commits_active"][-1]
             return self.control.get_quantity(commit["rawtx"])
 
     def get_deposit_total(self):
         """Returns the total deposit amount"""
         with self.mutex:
-            assert(self.deposit_rawtx is not None)
-            return self.control.get_quantity(self.deposit_rawtx)
+            assert(self.state["deposit_rawtx"] is not None)
+            return self.control.get_quantity(self.state["deposit_rawtx"])
 
     def get_deposit_remaining(self):
         """Returns the remaining deposit amount"""
@@ -166,7 +146,7 @@ class Base(util.UpdateThreadMixin):
 
     def get_deposit_txid(self):
         with self.mutex:
-            return util.gettxid(self.deposit_rawtx)
+            return util.gettxid(self.state["deposit_rawtx"])
 
     def _validate_transfer_quantity(self, quantity):
         with self.mutex:
@@ -185,7 +165,7 @@ class Base(util.UpdateThreadMixin):
 
         def sort_func(entry):
             return self.control.get_quantity(entry["rawtx"])
-        self.commits_active.sort(key=sort_func)
+        self.state["commits_active"].sort(key=sort_func)
 
     def revoke_all(self, secrets):
         return list(map(self.revoke, secrets))
@@ -193,12 +173,12 @@ class Base(util.UpdateThreadMixin):
     def revoke(self, secret):
         with self.mutex:
             secret_hash = util.hash160hex(secret)
-            for commit in self.commits_active[:]:
+            for commit in self.state["commits_active"][:]:
                 script = util.h2b(commit["script"])
                 if secret_hash == get_commit_revoke_secret_hash(script):
-                    self.commits_active.remove(commit)  # remove from active
+                    self.state["commits_active"].remove(commit)
                     commit["revoke_secret"] = secret  # save secret
-                    self.commits_revoked.append(commit)  # add to revoked
+                    self.state["commits_revoked"].append(commit)
                     return copy.deepcopy(commit)
             return None
 
@@ -214,8 +194,10 @@ class Base(util.UpdateThreadMixin):
 
     def _commit_spent(self, commit):
         txid = util.gettxid(commit["rawtx"])
-        for rawtx in (self.payout_rawtxs + self.revoke_rawtxs +
-                      self.change_rawtxs + self.expire_rawtxs):
+        for rawtx in (self.state["payout_rawtxs"] +
+                      self.state["revoke_rawtxs"] +
+                      self.state["change_rawtxs"] +
+                      self.state["expire_rawtxs"]):
             tx = pycoin.tx.Tx.from_hex(rawtx)
             for txin in tx.txs_in:
                 if util.b2h_rev(txin.previous_hash) == txid:

@@ -4,8 +4,8 @@ from picopayments.channel import Payer, Payee
 
 
 PARTIES = {
-  "payee": "cRgtPMUA4kxYEbkJnVHMgrmZCNeCZJwoVv7wxU59ku8wnrK1g2Ea",
-  "payer": "cVJDtqnCMLgpbmJHAjvAELtQVPEWZ2dvUqpMibK6i4fsT2ijugGF"
+  "payer": "cTVuKB6qVmwQ76DSjtzq47ZTv1QY6NB9MwFmsuZws9eLBAb5KCAd",
+  "payee": "cUEEJwKXpxNLkLYN7EsQjLHj3Yv7iNRgtgst8g21RPw6nSxgemkj"
 }
 
 PAYER_WIF = PARTIES["payer"]
@@ -103,8 +103,6 @@ try:
     # payee closes channel by signing and publishing commit
     txid = payee.close_channel()
     print("Payee closes channel by publishing commit {0}.".format(txid))
-
-    raise Exception("no payout, change")
 
     # wait until payout confirmed
     while not payee.payout_confirmed(minconfirms=1):
