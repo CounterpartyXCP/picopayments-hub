@@ -142,7 +142,7 @@ class Payee(Base):
                         "rawtx": rawtx, "script": script_hex,
                         "revoke_secret": revoke_secret
                     })
-                    return self._get_transferred_amount()
+                    return self.get_transferred_amount()
 
             return None
 

@@ -29,10 +29,10 @@ class TestPayout(unittest.TestCase):
     def tearDown(self):
         self.payee.stop()
 
-    def test_get_payout_recoverable(self):
-        self.payee.load(PAYEE_CLOSED)
-        scripts = self.payee.get_payout_recoverable()
-        self.assertTrue(len(scripts) > 0)
+    # def test_get_payout_recoverable(self):
+    #     self.payee.load(PAYEE_CLOSED)
+    #     scripts = self.payee.get_payout_recoverable()
+    #     self.assertTrue(len(scripts) > 0)
 
     def test_payout_recover(self):
         self.payee.load(PAYEE_CLOSED)

@@ -103,19 +103,22 @@ class Base(util.UpdateThreadMixin):
         assert(self.state["deposit_script"] is not None)
         return self._get_confirms(self.state["deposit_rawtx"])
 
-    def _get_transferred_amount(self):
-        if len(self.state["commits_active"]) == 0:
-            return 0
-        self._order_active()
-        commit = self.state["commits_active"][-1]
-        return self.control.get_quantity(commit["rawtx"])
+    def get_transferred_amount(self):
+        # FIXME add doc string
+        # FIXME validate all input
+        with self.mutex:
+            if len(self.state["commits_active"]) == 0:
+                return 0
+            self._order_active()
+            commit = self.state["commits_active"][-1]
+            return self.control.get_quantity(commit["rawtx"])
 
     def _get_deposit_total(self):
         assert(self.state["deposit_rawtx"] is not None)
         return self.control.get_quantity(self.state["deposit_rawtx"])
 
     def _validate_transfer_quantity(self, quantity):
-        transferred = self._get_transferred_amount()
+        transferred = self.get_transferred_amount()
         if quantity <= transferred:
             msg = "Amount not greater transferred: {0} <= {1}"
             raise ValueError(msg.format(quantity, transferred))
@@ -142,6 +145,12 @@ class Base(util.UpdateThreadMixin):
                     self.state["commits_revoked"].append(commit)
                     return copy.deepcopy(commit)
             return None
+
+    def revoke_all(self, secrets):
+        # FIXME add doc string
+        # FIXME validate all input
+        with self.mutex:
+            return list(map(self._revoke, secrets))
 
     def _all_confirmed(self, rawtxs, minconfirms=1):
         validate.unsigned(minconfirms)
