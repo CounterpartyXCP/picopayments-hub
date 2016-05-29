@@ -3,6 +3,7 @@
 # License: MIT (see LICENSE file)
 
 
+import time
 import pycoin
 import json
 import requests
@@ -148,6 +149,7 @@ class Control(object):
                 # see http://counterparty.io/docs/api/#wallet-integration
             except Exception as e:
                 print("publishing failed: {0} {1}".format(type(e), e))
+            time.sleep(10)
 
     def get_quantity(self, rawtx):
         result = self._rpc_call({

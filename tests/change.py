@@ -27,11 +27,6 @@ class TestRecoverChange(unittest.TestCase):
     def tearDown(self):
         self.payer.stop()
 
-    def test_find_spend_secret(self):
-        self.payer.load(PAYER_STATE)
-        secret = self.payer.find_spend_secret()
-        self.assertEqual(secret, SPEND_SECRET)
-
     def test_recover_change(self):
         self.payer.load(PAYER_STATE)
         self.payer.update()  # recover change

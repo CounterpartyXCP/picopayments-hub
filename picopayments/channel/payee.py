@@ -19,6 +19,8 @@ from picopayments.channel.base import Base
 class Payee(Base):
 
     def setup(self, payee_wif):
+        # FIXME add doc string
+        # FIXME validate all input
         with self.mutex:
             self.clear()
             self.state["payee_wif"] = payee_wif
@@ -74,6 +76,8 @@ class Payee(Base):
         # TODO check given script is commit script
 
     def set_deposit(self, rawtx, script_hex):
+        # FIXME add doc string
+        # FIXME validate all input
         with self.mutex:
             self._assert_unopen_state()
             self._validate_payer_deposit(rawtx, script_hex)
@@ -85,6 +89,8 @@ class Payee(Base):
             self.state["deposit_script"] = script_hex
 
     def request_commit(self, quantity):
+        # FIXME add doc string
+        # FIXME validate all input
         with self.mutex:
             self._validate_transfer_quantity(quantity)
             secret = util.b2h(os.urandom(32))  # secure random number
@@ -111,6 +117,8 @@ class Payee(Base):
             ))
 
     def set_commit(self, rawtx, script_hex):
+        # FIXME add doc string
+        # FIXME validate all input
         with self.mutex:
             self._validate_payer_commit(rawtx, script_hex)
 
@@ -134,11 +142,13 @@ class Payee(Base):
                         "rawtx": rawtx, "script": script_hex,
                         "revoke_secret": revoke_secret
                     })
-                    return self.get_transferred_amount()
+                    return self._get_transferred_amount()
 
             return None
 
     def revoke_until(self, quantity):
+        # FIXME add doc string
+        # FIXME validate all input
         with self.mutex:
             secrets = []
             self._order_active()
@@ -147,10 +157,13 @@ class Payee(Base):
                     secrets.append(commit["revoke_secret"])
                 else:
                     break
-            self.revoke_all(secrets)
+            list(map(self._revoke, secrets))
+
             return secrets
 
     def close_channel(self):
+        # FIXME add doc string
+        # FIXME validate all input
         with self.mutex:
             assert(len(self.state["commits_active"]) > 0)
             self._order_active()
@@ -163,44 +176,46 @@ class Payee(Base):
             return util.gettxid(rawtx)
 
     def update(self):
+        # FIXME add doc string
+        # FIXME validate all input
         with self.mutex:
 
             # payout recoverable commits
-            scripts = self.get_payout_recoverable()
+            scripts = self._get_payout_recoverable()
             if len(scripts) > 0:
-                self.payout_recover(scripts)
+                self._payout_recover(scripts)
 
-    def get_payout_recoverable(self):
-        with self.mutex:
-            scripts = []
-            for commit in (self.state["commits_active"] +
-                           self.state["commits_revoked"]):
-                script = util.h2b(commit["script"])
-                delay_time = get_commit_delay_time(script)
-                address = util.script2address(
-                    script, netcode=self.control.netcode
-                )
-                if self._commit_spent(commit):
-                    continue
-                if self.control.can_spend_from_address(address):
-                    utxos = self.control.btctxstore.retrieve_utxos([address])
-                    for utxo in utxos:
-                        txid = utxo["txid"]
-                        confirms = self.control.btctxstore.confirms(txid)
-                        if confirms >= delay_time:
-                            print("spendable commit address:", address)
-                            scripts.append(script)
-            return scripts
+    def _get_payout_recoverable(self):
+        scripts = []
+        for commit in (self.state["commits_active"] +
+                       self.state["commits_revoked"]):
+            script = util.h2b(commit["script"])
+            delay_time = get_commit_delay_time(script)
+            address = util.script2address(
+                script, netcode=self.control.netcode
+            )
+            if self._commit_spent(commit):
+                continue
+            if self.control.can_spend_from_address(address):
+                utxos = self.control.btctxstore.retrieve_utxos([address])
+                for utxo in utxos:
+                    txid = utxo["txid"]
+                    confirms = self.control.btctxstore.confirms(txid)
+                    if confirms >= delay_time:
+                        print("spendable commit address:", address)
+                        scripts.append(script)
+        return scripts
 
-    def payout_recover(self, scripts):
-        with self.mutex:
-            for script in scripts:
-                rawtx = self.control.payout_recover(
-                    self.state["payee_wif"], script, self.state["spend_secret"]
-                )
-                self.state["payout_rawtxs"].append(rawtx)
+    def _payout_recover(self, scripts):
+        for script in scripts:
+            rawtx = self.control.payout_recover(
+                self.state["payee_wif"], script, self.state["spend_secret"]
+            )
+            self.state["payout_rawtxs"].append(rawtx)
 
     def payout_confirmed(self, minconfirms=1):
+        # FIXME add doc string
+        # FIXME validate all input
         with self.mutex:
             validate.unsigned(minconfirms)
             return self._all_confirmed(self.state["payout_rawtxs"],

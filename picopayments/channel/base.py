@@ -9,7 +9,6 @@ from threading import RLock
 from picopayments import util
 from picopayments import control
 from picopayments import validate
-from picopayments.scripts import get_deposit_spend_secret_hash
 from picopayments.scripts import get_commit_revoke_secret_hash
 
 
@@ -64,17 +63,22 @@ class Base(util.UpdateThreadMixin):
             self.start()
 
     def save(self):
+        # FIXME add doc string
+        # FIXME validate all input
         with self.mutex:
             self._order_active()
             return copy.deepcopy(self.state)
 
     def load(self, state):
-        # TODO validate input
+        # FIXME add doc string
+        # FIXME validate all input
         with self.mutex:
             self.state = copy.deepcopy(state)
             return self
 
     def clear(self):
+        # FIXME add doc string
+        # FIXME validate all input
         with self.mutex:
             self.state = {
                 "payer_wif": None,
@@ -91,75 +95,35 @@ class Base(util.UpdateThreadMixin):
                 "commits_revoked": []
             }
 
-    def get_confirms(self, rawtx):
-        with self.mutex:
-            return self.control.btctxstore.confirms(util.gettxid(rawtx)) or 0
+    def _get_confirms(self, rawtx):
+        return self.control.btctxstore.confirms(util.gettxid(rawtx)) or 0
 
     def _get_deposit_confirms(self):
         assert(self.state["deposit_rawtx"] is not None)
         assert(self.state["deposit_script"] is not None)
-        return self.get_confirms(self.state["deposit_rawtx"])
+        return self._get_confirms(self.state["deposit_rawtx"])
 
-    def get_spend_secret_hash(self):
-        with self.mutex:
-            if self.state["spend_secret"] is not None:  # payee
-                return util.b2h(
-                    util.hash160(util.h2b(self.state["spend_secret"]))
-                )
-            elif self.state["deposit_script"] is not None:  # payer
-                script = util.h2b(self.state["deposit_script"])
-                return get_deposit_spend_secret_hash(script)
-            else:  # undefined
-                raise Exception("Undefined state, not payee or payer.")
+    def _get_transferred_amount(self):
+        if len(self.state["commits_active"]) == 0:
+            return 0
+        self._order_active()
+        commit = self.state["commits_active"][-1]
+        return self.control.get_quantity(commit["rawtx"])
 
-    def is_deposit_confirmed(self, minconfirms=1):
-        with self.mutex:
-            validate.unsigned(minconfirms)
-            script = util.h2b(self.state["deposit_script"])
-            if self.control.get_script_balance(script) == (0, 0):
-                return False
-            return self._get_deposit_confirms() >= minconfirms
-
-    def set_spend_secret(self, secret):
-        with self.mutex:
-            self.state["spend_secret"] = secret
-
-    def get_transferred_amount(self):
-        """Returns funds transferred from payer to payee."""
-        with self.mutex:
-            if len(self.state["commits_active"]) == 0:
-                return 0
-            self._order_active()
-            commit = self.state["commits_active"][-1]
-            return self.control.get_quantity(commit["rawtx"])
-
-    def get_deposit_total(self):
-        """Returns the total deposit amount"""
-        with self.mutex:
-            assert(self.state["deposit_rawtx"] is not None)
-            return self.control.get_quantity(self.state["deposit_rawtx"])
-
-    def get_deposit_remaining(self):
-        """Returns the remaining deposit amount"""
-        with self.mutex:
-            return self.get_deposit_total() - self.get_transferred_amount()
-
-    def get_deposit_txid(self):
-        with self.mutex:
-            return util.gettxid(self.state["deposit_rawtx"])
+    def _get_deposit_total(self):
+        assert(self.state["deposit_rawtx"] is not None)
+        return self.control.get_quantity(self.state["deposit_rawtx"])
 
     def _validate_transfer_quantity(self, quantity):
-        with self.mutex:
+        transferred = self._get_transferred_amount()
+        if quantity <= transferred:
+            msg = "Amount not greater transferred: {0} <= {1}"
+            raise ValueError(msg.format(quantity, transferred))
 
-            transferred = self.get_transferred_amount()
-            if quantity <= transferred:
-                msg = "Amount not greater transferred: {0} <= {1}"
-                raise ValueError(msg.format(quantity, transferred))
-
-            total = self.get_deposit_total()
-            if quantity > total:
-                msg = "Amount greater total: {0} > {1}"
-                raise ValueError(msg.fromat(quantity, total))
+        total = self._get_deposit_total()
+        if quantity > total:
+            msg = "Amount greater total: {0} > {1}"
+            raise ValueError(msg.fromat(quantity, total))
 
     def _order_active(self):
 
@@ -167,10 +131,7 @@ class Base(util.UpdateThreadMixin):
             return self.control.get_quantity(entry["rawtx"])
         self.state["commits_active"].sort(key=sort_func)
 
-    def revoke_all(self, secrets):
-        return list(map(self.revoke, secrets))
-
-    def revoke(self, secret):
+    def _revoke(self, secret):
         with self.mutex:
             secret_hash = util.hash160hex(secret)
             for commit in self.state["commits_active"][:]:
@@ -187,7 +148,7 @@ class Base(util.UpdateThreadMixin):
         if len(rawtxs) == 0:
             return False
         for rawtx in rawtxs:
-            confirms = self.get_confirms(rawtx)
+            confirms = self._get_confirms(rawtx)
             if confirms < minconfirms:
                 return False
         return True
