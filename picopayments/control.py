@@ -101,6 +101,23 @@ class Control(object):
         assert(self.get_quantity(rawtx) == quantity)
         return rawtx
 
+    def can_spend_from_script(self, script):
+        address = self.get_script_address(script)
+        return self.can_spend_from_address(address)
+
+    def can_spend_from_address(self, address):
+
+        # has assets, btc
+        if self.get_address_balance(address) == (0, 0):
+            return False
+
+        # TODO check if btc > fee
+
+        # can only spend if all txs confirmed
+        txids = self.btctxstore.get_transactions(address)
+        latest_confirms = self.btctxstore.confirms(txids[0])
+        return latest_confirms > 0
+
     def get_address_balance(self, address):
         result = self._rpc_call({
             "method": "get_balances",
@@ -121,12 +138,16 @@ class Control(object):
         return asset_balance, btc_balance
 
     def publish(self, rawtx):
+        txid = util.gettxid(rawtx)
         if self.dryrun:
-            print("PUBLISH:", rawtx)
-        else:
-            self.bitcoind_rpc.sendrawtransaction(rawtx)
-            return util.gettxid(rawtx)
-            # see http://counterparty.io/docs/api/#wallet-integration
+            return txid
+        while self.btctxstore.confirms(util.gettxid(rawtx)) is None:
+            try:
+                self.bitcoind_rpc.sendrawtransaction(rawtx)
+                return util.gettxid(rawtx)
+                # see http://counterparty.io/docs/api/#wallet-integration
+            except Exception as e:
+                print("publishing failed: {0} {1}".format(type(e), e))
 
     def get_quantity(self, rawtx):
         result = self._rpc_call({
@@ -255,7 +276,6 @@ class Control(object):
 
         # get channel info
         src_address = self.get_script_address(script)
-        print("src_address:", src_address)
         asset_balance, btc_balance = self.get_address_balance(src_address)
 
         # create expire tx

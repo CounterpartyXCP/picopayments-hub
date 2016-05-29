@@ -179,12 +179,16 @@ class Payee(Base):
                 address = util.script2address(
                     script, netcode=self.control.netcode
                 )
-                utxos = self.control.btctxstore.retrieve_utxos([address])
-                for utxo in utxos:
-                    # TODO test it returns 0 for unconfirmed spends
-                    confirms = self.control.btctxstore.confirms(utxo["txid"])
-                    if confirms >= delay_time:
-                        scripts.append(script)
+                if self._commit_spent(commit):
+                    continue
+                if self.control.can_spend_from_address(address):
+                    utxos = self.control.btctxstore.retrieve_utxos([address])
+                    for utxo in utxos:
+                        txid = utxo["txid"]
+                        confirms = self.control.btctxstore.confirms(txid)
+                        if confirms >= delay_time:
+                            print("spendable commit address:", address)
+                            scripts.append(script)
             return scripts
 
     def payout_recover(self, scripts):
@@ -194,7 +198,6 @@ class Payee(Base):
                     self.payee_wif, script, self.spend_secret
                 )
                 self.payout_rawtxs.append(rawtx)
-                print("Added payout rawtx: {0}".format(rawtx))
 
     def payout_confirmed(self, minconfirms=1):
         with self.mutex:

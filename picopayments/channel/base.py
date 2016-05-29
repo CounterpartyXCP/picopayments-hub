@@ -4,6 +4,7 @@
 
 
 import copy
+import pycoin
 from threading import RLock
 from picopayments import util
 from picopayments import control
@@ -116,11 +117,10 @@ class Base(util.UpdateThreadMixin):
         with self.mutex:
             return self.control.btctxstore.confirms(util.gettxid(rawtx)) or 0
 
-    def get_deposit_confirms(self):
-        with self.mutex:
-            assert(self.deposit_rawtx is not None)
-            assert(self.deposit_script_hex is not None)
-            return self.get_confirms(self.deposit_rawtx)
+    def _get_deposit_confirms(self):
+        assert(self.deposit_rawtx is not None)
+        assert(self.deposit_script_hex is not None)
+        return self.get_confirms(self.deposit_rawtx)
 
     def get_spend_secret_hash(self):
         with self.mutex:
@@ -135,7 +135,10 @@ class Base(util.UpdateThreadMixin):
     def is_deposit_confirmed(self, minconfirms=1):
         with self.mutex:
             validate.unsigned(minconfirms)
-            return self.get_deposit_confirms() >= minconfirms
+            script = util.h2b(self.deposit_script_hex)
+            if self.control.get_script_balance(script) == (0, 0):
+                return False
+            return self._get_deposit_confirms() >= minconfirms
 
     def set_spend_secret(self, secret):
         with self.mutex:
@@ -200,12 +203,22 @@ class Base(util.UpdateThreadMixin):
             return None
 
     def _all_confirmed(self, rawtxs, minconfirms=1):
-        with self.mutex:
-            validate.unsigned(minconfirms)
-            if len(rawtxs) == 0:
+        validate.unsigned(minconfirms)
+        if len(rawtxs) == 0:
+            return False
+        for rawtx in rawtxs:
+            confirms = self.get_confirms(rawtx)
+            if confirms < minconfirms:
                 return False
-            for rawtx in rawtxs:
-                confirms = self.get_confirms(rawtx)
-                if confirms < minconfirms:
-                    return False
-            return True
+        return True
+
+    def _commit_spent(self, commit):
+        txid = util.gettxid(commit["rawtx"])
+        for rawtx in (self.payout_rawtxs + self.revoke_rawtxs +
+                      self.change_rawtxs + self.expire_rawtxs):
+            tx = pycoin.tx.Tx.from_hex(rawtx)
+            for txin in tx.txs_in:
+                if util.b2h_rev(txin.previous_hash) == txid:
+                    print("found spent:", txid)
+                    return True
+        return False

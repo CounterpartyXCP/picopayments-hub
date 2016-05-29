@@ -23,6 +23,7 @@ class TestRevoke(unittest.TestCase):
         self.payer = picopayments.channel.Payer(
             ASSET, api_url=API_URL, testnet=TESTNET, dryrun=DRYRUN
         )
+        self.maxDiff = None
 
     def tearDown(self):
         self.payer.stop()
@@ -30,6 +31,7 @@ class TestRevoke(unittest.TestCase):
     def test_revoke(self):
         self.payer.load(FIXTURES["test_revoke"]["state_before"])
         self.payer.update()
+        # print(json.dumps(self.payer.save(), indent=2))
         self.assertEqual(
             self.payer.save(), FIXTURES["test_revoke"]["state_after"]
         )

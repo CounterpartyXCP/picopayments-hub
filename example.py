@@ -3,8 +3,13 @@ import json
 from picopayments.channel import Payer, Payee
 
 
-PAYER_WIF = "cQygpG38HiCDHsUCGn8QVKE8NFsgb9k1UHEwm8irEMuxMNX516QU"
-PAYEE_WIF = "cS3ZxfC6sWMCv5hyQsA1Kjpy6Vqe9CQpfX5GEYevTDW4fXucw5uo"
+PARTIES = {
+  "payee": "cRgtPMUA4kxYEbkJnVHMgrmZCNeCZJwoVv7wxU59ku8wnrK1g2Ea",
+  "payer": "cVJDtqnCMLgpbmJHAjvAELtQVPEWZ2dvUqpMibK6i4fsT2ijugGF"
+}
+
+PAYER_WIF = PARTIES["payer"]
+PAYEE_WIF = PARTIES["payee"]
 ASSET = "A14456548018133352000"
 URL = "http://127.0.0.1:14000/api/"
 
@@ -98,6 +103,8 @@ try:
     # payee closes channel by signing and publishing commit
     txid = payee.close_channel()
     print("Payee closes channel by publishing commit {0}.".format(txid))
+
+    raise Exception("no payout, change")
 
     # wait until payout confirmed
     while not payee.payout_confirmed(minconfirms=1):

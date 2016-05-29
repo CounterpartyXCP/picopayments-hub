@@ -24,21 +24,20 @@ class Payer(Base):
                 self.deposit_script_hex is not None and
 
                 # deposit expired
-                self.is_deposit_expired() and
+                self._is_deposit_expired() and
 
                 # funds to recover
-                (self._get_deposit_balance() != (0, 0))
+                self._can_deposit_spend()
             )
 
-    def _get_deposit_balance(self):
+    def _can_deposit_spend(self):
         script = util.h2b(self.deposit_script_hex)
-        return self.control.get_script_balance(script)
+        return self.control.can_spend_from_script(script)
 
-    def is_deposit_expired(self):
-        with self.mutex:
-            script = util.h2b(self.deposit_script_hex)
-            t = get_deposit_expire_time(script)
-            return self.get_deposit_confirms() >= t
+    def _is_deposit_expired(self):
+        script = util.h2b(self.deposit_script_hex)
+        t = get_deposit_expire_time(script)
+        return self._get_deposit_confirms() >= t
 
     def update(self):
         with self.mutex:
@@ -49,9 +48,10 @@ class Payer(Base):
                 self.revoke_recover(revokable)
 
             # If spend secret exposed by payout, recover change!
-            spend_secret = self.find_spend_secret()
-            if spend_secret is not None:
-                self.change_recover(spend_secret)
+            if self.can_change_recover():
+                spend_secret = self.find_spend_secret()
+                if spend_secret is not None:
+                    self.change_recover(spend_secret)
 
             # If deposit expired recover the coins!
             if self.can_expire_recover():
@@ -120,7 +120,6 @@ class Payer(Base):
                 self.payer_wif, script
             )
             self.expire_rawtxs.append(rawtx)
-            print("expire recover:", rawtx)
 
     def find_spend_secret(self):
         for commit in self.commits_active + self.commits_revoked:
@@ -129,8 +128,8 @@ class Payer(Base):
                 script, netcode=self.control.netcode
             )
             txs = self.control.btctxstore.get_transactions(address)
-            # if len(txs) == 1:
-            #     continue  # only the commit, no payout
+            if len(txs) == 1:
+                continue  # only the commit, no payout
             for txid in txs:
                 rawtx = self.control.btctxstore.retrieve_tx(txid)
                 spend_secret = scripts.get_spend_secret(rawtx, script)
@@ -138,15 +137,18 @@ class Payer(Base):
                     return spend_secret
         return None
 
+    def can_change_recover(self):
+        with self.mutex:
+            script = util.h2b(self.deposit_script_hex)
+            return self.control.can_spend_from_script(script)
+
     def change_recover(self, spend_secret):
         with self.mutex:
             script = util.h2b(self.deposit_script_hex)
-            if self.control.get_script_balance(script) != (0, 0):
-                rawtx = self.control.change_recover(
-                    self.payer_wif, script, spend_secret
-                )
-                self.change_rawtxs.append(rawtx)
-                print("Added change rawtx: {0}".format(rawtx))
+            rawtx = self.control.change_recover(
+                self.payer_wif, script, spend_secret
+            )
+            self.change_rawtxs.append(rawtx)
 
     def create_commit(self, quantity, revoke_secret_hash, delay_time):
         with self.mutex:
@@ -170,8 +172,7 @@ class Payer(Base):
                 address = util.script2address(
                     script, netcode=self.control.netcode
                 )
-                utxos = self.control.btctxstore.retrieve_utxos([address])
-                if len(utxos) > 0:
+                if self.control.can_spend_from_address(address):
                     revokable.append((script, commit["revoke_secret"]))
             return revokable
 
@@ -182,7 +183,6 @@ class Payer(Base):
                     self.payer_wif, script, secret
                 )
                 self.revoke_rawtxs.append(rawtx)
-                print("revoke recover:", rawtx)
 
     def change_confirmed(self, minconfirms=1):
         with self.mutex:
