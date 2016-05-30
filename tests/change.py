@@ -25,9 +25,8 @@ class TestRecoverChange(unittest.TestCase):
         )
 
     def test_recover_change(self):
-        self.payer.load(PAYER_STATE)
-        self.payer.payer_update()  # recover change
-        self.assertEqual(self.payer.save(), PAYER_RECOVERED_CHANGE)
+        result = self.payer.payer_update(PAYER_STATE)  # recover change
+        self.assertEqual(result["channel_state"], PAYER_RECOVERED_CHANGE)
 
 
 if __name__ == "__main__":

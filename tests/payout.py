@@ -27,9 +27,8 @@ class TestPayout(unittest.TestCase):
         )
 
     def test_payout_recover(self):
-        self.payee.load(PAYEE_CLOSED)
-        self.payee.payee_update()
-        self.assertEqual(self.payee.save(), PAYEE_AFTER)
+        result = self.payee.payee_update(PAYEE_CLOSED)
+        self.assertEqual(result["channel_state"], PAYEE_AFTER)
 
 
 if __name__ == "__main__":

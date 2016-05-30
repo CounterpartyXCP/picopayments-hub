@@ -9,7 +9,6 @@ import pycoin
 import time
 import json
 import requests
-from threading import RLock
 from btctxstore import BtcTxStore
 from requests.auth import HTTPBasicAuth
 from bitcoinrpc.authproxy import AuthServiceProxy
@@ -43,58 +42,16 @@ DEFAULT_COUNTERPARTY_RPC_PASSWORD = "1234"
 
 class Channel(object):
 
-    state = {
-        "payer_wif": None,
-        "payee_wif": None,
-        "spend_secret": None,
-        "deposit_script": None,
-        "deposit_rawtx": None,
-        "expire_rawtxs": [],  # ["rawtx", ...]
-        "change_rawtxs": [],  # ["rawtx", ...]
-        "revoke_rawtxs": [],  # ["rawtx", ...]
-        "payout_rawtxs": [],  # ["rawtx", ...]
-
-        # Quantity not needed as payer may change it. If its heigher its
-        # against our self intrest to throw away money. If its lower it
-        # gives us a better resolution when reversing the channel.
-        "commits_requested": [],  # ["revoke_secret_hex"]
-
-        # must be ordered lowest to heighest at all times!
-        "commits_active": [],     # [{
-        #                             "rawtx": hex,
-        #                             "script": hex,
-        #                             "revoke_secret": hex
-        #                         }]
-
-        "commits_revoked": [],    # [{
-        #                            "rawtx": hex,  # unneeded?
-        #                            "script": hex,
-        #                            "revoke_secret": hex
-        #                         }]
-    }
-
     def __init__(self, asset, user=DEFAULT_COUNTERPARTY_RPC_USER,
                  password=DEFAULT_COUNTERPARTY_RPC_PASSWORD,
                  api_url=None, testnet=DEFAULT_TESTNET, dryrun=False,
                  fee=DEFAULT_TXFEE, dust_size=DEFAULT_DUSTSIZE):
-        """Initialize payment channel controler.
-
-        Args:
-            asset (str): Counterparty asset name.
-            user (str): Counterparty API username.
-            password (str): Counterparty API password.
-            api_url (str): Counterparty API url.
-            testnet (bool): True if running on testnet, otherwise mainnet.
-            dryrun (bool): If True nothing will be published to the blockchain.
-            fee (int): The transaction fee to use.
-            dust_size (int): The default dust size for counterparty outputs.
-        """
-
+        # FIXME add doc string
+        # FIXME validate all input
         if testnet:
             default_url = DEFAULT_COUNTERPARTY_RPC_TESTNET_URL
         else:
             default_url = DEFAULT_COUNTERPARTY_RPC_MAINNET_URL
-
         self.dryrun = dryrun
         self.fee = fee
         self.dust_size = dust_size
@@ -109,206 +66,161 @@ class Channel(object):
         self.bitcoind_rpc = AuthServiceProxy(  # XXX to publish
             "http://bitcoinrpcuser:bitcoinrpcpass@127.0.0.1:18332"
         )
-        self.mutex = RLock()
-
-    def save(self):
-        # FIXME add doc string
-        # FIXME validate all input
-        # FIXME validate state
-        with self.mutex:
-            self._order_active(self.state)
-            return copy.deepcopy(self.state)
-
-    def load(self, state):
-        # FIXME add doc string
-        # FIXME validate all input
-        # FIXME validate state
-        with self.mutex:
-            self.state = copy.deepcopy(state)
-            return self
-
-    def clear(self):
-        # FIXME add doc string
-        # FIXME validate all input
-        # FIXME validate state
-        with self.mutex:
-            self.state = {
-                "payer_wif": None,
-                "payee_wif": None,
-                "spend_secret": None,
-                "deposit_script": None,
-                "deposit_rawtx": None,
-                "expire_rawtxs": [],
-                "change_rawtxs": [],
-                "payout_rawtxs": [],
-                "revoke_rawtxs": [],
-                "commits_requested": [],
-                "commits_active": [],
-                "commits_revoked": []
-            }
 
     def setup(self, payee_wif):
         # FIXME add doc string
         # FIXME validate all input
         # FIXME validate state
-        with self.mutex:
-            self.clear()
-            self.state["payee_wif"] = payee_wif
-            payee_pubkey = util.wif2pubkey(self.state["payee_wif"])
-            secret = os.urandom(32)  # secure random number
-            self.state["spend_secret"] = util.b2h(secret)
-            spend_secret_hash = util.b2h(util.hash160(secret))
-            return payee_pubkey, spend_secret_hash
+        secret = os.urandom(32)  # secure random number
+        state = self._init_state()
+        state["payee_wif"] = payee_wif
+        state["spend_secret"] = util.b2h(secret)
+        return {
+            "channel_state": state,
+            "payee_pubkey": util.wif2pubkey(state["payee_wif"]),
+            "spend_secret_hash": util.b2h(util.hash160(secret))
+        }
 
-    def set_deposit(self, rawtx, script_hex):
+    def set_deposit(self, state, rawtx, script_hex):
         # FIXME add doc string
         # FIXME validate all input
         # FIXME validate state
-        with self.mutex:
-            self._validate_payer_deposit(rawtx, script_hex)
+        state = copy.deepcopy(state)
+        self._validate_payer_deposit(rawtx, script_hex)
+        script = util.h2b(script_hex)
+        self._validate_deposit_spend_secret_hash(state, script)
+        self._validate_deposit_payee_pubkey(state, script)
+        state["deposit_rawtx"] = rawtx
+        state["deposit_script"] = script_hex
+        return {"channel_state": state}
 
-            script = util.h2b(script_hex)
-            self._validate_deposit_spend_secret_hash(self.state, script)
-            self._validate_deposit_payee_pubkey(self.state, script)
-            self.state["deposit_rawtx"] = rawtx
-            self.state["deposit_script"] = script_hex
-
-    def request_commit(self, quantity):
+    def request_commit(self, state, quantity):
         # FIXME add doc string
         # FIXME validate all input
         # FIXME validate state
-        with self.mutex:
-            self._validate_transfer_quantity(self.state, quantity)
-            secret = util.b2h(os.urandom(32))  # secure random number
-            secret_hash = util.hash160hex(secret)
-            self.state["commits_requested"].append(secret)
-            return quantity, secret_hash
+        state = copy.deepcopy(state)
+        self._validate_transfer_quantity(state, quantity)
+        secret = util.b2h(os.urandom(32))  # secure random number
+        secret_hash = util.hash160hex(secret)
+        state["commits_requested"].append(secret)
+        return {
+            "channel_state": state,
+            "quantity": quantity,
+            "revoke_secret_hash": secret_hash
+        }
 
-    def set_commit(self, rawtx, script_hex):
+    def set_commit(self, state, rawtx, script_hex):
         # FIXME add doc string
         # FIXME validate all input
         # FIXME validate state
-        with self.mutex:
-            self._validate_payer_commit(rawtx, script_hex)
+        state = copy.deepcopy(state)
+        self._validate_payer_commit(rawtx, script_hex)
 
-            script = util.h2b(script_hex)
-            self._validate_commit_secret_hash(self.state, script)
-            self._validate_commit_payee_pubkey(self.state, script)
+        script = util.h2b(script_hex)
+        self._validate_commit_secret_hash(state, script)
+        self._validate_commit_payee_pubkey(state, script)
 
-            revoke_secret_hash = get_commit_revoke_secret_hash(script)
-            for revoke_secret in self.state["commits_requested"][:]:
+        revoke_secret_hash = get_commit_revoke_secret_hash(script)
+        for revoke_secret in state["commits_requested"][:]:
 
-                # revoke secret hash must match as it would
-                # otherwise break the channels reversability
-                if revoke_secret_hash == util.hash160hex(revoke_secret):
+            # revoke secret hash must match as it would
+            # otherwise break the channels reversability
+            if revoke_secret_hash == util.hash160hex(revoke_secret):
 
-                    # remove from requests
-                    self.state["commits_requested"].remove(revoke_secret)
+                # remove from requests
+                state["commits_requested"].remove(revoke_secret)
 
-                    # add to active
-                    self._order_active(self.state)
-                    self.state["commits_active"].append({
-                        "rawtx": rawtx, "script": script_hex,
-                        "revoke_secret": revoke_secret
-                    })
-                    return self.get_transferred_amount()
+                # add to active
+                self._order_active(state)
+                state["commits_active"].append({
+                    "rawtx": rawtx, "script": script_hex,
+                    "revoke_secret": revoke_secret
+                })
+                break
+        return {"channel_state": state}
 
-            return None
-
-    def revoke_until(self, quantity):
+    def revoke_until(self, state, quantity):
         # FIXME add doc string
         # FIXME validate all input
         # FIXME validate state
-        with self.mutex:
-            secrets = []
-            self._order_active(self.state)
-            for commit in reversed(self.state["commits_active"][:]):
-                if quantity < self._get_quantity(commit["rawtx"]):
-                    secrets.append(commit["revoke_secret"])
-                else:
-                    break
-            self.revoke_all(secrets)
-            return secrets
+        state = copy.deepcopy(state)
+        secrets = []
+        self._order_active(state)
+        for commit in reversed(state["commits_active"][:]):
+            if quantity < self._get_quantity(commit["rawtx"]):
+                secrets.append(commit["revoke_secret"])
+            else:
+                break
+        list(map(lambda s: self._revoke(state, s), secrets))
+        return {"channel_state": state, "revoke_secrets": secrets}
 
-    def close_channel(self):
+    def close_channel(self, state):
         # FIXME add doc string
         # FIXME validate all input
         # FIXME validate state
-        with self.mutex:
-            assert(len(self.state["commits_active"]) > 0)
-            self._order_active(self.state)
-            commit = self.state["commits_active"][-1]
-            rawtx = self._finalize_commit(
-                self.state["payee_wif"], commit["rawtx"],
-                util.h2b(self.state["deposit_script"])
-            )
-            commit["rawtx"] = rawtx  # update commit
-            return util.gettxid(rawtx)
+        state = copy.deepcopy(state)
+        assert(len(state["commits_active"]) > 0)
+        self._order_active(state)
+        commit = state["commits_active"][-1]
+        rawtx = self._finalize_commit(
+            state["payee_wif"], commit["rawtx"],
+            util.h2b(state["deposit_script"])
+        )
+        commit["rawtx"] = rawtx  # update commit
+        return {"channel_state": state, "txid": util.gettxid(rawtx)}
 
-    def payee_update(self):
+    def revoke_all(self, state, secrets):
         # FIXME add doc string
         # FIXME validate all input
         # FIXME validate state
-        with self.mutex:
+        state = copy.deepcopy(state)
+        list(map(lambda s: self._revoke(state, s), secrets))
+        return {"channel_state": state}
 
-            # payout recoverable commits
-            scripts = self._get_payout_recoverable(self.state)
-            if len(scripts) > 0:
-                for script in scripts:
-                    rawtx = self._recover_commit(
-                        self.state["payee_wif"], script, None,
-                        self.state["spend_secret"], "payout"
-                    )
-                    self.state["payout_rawtxs"].append(rawtx)
-
-    def revoke_all(self, secrets):
+    def is_deposit_confirmed(self, state, minconfirms=1):
         # FIXME add doc string
         # FIXME validate all input
         # FIXME validate state
-        with self.mutex:
-            return list(map(lambda s: self._revoke(self.state, s), secrets))
+        state = copy.deepcopy(state)
+        validate.unsigned(minconfirms)
+        script = util.h2b(state["deposit_script"])
+        address = util.script2address(script, self.netcode)
+        if self._get_address_balance(address) == (0, 0):
+            return False
+        rawtx = state["deposit_rawtx"]
+        confirms = self.btctxstore.confirms(util.gettxid(rawtx)) or 0
+        return confirms >= minconfirms
 
-    def is_deposit_confirmed(self, minconfirms=1):
+    def get_transferred_amount(self, state):
         # FIXME add doc string
         # FIXME validate all input
         # FIXME validate state
-        with self.mutex:
-            validate.unsigned(minconfirms)
-            script = util.h2b(self.state["deposit_script"])
-            address = util.script2address(script, self.netcode)
-            if self._get_address_balance(address) == (0, 0):
-                return False
-            rawtx = self.state["deposit_rawtx"]
-            confirms = self.btctxstore.confirms(util.gettxid(rawtx)) or 0
-            return confirms >= minconfirms
+        state = copy.deepcopy(state)
+        if len(state["commits_active"]) == 0:
+            return 0
+        self._order_active(state)
+        commit = state["commits_active"][-1]
+        return self._get_quantity(commit["rawtx"])
 
-    def get_transferred_amount(self):
+    def create_commit(self, state, quantity, revoke_secret_hash, delay_time):
         # FIXME add doc string
         # FIXME validate all input
         # FIXME validate state
-        with self.mutex:
-            if len(self.state["commits_active"]) == 0:
-                return 0
-            self._order_active(self.state)
-            commit = self.state["commits_active"][-1]
-            return self._get_quantity(commit["rawtx"])
-
-    def create_commit(self, quantity, revoke_secret_hash, delay_time):
-        # FIXME add doc string
-        # FIXME validate all input
-        # FIXME validate state
-        with self.mutex:
-            self._validate_transfer_quantity(self.state, quantity)
-            rawtx, script = self._create_commit(
-                self.state["payer_wif"], util.h2b(self.state["deposit_script"]),
-                quantity, revoke_secret_hash, delay_time
-            )
-            script_hex = util.b2h(script)
-            self._order_active(self.state)
-            self.state["commits_active"].append({
-                "rawtx": rawtx, "script": script_hex, "revoke_secret": None
-            })
-            return {"rawtx": rawtx, "script": script_hex}
+        state = copy.deepcopy(state)
+        self._validate_transfer_quantity(state, quantity)
+        rawtx, script = self._create_commit(
+            state["payer_wif"], util.h2b(state["deposit_script"]),
+            quantity, revoke_secret_hash, delay_time
+        )
+        script_hex = util.b2h(script)
+        self._order_active(state)
+        state["commits_active"].append({
+            "rawtx": rawtx, "script": script_hex, "revoke_secret": None
+        })
+        return {
+            "channel_state": state,
+            "commit": {"rawtx": rawtx, "script": script_hex}
+        }
 
     def deposit(self, payer_wif, payee_pubkey, spend_secret_hash,
                 expire_time, quantity):
@@ -316,66 +228,117 @@ class Channel(object):
         # FIXME validate all input
         # FIXME validate state
 
-        with self.mutex:
-            self._validate_deposit(payer_wif, payee_pubkey, spend_secret_hash,
-                                   expire_time, quantity)
+        self._validate_deposit(payer_wif, payee_pubkey, spend_secret_hash,
+                               expire_time, quantity)
 
-            self.clear()
-            self.state["payer_wif"] = payer_wif
-            rawtx, script = self._deposit(
-                self.state["payer_wif"], payee_pubkey,
-                spend_secret_hash, expire_time, quantity
-            )
-            self.state["deposit_rawtx"] = rawtx
-            self.state["deposit_script"] = util.b2h(script)
-            return {"rawtx": rawtx, "script": util.b2h(script)}
+        state = self._init_state()
+        state["payer_wif"] = payer_wif
+        rawtx, script = self._deposit(
+            state["payer_wif"], payee_pubkey,
+            spend_secret_hash, expire_time, quantity
+        )
+        state["deposit_rawtx"] = rawtx
+        state["deposit_script"] = util.b2h(script)
+        return {
+            "channel_state": state,
+            "deposit": {"rawtx": rawtx, "script": util.b2h(script)}
+        }
 
-    def payer_update(self):
+    def payee_update(self, state):
         # FIXME add doc string
         # FIXME validate all input
         # FIXME validate state
-        with self.mutex:
+        state = copy.deepcopy(state)
 
-            # If revoked commit published, recover funds asap!
-            revokable = self._get_revoke_recoverable(self.state)
-            if len(revokable) > 0:
-                for script, secret in revokable:
-                    rawtx = self._recover_commit(
-                        self.state["payer_wif"], script, secret, None, "revoke")
-                    self.state["revoke_rawtxs"].append(rawtx)
+        # payout recoverable commits
+        scripts = self._get_payout_recoverable(state)
+        if len(scripts) > 0:
+            for script in scripts:
+                rawtx = self._recover_commit(
+                    state["payee_wif"], script, None,
+                    state["spend_secret"], "payout"
+                )
+                state["payout_rawtxs"].append(rawtx)
+        return {"channel_state": state}
 
-            # If spend secret exposed by payout, recover change!
-            script = util.h2b(self.state["deposit_script"])
-            address = util.script2address(script, self.netcode)
-            if self._can_spend_from_address(address):
-                spend_secret = self._find_spend_secret(self.state)
-                if spend_secret is not None:
-                    self.state = self._change_recover(self.state, spend_secret)
-
-            # If deposit expired recover the coins!
-            if self._can_expire_recover(self.state):
-                script = util.h2b(self.state["deposit_script"])
-                rawtx = self._recover_deposit(self.state["payer_wif"],
-                                              script, "expire", None)
-                self.state["expire_rawtxs"].append(rawtx)
-
-    def payout_confirmed(self, minconfirms=1):
+    def payer_update(self, state):
         # FIXME add doc string
         # FIXME validate all input
         # FIXME validate state
-        with self.mutex:
-            validate.unsigned(minconfirms)
-            return self._all_confirmed(self.state["payout_rawtxs"],
-                                       minconfirms=minconfirms)
+        state = copy.deepcopy(state)
 
-    def change_confirmed(self, minconfirms=1):
+        # If revoked commit published, recover funds asap!
+        revokable = self._get_revoke_recoverable(state)
+        if len(revokable) > 0:
+            for script, secret in revokable:
+                rawtx = self._recover_commit(
+                    state["payer_wif"], script, secret, None, "revoke")
+                state["revoke_rawtxs"].append(rawtx)
+
+        # If spend secret exposed by payout, recover change!
+        script = util.h2b(state["deposit_script"])
+        address = util.script2address(script, self.netcode)
+        if self._can_spend_from_address(address):
+            spend_secret = self._find_spend_secret(state)
+            if spend_secret is not None:
+                state = self._change_recover(state, spend_secret)
+
+        # If deposit expired recover the coins!
+        if self._can_expire_recover(state):
+            script = util.h2b(state["deposit_script"])
+            rawtx = self._recover_deposit(state["payer_wif"],
+                                          script, "expire", None)
+            state["expire_rawtxs"].append(rawtx)
+        return {"channel_state": state}
+
+    def payout_confirmed(self, state, minconfirms=1):
         # FIXME add doc string
         # FIXME validate all input
         # FIXME validate state
-        with self.mutex:
-            validate.unsigned(minconfirms)
-            return self._all_confirmed(self.state["change_rawtxs"],
-                                       minconfirms=minconfirms)
+        state = copy.deepcopy(state)
+        validate.unsigned(minconfirms)
+        return self._all_confirmed(state["payout_rawtxs"],
+                                   minconfirms=minconfirms)
+
+    def change_confirmed(self, state, minconfirms=1):
+        # FIXME add doc string
+        # FIXME validate all input
+        # FIXME validate state
+        state = copy.deepcopy(state)
+        validate.unsigned(minconfirms)
+        return self._all_confirmed(state["change_rawtxs"],
+                                   minconfirms=minconfirms)
+
+    def _init_state(self):
+        return copy.deepcopy({
+            "payer_wif": None,
+            "payee_wif": None,
+            "spend_secret": None,
+            "deposit_script": None,
+            "deposit_rawtx": None,
+            "expire_rawtxs": [],  # ["rawtx", ...]
+            "change_rawtxs": [],  # ["rawtx", ...]
+            "revoke_rawtxs": [],  # ["rawtx", ...]
+            "payout_rawtxs": [],  # ["rawtx", ...]
+
+            # Quantity not needed as payer may change it. If its heigher its
+            # against our self intrest to throw away money. If its lower it
+            # gives us a better resolution when reversing the channel.
+            "commits_requested": [],  # ["revoke_secret_hex"]
+
+            # must be ordered lowest to heighest at all times!
+            "commits_active": [],     # [{
+            #                             "rawtx": hex,
+            #                             "script": hex,
+            #                             "revoke_secret": hex
+            #                         }]
+
+            "commits_revoked": [],    # [{
+            #                            "rawtx": hex,  # unneeded?
+            #                            "script": hex,
+            #                            "revoke_secret": hex
+            #                         }]
+        })
 
     def _rpc_call(self, payload):
         headers = {'content-type': 'application/json'}
@@ -641,7 +604,7 @@ class Channel(object):
         return tx.bad_signature_count() == 0
 
     def _validate_transfer_quantity(self, state, quantity):
-        transferred = self.get_transferred_amount()
+        transferred = self.get_transferred_amount(state)
         if quantity <= transferred:
             msg = "Amount not greater transferred: {0} <= {1}"
             raise ValueError(msg.format(quantity, transferred))
@@ -658,16 +621,13 @@ class Channel(object):
         state["commits_active"].sort(key=sort_func)
 
     def _revoke(self, state, secret):
-        with self.mutex:
-            secret_hash = util.hash160hex(secret)
-            for commit in state["commits_active"][:]:
-                script = util.h2b(commit["script"])
-                if secret_hash == get_commit_revoke_secret_hash(script):
-                    state["commits_active"].remove(commit)
-                    commit["revoke_secret"] = secret  # save secret
-                    state["commits_revoked"].append(commit)
-                    return copy.deepcopy(commit)
-            return None
+        secret_hash = util.hash160hex(secret)
+        for commit in state["commits_active"][:]:
+            script = util.h2b(commit["script"])
+            if secret_hash == get_commit_revoke_secret_hash(script):
+                state["commits_active"].remove(commit)
+                commit["revoke_secret"] = secret  # save secret
+                state["commits_revoked"].append(commit)
 
     def _all_confirmed(self, rawtxs, minconfirms=1):
         validate.unsigned(minconfirms)

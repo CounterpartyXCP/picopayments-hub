@@ -22,17 +22,19 @@ class TestRecover(unittest.TestCase):
         )
 
     def test_expired_to_recovering(self):
-        self.payer.load(FIXTURES["test_expire"]["expired"])
-        self.payer.payer_update()  # publish expire tx
+        payer_state = FIXTURES["test_expire"]["expired"]
+        result = self.payer.payer_update(payer_state)  # publish expire tx
+        payer_state = result["channel_state"]
         self.assertEqual(
-            self.payer.save(), FIXTURES["test_expire"]["recovering_alpha"]
+            payer_state, FIXTURES["test_expire"]["recovering_alpha"]
         )
 
     def test_recovering_to_closed(self):
-        self.payer.load(FIXTURES["test_expire"]["recovering_beta"])
-        self.payer.payer_update()  # does nothing
+        payer_state = FIXTURES["test_expire"]["recovering_beta"]
+        result = self.payer.payer_update(payer_state)  # does nothing
+        payer_state = result["channel_state"]
         self.assertEqual(
-            self.payer.save(), FIXTURES["test_expire"]["recovering_beta"]
+            payer_state, FIXTURES["test_expire"]["recovering_beta"]
         )
 
 

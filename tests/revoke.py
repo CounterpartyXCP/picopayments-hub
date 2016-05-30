@@ -26,10 +26,10 @@ class TestRevoke(unittest.TestCase):
         self.maxDiff = None
 
     def test_revoke(self):
-        self.payer.load(FIXTURES["test_revoke"]["state_before"])
-        self.payer.payer_update()
+        payer_state = FIXTURES["test_revoke"]["state_before"]
+        result = self.payer.payer_update(payer_state)
         self.assertEqual(
-            self.payer.save(), FIXTURES["test_revoke"]["state_after"]
+            result["channel_state"], FIXTURES["test_revoke"]["state_after"]
         )
 
 

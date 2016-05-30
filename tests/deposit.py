@@ -74,13 +74,12 @@ class TestDeposit(unittest.TestCase):
         )
 
     def test_deposit(self):
-        deposit_info = self.channel.deposit(
+        result = self.channel.deposit(
             PAYER_WIF, PAYEE_PUBKEY, SPEND_SECRET_HASH,
             EXPIRE_TIME, QUANTITY
         )
-        self.assertEqual(EXPECTED_DEPOSIT, deposit_info)
-        save_state = self.channel.save()
-        self.assertEqual(EXPECTED_STATE, save_state)
+        self.assertEqual(EXPECTED_DEPOSIT, result["deposit"])
+        self.assertEqual(EXPECTED_STATE, result["channel_state"])
 
 
 if __name__ == "__main__":

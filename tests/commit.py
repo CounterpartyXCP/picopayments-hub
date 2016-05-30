@@ -1,4 +1,3 @@
-import json
 import unittest
 import picopayments
 
@@ -225,49 +224,60 @@ class TestCommit(unittest.TestCase):
         self.maxDiff = None
 
     def test_request_commit(self):
-        self.payee.load(PAYEE_BEFORE_REQUEST)
-        quantity, revoke_secret_hash = self.payee.request_commit(1)
-        hash_bin = picopayments.util.h2b(revoke_secret_hash)
+        result = self.payee.request_commit(PAYEE_BEFORE_REQUEST, 1)
+        hash_bin = picopayments.util.h2b(result["revoke_secret_hash"])
         self.assertEqual(len(hash_bin), 20)
-        self.assertEqual(quantity, 1)
+        self.assertEqual(result["quantity"], 1)
 
     def test_create_commit(self):
-        self.payer.load(PAYER_BEFORE)
-        commit = self.payer.create_commit(1, REVOKE_SECRET_HASH, DELAY_TIME)
-        self.assertEqual(commit, EXPECTED_COMMIT)
-        self.assertEqual(self.payer.save(), PAYER_AFTER)
+        result = self.payer.create_commit(PAYER_BEFORE, 1,
+                                          REVOKE_SECRET_HASH, DELAY_TIME)
+        self.assertEqual(result["commit"], EXPECTED_COMMIT)
+        self.assertEqual(result["channel_state"], PAYER_AFTER)
 
     def test_set_commit(self):
-        commit = EXPECTED_COMMIT
-        self.payee.load(PAYEE_AFTER_REQUEST)
-        self.payee.set_commit(commit["rawtx"], commit["script"])
-        self.assertEqual(self.payee.save(), PAYEE_AFTER_SET_COMMIT)
+        result = self.payee.set_commit(PAYEE_AFTER_REQUEST,
+                                       EXPECTED_COMMIT["rawtx"],
+                                       EXPECTED_COMMIT["script"])
+        self.assertEqual(result["channel_state"], PAYEE_AFTER_SET_COMMIT)
 
     def test_funds_flow(self):
-        self.payer.load(PAYER_BEFORE)
-        self.payee.load(PAYEE_BEFORE_REQUEST)
+        payer_state = PAYER_BEFORE
+        payee_state = PAYEE_BEFORE_REQUEST
 
         # send funds
         for quantity in range(1, 10):
-            amount, revoke_hash = self.payee.request_commit(quantity)
-            commit = self.payer.create_commit(amount, revoke_hash, DELAY_TIME)
-            self.payee.set_commit(commit["rawtx"], commit["script"])
 
-        self.assertEqual(self.payer.get_transferred_amount(), 9)
-        self.assertEqual(self.payee.get_transferred_amount(), 9)
+            result = self.payee.request_commit(payee_state, quantity)
+            payee_state = result["channel_state"]
+
+            result = self.payer.create_commit(payer_state, result["quantity"],
+                                              result["revoke_secret_hash"],
+                                              DELAY_TIME)
+            payer_state = result["channel_state"]
+
+            result = self.payee.set_commit(payee_state,
+                                           result["commit"]["rawtx"],
+                                           result["commit"]["script"])
+            payee_state = result["channel_state"]
+
+        self.assertEqual(self.payer.get_transferred_amount(payer_state), 9)
+        self.assertEqual(self.payee.get_transferred_amount(payee_state), 9)
 
         # reverse funds
-        secrets = self.payee.revoke_until(4)
-        self.payer.revoke_all(secrets)
+        result = self.payee.revoke_until(payee_state, 4)
+        payee_state = result["channel_state"]
 
-        self.assertEqual(self.payer.get_transferred_amount(), 4)
-        self.assertEqual(self.payee.get_transferred_amount(), 4)
+        result = self.payer.revoke_all(payer_state, result["revoke_secrets"])
+        payer_state = result["channel_state"]
+
+        self.assertEqual(self.payer.get_transferred_amount(payer_state), 4)
+        self.assertEqual(self.payee.get_transferred_amount(payee_state), 4)
 
     def test_publish(self):
-        self.payee.load(PAYEE_BEFORE_CLOSE)
-        txid = self.payee.close_channel()
-        self.assertEqual(txid, CLOSE_TXID)
-        self.assertEqual(PAYEE_AFTER_CLOSE, self.payee.save())
+        result = self.payee.close_channel(PAYEE_BEFORE_CLOSE)
+        self.assertEqual(result["txid"], CLOSE_TXID)
+        self.assertEqual(PAYEE_AFTER_CLOSE, result["channel_state"])
 
 
 if __name__ == "__main__":

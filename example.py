@@ -23,9 +23,9 @@ try:
     #################################
 
     # payee publishes pubkey and spend secret hash
-    payee_pubkey, spend_secret_hash = payee.setup(PAYEE_WIF)
+    result = payee.setup(PAYEE_WIF)
     print("Payee shares pubkey {0} and spend secret hash {1}".format(
-        payee_pubkey, spend_secret_hash
+        result["payee_pubkey"], result["spend_secret_hash"]
     ))
 
     # payer chooses deposit expire time and quantity
@@ -36,7 +36,8 @@ try:
     ))
 
     # payer makes deposit
-    deposit = payer.deposit(PAYER_WIF, payee_pubkey, spend_secret_hash,
+    deposit = payer.deposit(PAYER_WIF, result["payee_pubkey"],
+                            result["spend_secret_hash"],
                             deposit_expire_time, deposit_quantity)
     print("Payer made deposit {0}".format(deposit))
 
@@ -45,12 +46,12 @@ try:
     print("Payee received deposit from payer.")
 
     # wait until deposit is confirmed
-    while not payer.is_deposit_confirmed(minconfirms=1):
+    while not payer.is_deposit_confirmed(payer.state, minconfirms=1):
         time.sleep(1)
     print("Deposit confirmed, channel now open.")
 
     print("Channel transferred quantity {0}.".format(
-        payee.get_transferred_amount()
+        payee.get_transferred_amount(payee.state)
     ))
 
     ##################################
@@ -67,7 +68,8 @@ try:
 
         # payer chooses delay time and creates, signs commit
         delay_time = 1  # block payee must wait to recover commied funds
-        commit = payer.create_commit(quantity, revoke_secret_hash, delay_time)
+        commit = payer.create_commit(payer.state, quantity,
+                                     revoke_secret_hash, delay_time)
         print("Payer creates and shares commit {0}.".format(commit))
 
         # payer publishes commit and payee updates its state
@@ -75,7 +77,7 @@ try:
         print("Payee received commit {0}.".format(commit))
 
         print("Channel transferred quantity {0}.".format(
-            payee.get_transferred_amount()
+            payee.get_transferred_amount(payee.state)
         ))
 
     #######################
@@ -93,7 +95,7 @@ try:
     print("Payer received revoke secrets and updates state.")
 
     print("Channel transferred quantity {0}.".format(
-        payee.get_transferred_amount()
+        payee.get_transferred_amount(payee.state)
     ))
 
     ##################################
@@ -105,14 +107,14 @@ try:
     print("Payee closes channel by publishing commit {0}.".format(txid))
 
     # wait until payout confirmed
-    while not payee.payout_confirmed(minconfirms=1):
-        payee.update()  # payout recover if possible
+    while not payee.payout_confirmed(payee.state, minconfirms=1):
+        payee.payee_update(payee.state)  # payout recover if possible
         time.sleep(1)
     print("Payee payout recover transaction confirmed!")
 
     # wait until change confirmed
-    while not payer.change_confirmed(minconfirms=1):
-        payer.update()  # change recover if possible
+    while not payer.change_confirmed(payer.state, minconfirms=1):
+        payer.payer_update(payer.state)  # change recover if possible
         time.sleep(1)
     print("Payer change recover transaction confirmed!")
 
