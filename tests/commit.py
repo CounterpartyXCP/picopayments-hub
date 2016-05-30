@@ -216,10 +216,10 @@ CLOSE_TXID = "cae4f025dedbaba4bb470b1e46ffcd916d8ffce597019950b25b7307b531843d"
 class TestCommit(unittest.TestCase):
 
     def setUp(self):
-        self.payer = picopayments.channel.Payer(
+        self.payer = picopayments.Channel(
             ASSET, api_url=API_URL, testnet=TESTNET, dryrun=DRYRUN
         )
-        self.payee = picopayments.channel.Payee(
+        self.payee = picopayments.Channel(
             ASSET, api_url=API_URL, testnet=TESTNET, dryrun=DRYRUN
         )
         self.maxDiff = None

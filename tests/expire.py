@@ -17,7 +17,7 @@ FIXTURES = json.load(open("tests/fixtures.json"))
 class TestRecover(unittest.TestCase):
 
     def setUp(self):
-        self.payer = picopayments.channel.Payer(
+        self.payer = picopayments.Channel(
             ASSET, api_url=API_URL, testnet=TESTNET, dryrun=DRYRUN
         )
 
@@ -26,14 +26,14 @@ class TestRecover(unittest.TestCase):
 
     def test_expired_to_recovering(self):
         self.payer.load(FIXTURES["test_expire"]["expired"])
-        self.payer.update()  # publish expire tx
+        self.payer.payer_update()  # publish expire tx
         self.assertEqual(
             self.payer.save(), FIXTURES["test_expire"]["recovering_alpha"]
         )
 
     def test_recovering_to_closed(self):
         self.payer.load(FIXTURES["test_expire"]["recovering_beta"])
-        self.payer.update()  # does nothing
+        self.payer.payer_update()  # does nothing
         self.assertEqual(
             self.payer.save(), FIXTURES["test_expire"]["recovering_beta"]
         )

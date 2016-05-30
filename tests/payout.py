@@ -22,21 +22,16 @@ PAYEE_AFTER = FIXTURES["test_payout"]["payee_after"]
 class TestPayout(unittest.TestCase):
 
     def setUp(self):
-        self.payee = picopayments.channel.Payee(
+        self.payee = picopayments.Channel(
             ASSET, api_url=API_URL, testnet=TESTNET, dryrun=DRYRUN
         )
 
     def tearDown(self):
         self.payee.stop()
 
-    # def test_get_payout_recoverable(self):
-    #     self.payee.load(PAYEE_CLOSED)
-    #     scripts = self.payee.get_payout_recoverable()
-    #     self.assertTrue(len(scripts) > 0)
-
     def test_payout_recover(self):
         self.payee.load(PAYEE_CLOSED)
-        self.payee.update()
+        self.payee.payee_update()
         self.assertEqual(self.payee.save(), PAYEE_AFTER)
 
 

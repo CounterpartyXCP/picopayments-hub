@@ -20,7 +20,7 @@ FIXTURES = json.load(open("tests/fixtures.json"))
 class TestRevoke(unittest.TestCase):
 
     def setUp(self):
-        self.payer = picopayments.channel.Payer(
+        self.payer = picopayments.Channel(
             ASSET, api_url=API_URL, testnet=TESTNET, dryrun=DRYRUN
         )
         self.maxDiff = None
@@ -30,7 +30,7 @@ class TestRevoke(unittest.TestCase):
 
     def test_revoke(self):
         self.payer.load(FIXTURES["test_revoke"]["state_before"])
-        self.payer.update()
+        self.payer.payer_update()
         # print(json.dumps(self.payer.save(), indent=2))
         self.assertEqual(
             self.payer.save(), FIXTURES["test_revoke"]["state_after"]

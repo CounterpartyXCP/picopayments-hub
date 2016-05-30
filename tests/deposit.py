@@ -69,7 +69,7 @@ EXPECTED_STATE = {
 class TestDeposit(unittest.TestCase):
 
     def setUp(self):
-        self.channel = picopayments.channel.Payer(
+        self.channel = picopayments.Channel(
             ASSET, api_url=API_URL, testnet=TESTNET, dryrun=DRYRUN
         )
 

@@ -68,6 +68,3 @@ class UpdateThreadMixin(object):
         if self._update_thread is not None:
             self._update_stop = True
             self._update_thread.join()
-
-    def update(self):
-        raise NotImplementedError()

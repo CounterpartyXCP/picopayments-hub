@@ -20,7 +20,7 @@ PAYER_RECOVERED_CHANGE = FIXTURES["test_change"]["payer_recovered_change"]
 class TestRecoverChange(unittest.TestCase):
 
     def setUp(self):
-        self.payer = picopayments.channel.Payer(
+        self.payer = picopayments.Channel(
             ASSET, api_url=API_URL, testnet=TESTNET, dryrun=DRYRUN
         )
 
@@ -29,7 +29,7 @@ class TestRecoverChange(unittest.TestCase):
 
     def test_recover_change(self):
         self.payer.load(PAYER_STATE)
-        self.payer.update()  # recover change
+        self.payer.payer_update()  # recover change
         self.assertEqual(self.payer.save(), PAYER_RECOVERED_CHANGE)
 
 
