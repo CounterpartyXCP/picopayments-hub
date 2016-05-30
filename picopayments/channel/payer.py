@@ -4,62 +4,82 @@
 
 
 from picopayments import util
+from picopayments import validate
+from picopayments import exceptions
+from picopayments import scripts
 from picopayments.channel.base import Base
+from picopayments.scripts import get_deposit_expire_time
 
 
 class Payer(Base):
 
-    def can_change_recover(self):
-        with self.mutex:
-            return (
-                # we know the payer wif
-                self.payer_wif is not None and
+    def _can_expire_recover(self):
+        return (
+            # we know the payer wif
+            self.state["payer_wif"] is not None and
 
-                # deposit was made
-                self.deposit_rawtx is not None and
-                self.deposit_script_hex is not None and
+            # deposit was made
+            self.state["deposit_rawtx"] is not None and
+            self.state["deposit_script"] is not None and
 
-                # we know the spend secret
-                self.spend_secret is not None  # FIXME check for payout instead
-            )
+            # deposit expired
+            self._is_deposit_expired() and
 
-    def can_timeout_recover(self):
-        with self.mutex:
-            return (
-                # we know the payer wif
-                self.payer_wif is not None and
+            # funds to recover
+            self._can_deposit_spend()
+        )
 
-                # deposit was made
-                self.deposit_rawtx is not None and
-                self.deposit_script_hex is not None and
+    def _can_deposit_spend(self):
+        script = util.h2b(self.state["deposit_script"])
+        return self.control.can_spend_from_script(script)
 
-                # deposit expired
-                self.is_deposit_expired() and
-
-                # not already recovering
-                not self.is_closing()
-            )
+    def _is_deposit_expired(self):
+        script = util.h2b(self.state["deposit_script"])
+        t = get_deposit_expire_time(script)
+        return self._get_deposit_confirms() >= t
 
     def update(self):
+        # FIXME add doc string
+        # FIXME validate all input
         with self.mutex:
 
-            # If deposit expired recover the coins!
-            if self.can_timeout_recover():
-                self.timeout_recover()
-
-            # If spend secret exposed recover the coins!
-            if self.can_change_recover():
-                self.change_recover()
-
             # If revoked commit published, recover funds asap!
-            # if self.can_revoke_recover():
-            #     self.revoke_recover()
+            revokable = self._get_revoke_recoverable()
+            if len(revokable) > 0:
+                self._revoke_recover(revokable)
 
-    def can_revoke_recover(self):
-        raise NotImplementedError()
+            # If spend secret exposed by payout, recover change!
+            if self._can_change_recover():
+                spend_secret = self._find_spend_secret()
+                if spend_secret is not None:
+                    self._change_recover(spend_secret)
 
-    def revoke_recover(self):
-        raise NotImplementedError()
+            # If deposit expired recover the coins!
+            if self._can_expire_recover():
+                self._expire_recover()
+
+    def _validate_deposit(self, payer_wif, payee_pubkey, spend_secret_hash,
+                          expire_time, quantity):
+
+        # validate untrusted input data
+        validate.wif(payer_wif, self.control.netcode)
+        validate.pubkey(payee_pubkey)
+        validate.hash160(spend_secret_hash)
+        validate.sequence(expire_time)
+        validate.quantity(quantity)
+
+        # get balances
+        address = util.wif2address(payer_wif)
+        asset_balance, btc_balance = self.control.get_address_balance(address)
+
+        # check asset balance
+        if asset_balance < quantity:
+            raise exceptions.InsufficientFunds(quantity, asset_balance)
+
+        # check btc balance
+        extra_btc = (self.control.fee + self.control.dust_size) * 3
+        if btc_balance < extra_btc:
+            raise exceptions.InsufficientFunds(extra_btc, btc_balance)
 
     def deposit(self, payer_wif, payee_pubkey, spend_secret_hash,
                 expire_time, quantity):
@@ -79,45 +99,96 @@ class Payer(Base):
             ValueError if invalid quantity
             InsufficientFunds if not enough funds to cover requested quantity.
         """
-
-        # TODO validate input
-        # TODO validate pubkeys on blockchain (required by counterparty)
+        # FIXME add doc string
+        # FIXME validate all input
 
         with self.mutex:
+            self._validate_deposit(payer_wif, payee_pubkey, spend_secret_hash,
+                                   expire_time, quantity)
+
             self.clear()
-            self.payer_wif = payer_wif
+            self.state["payer_wif"] = payer_wif
             rawtx, script = self.control.deposit(
-                self.payer_wif, payee_pubkey,
+                self.state["payer_wif"], payee_pubkey,
                 spend_secret_hash, expire_time, quantity
             )
-            self.deposit_rawtx = rawtx
-            self.deposit_script_hex = util.b2h(script)
+            self.state["deposit_rawtx"] = rawtx
+            self.state["deposit_script"] = util.b2h(script)
             return {"rawtx": rawtx, "script": util.b2h(script)}
 
-    def timeout_recover(self):
-        with self.mutex:
-            script = util.h2b(self.deposit_script_hex)
-            self.timeout_rawtx = self.control.timeout_recover(
-                self.payer_wif, script
-            )
+    def _expire_recover(self):
+        script = util.h2b(self.state["deposit_script"])
+        rawtx = self.control.expire_recover(
+            self.state["payer_wif"], script
+        )
+        self.state["expire_rawtxs"].append(rawtx)
 
-    def change_recover(self):
-        with self.mutex:
-            script = util.h2b(self.deposit_script_hex)
-            self.change_rawtx = self.control.change_recover(
-                self.payer_wif, script, self.spend_secret
+    def _find_spend_secret(self):
+        for commit in self.state["commits_active"] + \
+                self.state["commits_revoked"]:
+            script = util.h2b(commit["script"])
+            address = util.script2address(
+                script, netcode=self.control.netcode
             )
+            txs = self.control.btctxstore.get_transactions(address)
+            if len(txs) == 1:
+                continue  # only the commit, no payout
+            for txid in txs:
+                rawtx = self.control.btctxstore.retrieve_tx(txid)
+                spend_secret = scripts.get_spend_secret(rawtx, script)
+                if spend_secret is not None:
+                    return spend_secret
+        return None
+
+    def _can_change_recover(self):
+        script = util.h2b(self.state["deposit_script"])
+        return self.control.can_spend_from_script(script)
+
+    def _change_recover(self, spend_secret):
+        script = util.h2b(self.state["deposit_script"])
+        rawtx = self.control.change_recover(
+            self.state["payer_wif"], script, spend_secret
+        )
+        self.state["change_rawtxs"].append(rawtx)
 
     def create_commit(self, quantity, revoke_secret_hash, delay_time):
+        # FIXME add doc string
+        # FIXME validate all input
         with self.mutex:
             self._validate_transfer_quantity(quantity)
             rawtx, script = self.control.create_commit(
-                self.payer_wif, util.h2b(self.deposit_script_hex),
+                self.state["payer_wif"], util.h2b(self.state["deposit_script"]),
                 quantity, revoke_secret_hash, delay_time
             )
             script_hex = util.b2h(script)
             self._order_active()
-            self.commits_active.append({
+            self.state["commits_active"].append({
                 "rawtx": rawtx, "script": script_hex, "revoke_secret": None
             })
             return {"rawtx": rawtx, "script": script_hex}
+
+    def _get_revoke_recoverable(self):
+        revokable = []  # (secret, script)
+        for commit in self.state["commits_revoked"]:
+            script = util.h2b(commit["script"])
+            address = util.script2address(
+                script, netcode=self.control.netcode
+            )
+            if self.control.can_spend_from_address(address):
+                revokable.append((script, commit["revoke_secret"]))
+        return revokable
+
+    def _revoke_recover(self, revokable):
+        for script, secret in revokable:
+            rawtx = self.control.revoke_recover(
+                self.state["payer_wif"], script, secret
+            )
+            self.state["revoke_rawtxs"].append(rawtx)
+
+    def change_confirmed(self, minconfirms=1):
+        # FIXME add doc string
+        # FIXME validate all input
+        with self.mutex:
+            validate.unsigned(minconfirms)
+            return self._all_confirmed(self.state["change_rawtxs"],
+                                       minconfirms=minconfirms)

@@ -36,13 +36,15 @@ EXPECTED_DEPOSIT = {
 }
 
 EXPECTED_STATE = {
+    "payout_rawtxs": [],
+    "revoke_rawtxs": [],
     "payer_wif": "cT5RVbfLsgdUv2EAmbckFXNcsj9EmdAVvU9m6aarXb3fUpt9xkjX",
     "payee_wif": None,
     "commits_revoked": [],
     "commits_active": [],
     "commits_requested": [],
-    "timeout_rawtx": None,
-    "deposit_script_hex": (
+    "expire_rawtxs": [],
+    "deposit_script": (
         "635221033faa57e0ed3a3bf89340a0a3074ce0ef403ebfb77cb3402d0daa29d808e2bd"
         "e0210327f017c35a46b759536309e6de256ad44ad609c1c4aed0e2cdb82f62490f75f8"
         "52ae6763a914a7ec62542b0d393d43442aadf8d55f7da1e303cb8821033faa57e0ed3a"
@@ -50,7 +52,7 @@ EXPECTED_STATE = {
         "57e0ed3a3bf89340a0a3074ce0ef403ebfb77cb3402d0daa29d808e2bde0ac6868"
     ),
     "spend_secret": None,
-    "change_rawtx": None,
+    "change_rawtxs": [],
     "deposit_rawtx": (
         "0100000001dab5588f6df29b3f3b650f57b443bb2dbd9ba8d113dbf1f80b18b60f1a71"
         "0447000000006b483045022100ba5366aa8f8110ae52bc6ed3916ca1fcf86e7c11d621"

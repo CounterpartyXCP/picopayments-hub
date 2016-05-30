@@ -4,41 +4,45 @@
 
 
 import copy
+import pycoin
 from threading import RLock
 from picopayments import util
 from picopayments import control
-from picopayments.scripts import get_deposit_spend_secret_hash
-from picopayments.scripts import get_deposit_expire_time
+from picopayments import validate
 from picopayments.scripts import get_commit_revoke_secret_hash
 
 
 class Base(util.UpdateThreadMixin):
 
-    payer_wif = None
-    payee_wif = None
-    spend_secret = None
-    deposit_script_hex = None
-    deposit_rawtx = None
-    timeout_rawtx = None
-    change_rawtx = None
+    state = {
+        "payer_wif": None,
+        "payee_wif": None,
+        "spend_secret": None,
+        "deposit_script": None,
+        "deposit_rawtx": None,
+        "expire_rawtxs": [],  # ["rawtx", ...]
+        "change_rawtxs": [],  # ["rawtx", ...]
+        "revoke_rawtxs": [],  # ["rawtx", ...]
+        "payout_rawtxs": [],  # ["rawtx", ...]
 
-    # Quantity not needed as payer may change it. If its heigher its against
-    # our self intrest to throw away money. If its lower it gives us a better
-    # resolution when reversing the channel.
-    commits_requested = []  # ["revoke_secret_hex"]
+        # Quantity not needed as payer may change it. If its heigher its
+        # against our self intrest to throw away money. If its lower it
+        # gives us a better resolution when reversing the channel.
+        "commits_requested": [],  # ["revoke_secret_hex"]
 
-    # must be ordered lowest to heighest at all times!
-    commits_active = []     # [{
-    #                             "rawtx": hex,
-    #                             "script": hex,
-    #                             "revoke_secret": hex
-    #                         }]
+        # must be ordered lowest to heighest at all times!
+        "commits_active": [],     # [{
+        #                             "rawtx": hex,
+        #                             "script": hex,
+        #                             "revoke_secret": hex
+        #                         }]
 
-    commits_revoked = []    # [{
-    #                            "rawtx": hex,
-    #                            "script": hex,
-    #                            "revoke_secret": hex
-    #                         }]
+        "commits_revoked": [],    # [{
+        #                            "rawtx": hex,  # unneeded?
+        #                            "script": hex,
+        #                            "revoke_secret": hex
+        #                         }]
+    }
 
     def __init__(self, asset, user=control.DEFAULT_COUNTERPARTY_RPC_USER,
                  password=control.DEFAULT_COUNTERPARTY_RPC_PASSWORD,
@@ -59,177 +63,114 @@ class Base(util.UpdateThreadMixin):
             self.start()
 
     def save(self):
+        # FIXME add doc string
+        # FIXME validate all input
         with self.mutex:
             self._order_active()
-            return copy.deepcopy({
-                "payer_wif": self.payer_wif,
-                "payee_wif": self.payee_wif,
-                "spend_secret": self.spend_secret,
-                "deposit_script_hex": self.deposit_script_hex,
-                "deposit_rawtx": self.deposit_rawtx,
-                "timeout_rawtx": self.timeout_rawtx,
-                "change_rawtx": self.change_rawtx,
-                "commits_requested": self.commits_requested,
-                "commits_active": self.commits_active,
-                "commits_revoked": self.commits_revoked,
-            })
+            return copy.deepcopy(self.state)
 
-    def load(self, data):
-        # TODO validate input
+    def load(self, state):
+        # FIXME add doc string
+        # FIXME validate all input
         with self.mutex:
-            data = copy.deepcopy(data)
-            self.payer_wif = data["payer_wif"]
-            self.payee_wif = data["payee_wif"]
-            self.spend_secret = data["spend_secret"]
-            self.deposit_script_hex = data["deposit_script_hex"]
-            self.deposit_rawtx = data["deposit_rawtx"]
-            self.timeout_rawtx = data["timeout_rawtx"]
-            self.change_rawtx = data["change_rawtx"]
-            self.commits_requested = data["commits_requested"]
-            self.commits_active = data["commits_active"]
-            self.commits_revoked = data["commits_revoked"]
-            self._order_active()
+            self.state = copy.deepcopy(state)
+            return self
 
     def clear(self):
+        # FIXME add doc string
+        # FIXME validate all input
         with self.mutex:
-            self.payer_wif = None
-            self.payee_wif = None
-            self.spend_secret = None
-            self.deposit_script_hex = None
-            self.deposit_rawtx = None
-            self.timeout_rawtx = None
-            self.change_rawtx = None
-            self.commits_requested = []
-            self.commits_active = []
-            self.commits_revoked = []
+            self.state = {
+                "payer_wif": None,
+                "payee_wif": None,
+                "spend_secret": None,
+                "deposit_script": None,
+                "deposit_rawtx": None,
+                "expire_rawtxs": [],
+                "change_rawtxs": [],
+                "payout_rawtxs": [],
+                "revoke_rawtxs": [],
+                "commits_requested": [],
+                "commits_active": [],
+                "commits_revoked": []
+            }
 
-    def get_confirms(self, rawtx):
-        with self.mutex:
-            txid = util.gettxid(rawtx)
-            return self.control.btctxstore.confirms(txid) or 0
+    def _get_confirms(self, rawtx):
+        return self.control.btctxstore.confirms(util.gettxid(rawtx)) or 0
 
-    def get_deposit_confirms(self):
-        with self.mutex:
-            assert(self.deposit_rawtx is not None)
-            assert(self.deposit_script_hex is not None)
-            return self.get_confirms(self.deposit_rawtx)
-
-    def get_timeout_confirms(self):
-        with self.mutex:
-            assert(self.timeout_rawtx is not None)
-            return self.get_confirms(self.timeout_rawtx)
-
-    def get_change_confirms(self):
-        with self.mutex:
-            assert(self.change_rawtx is not None)
-            return self.get_confirms(self.change_rawtx)
-
-    def get_spend_secret_hash(self):
-        with self.mutex:
-            if self.spend_secret is not None:  # payee
-                return util.b2h(util.hash160(util.h2b(self.spend_secret)))
-            elif self.deposit_script_hex is not None:  # payer
-                script = util.h2b(self.deposit_script_hex)
-                return get_deposit_spend_secret_hash(script)
-            else:  # undefined
-                raise Exception("Undefined state, not payee or payer.")
-
-    def is_deposit_confirmed(self):
-        with self.mutex:
-            return self.get_deposit_confirms() > 0
-
-    def is_deposit_expired(self):
-        with self.mutex:
-            script = util.h2b(self.deposit_script_hex)
-            t = get_deposit_expire_time(script)
-            return self.get_deposit_confirms() >= t
-
-    def is_timeout_confirmed(self):
-        with self.mutex:
-            assert(self.timeout_rawtx is not None)
-            txid = util.gettxid(self.timeout_rawtx)
-            return bool(self.control.btctxstore.confirms(txid))
-
-    def is_change_confirmed(self):
-        with self.mutex:
-            assert(self.change_rawtx is not None)
-            txid = util.gettxid(self.change_rawtx)
-            return bool(self.control.btctxstore.confirms(txid))
-
-    def is_closing(self):
-        with self.mutex:
-            unconfirmed_change = (
-                self.change_rawtx is not None and
-                not self.is_change_confirmed()
-            )
-            unconfirmed_timeout = (
-                self.timeout_rawtx is not None and
-                not self.is_timeout_confirmed()
-            )
-            return unconfirmed_change or unconfirmed_timeout
-
-    def is_closed(self):
-        with self.mutex:
-            return (
-                self.change_rawtx is not None and self.is_change_confirmed() or
-                self.timeout_rawtx is not None and self.is_timeout_confirmed()
-            )
-
-    def set_spend_secret(self, secret):
-        with self.mutex:
-            self.spend_secret = secret
+    def _get_deposit_confirms(self):
+        assert(self.state["deposit_rawtx"] is not None)
+        assert(self.state["deposit_script"] is not None)
+        return self._get_confirms(self.state["deposit_rawtx"])
 
     def get_transferred_amount(self):
-        """Returns funds transferred from payer to payee."""
+        # FIXME add doc string
+        # FIXME validate all input
         with self.mutex:
-            # FIXME sort first!
-            if len(self.commits_active) == 0:
+            if len(self.state["commits_active"]) == 0:
                 return 0
             self._order_active()
-            commit = self.commits_active[-1]
+            commit = self.state["commits_active"][-1]
             return self.control.get_quantity(commit["rawtx"])
 
-    def get_deposit_total(self):
-        """Returns the total deposit amount"""
-        with self.mutex:
-            assert(self.deposit_rawtx is not None)
-            return self.control.get_quantity(self.deposit_rawtx)
-
-    def get_deposit_remaining(self):
-        """Returns the remaining deposit amount"""
-        with self.mutex:
-            return self.get_deposit_total() - self.get_transferred_amount()
+    def _get_deposit_total(self):
+        assert(self.state["deposit_rawtx"] is not None)
+        return self.control.get_quantity(self.state["deposit_rawtx"])
 
     def _validate_transfer_quantity(self, quantity):
-        with self.mutex:
+        transferred = self.get_transferred_amount()
+        if quantity <= transferred:
+            msg = "Amount not greater transferred: {0} <= {1}"
+            raise ValueError(msg.format(quantity, transferred))
 
-            transferred = self.get_transferred_amount()
-            if quantity <= transferred:
-                msg = "Amount not greater transferred: {0} <= {1}"
-                raise ValueError(msg.format(quantity, transferred))
-
-            total = self.get_deposit_total()
-            if quantity > total:
-                msg = "Amount greater total: {0} > {1}"
-                raise ValueError(msg.fromat(quantity, total))
+        total = self._get_deposit_total()
+        if quantity > total:
+            msg = "Amount greater total: {0} > {1}"
+            raise ValueError(msg.fromat(quantity, total))
 
     def _order_active(self):
 
         def sort_func(entry):
             return self.control.get_quantity(entry["rawtx"])
-        self.commits_active.sort(key=sort_func)
+        self.state["commits_active"].sort(key=sort_func)
 
-    def revoke_all(self, secrets):
-        return list(map(self.revoke, secrets))
-
-    def revoke(self, secret):
+    def _revoke(self, secret):
         with self.mutex:
             secret_hash = util.hash160hex(secret)
-            for commit in self.commits_active[:]:
+            for commit in self.state["commits_active"][:]:
                 script = util.h2b(commit["script"])
                 if secret_hash == get_commit_revoke_secret_hash(script):
-                    self.commits_active.remove(commit)  # remove from active
+                    self.state["commits_active"].remove(commit)
                     commit["revoke_secret"] = secret  # save secret
-                    self.commits_revoked.append(commit)  # add to revoked
+                    self.state["commits_revoked"].append(commit)
                     return copy.deepcopy(commit)
             return None
+
+    def revoke_all(self, secrets):
+        # FIXME add doc string
+        # FIXME validate all input
+        with self.mutex:
+            return list(map(self._revoke, secrets))
+
+    def _all_confirmed(self, rawtxs, minconfirms=1):
+        validate.unsigned(minconfirms)
+        if len(rawtxs) == 0:
+            return False
+        for rawtx in rawtxs:
+            confirms = self._get_confirms(rawtx)
+            if confirms < minconfirms:
+                return False
+        return True
+
+    def _commit_spent(self, commit):
+        txid = util.gettxid(commit["rawtx"])
+        for rawtx in (self.state["payout_rawtxs"] +
+                      self.state["revoke_rawtxs"] +
+                      self.state["change_rawtxs"] +
+                      self.state["expire_rawtxs"]):
+            tx = pycoin.tx.Tx.from_hex(rawtx)
+            for txin in tx.txs_in:
+                if util.b2h_rev(txin.previous_hash) == txid:
+                    print("found spent:", txid)
+                    return True
+        return False

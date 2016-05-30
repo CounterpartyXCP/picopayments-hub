@@ -3,7 +3,7 @@
 # License: MIT (see LICENSE file)
 
 
-import six
+import time
 import pycoin
 import json
 import requests
@@ -23,7 +23,7 @@ from .scripts import DepositScriptHandler
 from .scripts import CommitScriptHandler
 
 
-# FIXME make fees per kb and auto adjust to market price
+# FIXME fees per kb, auto adjust to market price or get from counterparty
 DEFAULT_TXFEE = 10000  # FIXME dont hardcode tx fee
 DEFAULT_DUSTSIZE = 5430  # FIXME dont hardcode dust size
 DEFAULT_TESTNET = False
@@ -102,7 +102,24 @@ class Control(object):
         assert(self.get_quantity(rawtx) == quantity)
         return rawtx
 
-    def get_balance(self, address):
+    def can_spend_from_script(self, script):
+        address = self.get_script_address(script)
+        return self.can_spend_from_address(address)
+
+    def can_spend_from_address(self, address):
+
+        # has assets, btc
+        if self.get_address_balance(address) == (0, 0):
+            return False
+
+        # TODO check if btc > fee
+
+        # can only spend if all txs confirmed
+        txids = self.btctxstore.get_transactions(address)
+        latest_confirms = self.btctxstore.confirms(txids[0])
+        return latest_confirms > 0
+
+    def get_address_balance(self, address):
         result = self._rpc_call({
             "method": "get_balances",
             "params": {
@@ -114,16 +131,25 @@ class Control(object):
             "jsonrpc": "2.0",
             "id": 0,
         })
+        if not result:  # FIXME what causes this?
+            return 0, 0
         asset_balance = result[0]["quantity"]
         utxos = self.btctxstore.retrieve_utxos([address])
         btc_balance = sum(map(lambda utxo: utxo["value"], utxos))
         return asset_balance, btc_balance
 
     def publish(self, rawtx):
+        txid = util.gettxid(rawtx)
         if self.dryrun:
-            print("PUBLISH:", rawtx)
-        else:
-            self.bitcoind_rpc.sendrawtransaction(rawtx)
+            return txid
+        while self.btctxstore.confirms(util.gettxid(rawtx)) is None:
+            try:
+                self.bitcoind_rpc.sendrawtransaction(rawtx)
+                return util.gettxid(rawtx)
+                # see http://counterparty.io/docs/api/#wallet-integration
+            except Exception as e:
+                print("publishing failed: {0} {1}".format(type(e), e))
+            time.sleep(10)
 
     def get_quantity(self, rawtx):
         result = self._rpc_call({
@@ -152,38 +178,19 @@ class Control(object):
             raise ValueError(msg.format(self.asset, unpacked["asset"]))
         return unpacked["quantity"]
 
-    def _valid_deposit_request(self, payer_wif, payee_pubkey,
-                               spend_secret_hash, expire_time, quantity):
-
-        # FIXME validate channel previously unused
-
-        # quantity must be > 0
-        if not isinstance(quantity, six.integer_types) or quantity <= 0:
-            raise ValueError()
-
-        # get balances
-        address = util.wif2address(payer_wif)
-        asset_balance, btc_balance = self.get_balance(address)
-
-        # check asset balance
-        if asset_balance < quantity:
-            raise exceptions.InsufficientFunds(quantity, asset_balance)
-
-        # check btc balance
-        extra_btc = (self.fee + self.dust_size) * 3
-        if btc_balance < extra_btc:
-            raise exceptions.InsufficientFunds(extra_btc, btc_balance)
+    def _valid_channel_unused(self, channel_address):
+        txs = self.btctxstore.get_transactions(channel_address)
+        if len(txs) > 0:
+            raise exceptions.ChannelAlreadyUsed(channel_address, txs)
 
     def deposit(self, payer_wif, payee_pubkey, spend_secret_hash,
                 expire_time, quantity):
 
-        self._valid_deposit_request(payer_wif, payee_pubkey, spend_secret_hash,
-                                    expire_time, quantity)
-
         payer_pubkey = util.wif2pubkey(payer_wif)
         script = compile_deposit_script(payer_pubkey, payee_pubkey,
                                         spend_secret_hash, expire_time)
-        dest_address = util.script2address(script, self.netcode)
+        dest_address = self.get_script_address(script)
+        self._valid_channel_unused(dest_address)
         payer_address = util.wif2address(payer_wif)
 
         # provide extra btc for future closing channel fees
@@ -210,9 +217,9 @@ class Control(object):
         )
 
         # create tx
-        src_address = util.script2address(deposit_script, self.netcode)
-        dest_address = util.script2address(commit_script, self.netcode)
-        asset_balance, btc_balance = self.get_balance(src_address)
+        src_address = self.get_script_address(deposit_script)
+        dest_address = self.get_script_address(commit_script)
+        asset_balance, btc_balance = self.get_address_balance(src_address)
         if quantity == asset_balance:  # spend all btc as change tx not needed
             extra_btc = btc_balance - self.fee
         else:  # provide extra btc for future payout/revoke tx fees
@@ -260,13 +267,20 @@ class Control(object):
         self.publish(rawtx)
         return rawtx
 
+    def get_script_address(self, script):
+        return util.script2address(script, self.netcode)
+
+    def get_script_balance(self, script):
+        src_address = self.get_script_address(script)
+        return self.get_address_balance(src_address)
+
     def _recover_tx(self, dest_address, script, sequence=None):
 
         # get channel info
-        src_address = util.script2address(script, self.netcode)
-        asset_balance, btc_balance = self.get_balance(src_address)
+        src_address = self.get_script_address(script)
+        asset_balance, btc_balance = self.get_address_balance(src_address)
 
-        # create timeout tx
+        # create expire tx
         rawtx = self.create_tx(src_address, dest_address, asset_balance,
                                extra_btc=btc_balance - self.fee)
 
@@ -300,7 +314,7 @@ class Control(object):
                     revoke_secret=revoke_secret)
 
         rawtx = tx.as_hex()
-        assert(self.can_publish(rawtx))
+        assert(self.transaction_complete(rawtx))
         self.publish(rawtx)
         return rawtx
 
@@ -309,7 +323,7 @@ class Control(object):
         dest_address = util.wif2address(wif)
         expire_time = get_deposit_expire_time(script)
         tx = self._recover_tx(dest_address, script,
-                              expire_time if spend_type == "timeout" else None)
+                              expire_time if spend_type == "expire" else None)
 
         # sign
         hash160_lookup = pycoin.tx.pay_to.build_hash160_lookup(
@@ -321,9 +335,16 @@ class Control(object):
                     spend_type=spend_type, spend_secret=spend_secret)
 
         rawtx = tx.as_hex()
-        assert(self.can_publish(rawtx))
+        assert(self.transaction_complete(rawtx))
         self.publish(rawtx)
         return rawtx
+
+    def transaction_complete(self, rawtx):
+        tx = pycoin.tx.Tx.from_hex(rawtx)
+        for txin in tx.txs_in:
+            utxo_tx = self.btctxstore.service.get_tx(txin.previous_hash)
+            tx.unspents.append(utxo_tx.txs_out[txin.previous_index])
+        return tx.bad_signature_count() == 0
 
     def payout_recover(self, wif, script, spend_secret):
         return self._recover_commit(wif, script, None, spend_secret, "payout")
@@ -331,8 +352,8 @@ class Control(object):
     def revoke_recover(self, wif, script, revoke_secret):
         return self._recover_commit(wif, script, revoke_secret, None, "revoke")
 
-    def timeout_recover(self, wif, script):
-        return self._recover_deposit(wif, script, "timeout", None)
+    def expire_recover(self, wif, script):
+        return self._recover_deposit(wif, script, "expire", None)
 
     def change_recover(self, wif, script, spend_secret):
         return self._recover_deposit(wif, script, "change", spend_secret)

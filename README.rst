@@ -92,19 +92,21 @@ pay to script:
     OP_ENDIF
 
 
--------------------
-Timeout Transaction 
--------------------
+------------------
+Expire Transaction 
+------------------
 
-The timeout transaction is used by the payee to recover the and funds after
-the channel reaches a timeout. This is to prevent funds being lost should
-the payee be hit by a bus.
+The expire transaction is used by the payee to recover the and funds after
+the channel expires. This is to prevent funds being lost should the payee
+be hit by a bus.
 
 script sig:
 
 ::
     
     <payer signature> OP_FALSE OP_FALSE
+
+    # Proof/example: 796637e788db8d3430ae48ec057ef493a871b7abc4711f9bb5f6148efc2212e7
 
 
 ------------------
@@ -122,6 +124,9 @@ script sig:
     
     <payer signature> <spend secret> OP_TRUE OP_FALSE
 
+    # Proof/example: a6fdd23b2e5b1153cbd358c362456263531451b80ab4a597f7aa122cecc52703
+
+
 ------------------
 Commit Transaction 
 ------------------
@@ -133,7 +138,7 @@ Every time the payer wishes to transfer funds to the payee, the output amount
 of the transaction is increased. The payee then signs and shares it.
 
 To ensure the payer can recover the change without having to wait for the
-channel to timeout, the payee must reveal the spend secret when spending the
+channel to expire, the payee must reveal the spend secret when spending the
 payout. **The commit transaction spend secret must be the same as the deposit
 transaction spend secret!**
 
@@ -147,6 +152,8 @@ script sig:
 ::
     
     OP_FALSE <payer signature> <payee signature> OP_TRUE
+
+    # Proof/example: 34f7abf7474de02abdbff63e1718477d33c20d457e9881e2087c3d79f6517d1c
 
 pay to script:
 
@@ -179,6 +186,7 @@ script sig:
     
     <payee signature> <spend secret> OP_TRUE
 
+    # Proof/example: 52a86445bf72b193cd351e2477cac9177d5c8fb4a637226b11811f7068e67fe8
     
 ------------------
 Revoke Transaction 
@@ -192,3 +200,13 @@ script sig:
 ::
     
     <payer signature> <revoke secret> OP_FALSE
+    
+    # Proof/example: c368ff17683f0720ea3e2c06bb0c70e3b0c381e7df5b6c10b28bfad5433a3b8c
+
+
+======
+States
+======
+                                            
+Setup -> Depositing -> Open -> Commiting -> Commited -> Payout recovering -> Payout recovered
+                           \-> Change recovering -> Change recovered

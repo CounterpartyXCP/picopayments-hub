@@ -8,3 +8,5 @@ from . import util  # NOQA
 from . import scripts  # NOQA
 from . import control  # NOQA
 from . import channel  # NOQA
+from . import validate  # NOQA
+from . import exceptions  # NOQA
