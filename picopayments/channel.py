@@ -131,7 +131,7 @@ class Channel(object):
     def _recover_tx(self, dest_address, script, sequence=None):
 
         # get channel info
-        src_address = self._get_script_address(script)
+        src_address = util.script2address(script, self.netcode)
         asset_balance, btc_balance = self._get_address_balance(src_address)
 
         # create expire tx
@@ -215,13 +215,6 @@ class Channel(object):
         self._publish(rawtx)
         return rawtx
 
-    def _get_script_address(self, script):
-        return util.script2address(script, self.netcode)
-
-    def _get_script_balance(self, script):
-        src_address = self._get_script_address(script)
-        return self._get_address_balance(src_address)
-
     def _create_commit(self, payer_wif, deposit_script, quantity,
                        revoke_secret_hash, delay_time):
 
@@ -236,8 +229,8 @@ class Channel(object):
         )
 
         # create tx
-        src_address = self._get_script_address(deposit_script)
-        dest_address = self._get_script_address(commit_script)
+        src_address = util.script2address(deposit_script, self.netcode)
+        dest_address = util.script2address(commit_script, self.netcode)
         asset_balance, btc_balance = self._get_address_balance(src_address)
         if quantity == asset_balance:  # spend all btc as change tx not needed
             extra_btc = btc_balance - self.fee
@@ -270,7 +263,7 @@ class Channel(object):
         payer_pubkey = util.wif2pubkey(payer_wif)
         script = compile_deposit_script(payer_pubkey, payee_pubkey,
                                         spend_secret_hash, expire_time)
-        dest_address = self._get_script_address(script)
+        dest_address = util.script2address(script, self.netcode)
         self._valid_channel_unused(dest_address)
         payer_address = util.wif2address(payer_wif)
 
@@ -301,10 +294,6 @@ class Channel(object):
         })
         assert(self._get_quantity(rawtx) == quantity)
         return rawtx
-
-    def _can_spend_from_script(self, script):
-        address = self._get_script_address(script)
-        return self._can_spend_from_address(address)
 
     def _can_spend_from_address(self, address):
 
@@ -385,32 +374,13 @@ class Channel(object):
             tx.unspents.append(utxo_tx.txs_out[txin.previous_index])
         return tx.bad_signature_count() == 0
 
-    def _can_publish(self, rawtx):
-        tx = pycoin.tx.Tx.from_hex(rawtx)
-        return tx.bad_signature_count() == 0
-
-    def _get_confirms(self, rawtx):
-        txid = util.gettxid(rawtx)
-        confirms = self.btctxstore.confirms(txid)
-        print("Confirms {0} {1}".format(txid, confirms))
-        return confirms or 0
-
-    def _get_deposit_confirms(self):
-        assert(self.state["deposit_rawtx"] is not None)
-        assert(self.state["deposit_script"] is not None)
-        return self._get_confirms(self.state["deposit_rawtx"])
-
-    def _get_deposit_total(self):
-        assert(self.state["deposit_rawtx"] is not None)
-        return self._get_quantity(self.state["deposit_rawtx"])
-
     def _validate_transfer_quantity(self, quantity):
         transferred = self.get_transferred_amount()
         if quantity <= transferred:
             msg = "Amount not greater transferred: {0} <= {1}"
             raise ValueError(msg.format(quantity, transferred))
 
-        total = self._get_deposit_total()
+        total = self._get_quantity(self.state["deposit_rawtx"])
         if quantity > total:
             msg = "Amount greater total: {0} > {1}"
             raise ValueError(msg.fromat(quantity, total))
@@ -438,7 +408,7 @@ class Channel(object):
         if len(rawtxs) == 0:
             return False
         for rawtx in rawtxs:
-            confirms = self._get_confirms(rawtx)
+            confirms = self.btctxstore.confirms(util.gettxid(rawtx)) or 0
             if confirms < minconfirms:
                 return False
         return True
@@ -452,7 +422,6 @@ class Channel(object):
             tx = pycoin.tx.Tx.from_hex(rawtx)
             for txin in tx.txs_in:
                 if util.b2h_rev(txin.previous_hash) == txid:
-                    print("found spent:", txid)
                     return True
         return False
 
@@ -473,15 +442,6 @@ class Channel(object):
             raise ValueError(msg.format(
                 given_payee_pubkey, own_payee_pubkey
             ))
-
-    def _assert_unopen_state(self):
-        assert(self.state["payer_wif"] is None)
-        assert(self.state["payee_wif"] is not None)
-        assert(self.state["spend_secret"] is not None)
-        assert(self.state["deposit_rawtx"] is None)
-        assert(self.state["deposit_script"] is None)
-        assert(len(self.state["commits_active"]) == 0)
-        assert(len(self.state["commits_revoked"]) == 0)
 
     def _validate_payer_deposit(self, rawtx, script_hex):
         tx = pycoin.tx.Tx.from_hex(rawtx)
@@ -536,15 +496,8 @@ class Channel(object):
                     txid = utxo["txid"]
                     confirms = self.btctxstore.confirms(txid)
                     if confirms >= delay_time:
-                        print("spendable commit address:", address)
                         scripts.append(script)
         return scripts
-
-    def _payout_recover(self, scripts):
-        for script in scripts:
-            rawtx = self._recover_commit(self.state["payee_wif"], script, None,
-                                         self.state["spend_secret"], "payout")
-            self.state["payout_rawtxs"].append(rawtx)
 
     def _can_expire_recover(self):
         return (
@@ -564,12 +517,15 @@ class Channel(object):
 
     def _can_deposit_spend(self):
         script = util.h2b(self.state["deposit_script"])
-        return self._can_spend_from_script(script)
+        address = util.script2address(script, self.netcode)
+        return self._can_spend_from_address(address)
 
     def _is_deposit_expired(self):
         script = util.h2b(self.state["deposit_script"])
         t = get_deposit_expire_time(script)
-        return self._get_deposit_confirms() >= t
+        rawtx = self.state["deposit_rawtx"]
+        confirms = self.btctxstore.confirms(util.gettxid(rawtx)) or 0
+        return confirms >= t
 
     def _validate_deposit(self, payer_wif, payee_pubkey, spend_secret_hash,
                           expire_time, quantity):
@@ -619,7 +575,8 @@ class Channel(object):
 
     def _can_change_recover(self):
         script = util.h2b(self.state["deposit_script"])
-        return self._can_spend_from_script(script)
+        address = util.script2address(script, self.netcode)
+        return self._can_spend_from_address(address)
 
     def _change_recover(self, spend_secret):
         script = util.h2b(self.state["deposit_script"])
@@ -647,6 +604,7 @@ class Channel(object):
     def save(self):
         # FIXME add doc string
         # FIXME validate all input
+        # FIXME validate state
         with self.mutex:
             self._order_active()
             return copy.deepcopy(self.state)
@@ -654,6 +612,7 @@ class Channel(object):
     def load(self, state):
         # FIXME add doc string
         # FIXME validate all input
+        # FIXME validate state
         with self.mutex:
             self.state = copy.deepcopy(state)
             return self
@@ -661,6 +620,7 @@ class Channel(object):
     def clear(self):
         # FIXME add doc string
         # FIXME validate all input
+        # FIXME validate state
         with self.mutex:
             self.state = {
                 "payer_wif": None,
@@ -680,6 +640,7 @@ class Channel(object):
     def setup(self, payee_wif):
         # FIXME add doc string
         # FIXME validate all input
+        # FIXME validate state
         with self.mutex:
             self.clear()
             self.state["payee_wif"] = payee_wif
@@ -692,8 +653,8 @@ class Channel(object):
     def set_deposit(self, rawtx, script_hex):
         # FIXME add doc string
         # FIXME validate all input
+        # FIXME validate state
         with self.mutex:
-            self._assert_unopen_state()
             self._validate_payer_deposit(rawtx, script_hex)
 
             script = util.h2b(script_hex)
@@ -705,6 +666,7 @@ class Channel(object):
     def request_commit(self, quantity):
         # FIXME add doc string
         # FIXME validate all input
+        # FIXME validate state
         with self.mutex:
             self._validate_transfer_quantity(quantity)
             secret = util.b2h(os.urandom(32))  # secure random number
@@ -715,6 +677,7 @@ class Channel(object):
     def set_commit(self, rawtx, script_hex):
         # FIXME add doc string
         # FIXME validate all input
+        # FIXME validate state
         with self.mutex:
             self._validate_payer_commit(rawtx, script_hex)
 
@@ -745,6 +708,7 @@ class Channel(object):
     def revoke_until(self, quantity):
         # FIXME add doc string
         # FIXME validate all input
+        # FIXME validate state
         with self.mutex:
             secrets = []
             self._order_active()
@@ -760,6 +724,7 @@ class Channel(object):
     def close_channel(self):
         # FIXME add doc string
         # FIXME validate all input
+        # FIXME validate state
         with self.mutex:
             assert(len(self.state["commits_active"]) > 0)
             self._order_active()
@@ -774,32 +739,44 @@ class Channel(object):
     def payee_update(self):
         # FIXME add doc string
         # FIXME validate all input
+        # FIXME validate state
         with self.mutex:
 
             # payout recoverable commits
             scripts = self._get_payout_recoverable()
             if len(scripts) > 0:
-                self._payout_recover(scripts)
+                for script in scripts:
+                    rawtx = self._recover_commit(
+                        self.state["payee_wif"], script, None,
+                        self.state["spend_secret"], "payout"
+                    )
+                    self.state["payout_rawtxs"].append(rawtx)
 
     def revoke_all(self, secrets):
         # FIXME add doc string
         # FIXME validate all input
+        # FIXME validate state
         with self.mutex:
             return list(map(self._revoke, secrets))
 
     def is_deposit_confirmed(self, minconfirms=1):
         # FIXME add doc string
         # FIXME validate all input
+        # FIXME validate state
         with self.mutex:
             validate.unsigned(minconfirms)
             script = util.h2b(self.state["deposit_script"])
-            if self._get_script_balance(script) == (0, 0):
+            address = util.script2address(script, self.netcode)
+            if self._get_address_balance(address) == (0, 0):
                 return False
-            return self._get_deposit_confirms() >= minconfirms
+            rawtx = self.state["deposit_rawtx"]
+            confirms = self.btctxstore.confirms(util.gettxid(rawtx)) or 0
+            return confirms >= minconfirms
 
     def get_transferred_amount(self):
         # FIXME add doc string
         # FIXME validate all input
+        # FIXME validate state
         with self.mutex:
             if len(self.state["commits_active"]) == 0:
                 return 0
@@ -810,6 +787,7 @@ class Channel(object):
     def create_commit(self, quantity, revoke_secret_hash, delay_time):
         # FIXME add doc string
         # FIXME validate all input
+        # FIXME validate state
         with self.mutex:
             self._validate_transfer_quantity(quantity)
             rawtx, script = self._create_commit(
@@ -825,24 +803,9 @@ class Channel(object):
 
     def deposit(self, payer_wif, payee_pubkey, spend_secret_hash,
                 expire_time, quantity):
-        """Create deposit for given quantity.
-
-        Args:
-            payer_wif: TODO doc string
-            payee_pubkey: TODO doc string
-            spend_secret_hash: TODO doc string
-            expire_time: TODO doc string
-            quantity: In satoshis
-
-        Returns:
-            Transaction ID for the created deposit.
-
-        Raises:
-            ValueError if invalid quantity
-            InsufficientFunds if not enough funds to cover requested quantity.
-        """
         # FIXME add doc string
         # FIXME validate all input
+        # FIXME validate state
 
         with self.mutex:
             self._validate_deposit(payer_wif, payee_pubkey, spend_secret_hash,
@@ -861,6 +824,7 @@ class Channel(object):
     def payer_update(self):
         # FIXME add doc string
         # FIXME validate all input
+        # FIXME validate state
         with self.mutex:
 
             # If revoked commit published, recover funds asap!
@@ -881,6 +845,7 @@ class Channel(object):
     def payout_confirmed(self, minconfirms=1):
         # FIXME add doc string
         # FIXME validate all input
+        # FIXME validate state
         with self.mutex:
             validate.unsigned(minconfirms)
             return self._all_confirmed(self.state["payout_rawtxs"],
@@ -889,6 +854,7 @@ class Channel(object):
     def change_confirmed(self, minconfirms=1):
         # FIXME add doc string
         # FIXME validate all input
+        # FIXME validate state
         with self.mutex:
             validate.unsigned(minconfirms)
             return self._all_confirmed(self.state["change_rawtxs"],
