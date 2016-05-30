@@ -4,8 +4,8 @@ from picopayments.channel import Payer, Payee
 
 
 PARTIES = {
-  "payer": "cTVuKB6qVmwQ76DSjtzq47ZTv1QY6NB9MwFmsuZws9eLBAb5KCAd",
-  "payee": "cUEEJwKXpxNLkLYN7EsQjLHj3Yv7iNRgtgst8g21RPw6nSxgemkj"
+  "payee": "cRnt584VhnxgSWPs7hZjuq7ngDw5Fwquyahv5JDTSs5nkTN8KZR7",
+  "payer": "cQp3Q9JM15C1Rf6VX6Bw5DV4ZoH54bakr51UokBNX9hs6GQhJV3c"
 }
 
 PAYER_WIF = PARTIES["payer"]

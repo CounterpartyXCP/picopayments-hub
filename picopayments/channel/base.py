@@ -96,12 +96,25 @@ class Base(util.UpdateThreadMixin):
             }
 
     def _get_confirms(self, rawtx):
-        return self.control.btctxstore.confirms(util.gettxid(rawtx)) or 0
+        txid = util.gettxid(rawtx)
+        confirms = self.control.btctxstore.confirms(txid)
+        print("Confirms {0} {1}".format(txid, confirms))
+        return confirms or 0
 
     def _get_deposit_confirms(self):
         assert(self.state["deposit_rawtx"] is not None)
         assert(self.state["deposit_script"] is not None)
         return self._get_confirms(self.state["deposit_rawtx"])
+
+    def is_deposit_confirmed(self, minconfirms=1):
+        # FIXME add doc string
+        # FIXME validate all input
+        with self.mutex:
+            validate.unsigned(minconfirms)
+            script = util.h2b(self.state["deposit_script"])
+            if self.control.get_script_balance(script) == (0, 0):
+                return False
+            return self._get_deposit_confirms() >= minconfirms
 
     def get_transferred_amount(self):
         # FIXME add doc string
