@@ -25,13 +25,9 @@ class TestRevoke(unittest.TestCase):
         )
         self.maxDiff = None
 
-    def tearDown(self):
-        self.payer.stop()
-
     def test_revoke(self):
         self.payer.load(FIXTURES["test_revoke"]["state_before"])
         self.payer.payer_update()
-        # print(json.dumps(self.payer.save(), indent=2))
         self.assertEqual(
             self.payer.save(), FIXTURES["test_revoke"]["state_after"]
         )

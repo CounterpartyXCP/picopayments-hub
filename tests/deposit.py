@@ -73,9 +73,6 @@ class TestDeposit(unittest.TestCase):
             ASSET, api_url=API_URL, testnet=TESTNET, dryrun=DRYRUN
         )
 
-    def tearDown(self):
-        self.channel.stop()
-
     def test_deposit(self):
         deposit_info = self.channel.deposit(
             PAYER_WIF, PAYEE_PUBKEY, SPEND_SECRET_HASH,

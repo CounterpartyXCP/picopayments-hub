@@ -21,7 +21,7 @@ from picopayments import scripts
 from picopayments.scripts import get_deposit_expire_time
 
 
-class Channel(util.UpdateThreadMixin):
+class Channel(object):
 
     state = {
         "payer_wif": None,

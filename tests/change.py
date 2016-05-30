@@ -24,9 +24,6 @@ class TestRecoverChange(unittest.TestCase):
             ASSET, api_url=API_URL, testnet=TESTNET, dryrun=DRYRUN
         )
 
-    def tearDown(self):
-        self.payer.stop()
-
     def test_recover_change(self):
         self.payer.load(PAYER_STATE)
         self.payer.payer_update()  # recover change

@@ -224,10 +224,6 @@ class TestCommit(unittest.TestCase):
         )
         self.maxDiff = None
 
-    def tearDown(self):
-        self.payer.stop()
-        self.payee.stop()
-
     def test_request_commit(self):
         self.payee.load(PAYEE_BEFORE_REQUEST)
         quantity, revoke_secret_hash = self.payee.request_commit(1)

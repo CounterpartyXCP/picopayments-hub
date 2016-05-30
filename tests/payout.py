@@ -26,9 +26,6 @@ class TestPayout(unittest.TestCase):
             ASSET, api_url=API_URL, testnet=TESTNET, dryrun=DRYRUN
         )
 
-    def tearDown(self):
-        self.payee.stop()
-
     def test_payout_recover(self):
         self.payee.load(PAYEE_CLOSED)
         self.payee.payee_update()

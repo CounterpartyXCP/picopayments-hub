@@ -21,9 +21,6 @@ class TestRecover(unittest.TestCase):
             ASSET, api_url=API_URL, testnet=TESTNET, dryrun=DRYRUN
         )
 
-    def tearDown(self):
-        self.payer.stop()
-
     def test_expired_to_recovering(self):
         self.payer.load(FIXTURES["test_expire"]["expired"])
         self.payer.payer_update()  # publish expire tx
