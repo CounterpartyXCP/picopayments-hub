@@ -3,6 +3,8 @@
 # License: MIT (see LICENSE file)
 
 
+from picopayments import util
+import pycoin
 from pycoin.serialize import b2h, h2b
 from pycoin import encoding
 from pycoin.tx.script import tools
@@ -165,7 +167,7 @@ def compile_commit_script(payer_pubkey, payee_pubkey, spend_secret_hash,
     return tools.compile(script_text)
 
 
-class AbsScriptChannelCommit(ScriptType):
+class AbsCommitScript(ScriptType):
 
     def __init__(self, delay_time, spend_secret_hash,
                  payee_sec, payer_sec, revoke_secret_hash):
@@ -228,10 +230,10 @@ class AbsScriptChannelCommit(ScriptType):
 
     def __repr__(self):
         script_text = tools.disassemble(self.script)
-        return "<ScriptChannelCommit: {0}".format(script_text)
+        return "<CommitScript: {0}".format(script_text)
 
 
-class AbsScriptChannelDeposit(ScriptType):
+class AbsDepositScript(ScriptType):
 
     def __init__(self, payer_sec, payee_sec, spend_secret_hash, expire_time):
         self.payer_sec = payer_sec
@@ -340,18 +342,82 @@ class AbsScriptChannelDeposit(ScriptType):
 
     def __repr__(self):
         script_text = tools.disassemble(self.script)
-        return "<ScriptChannelDeposit: {0}".format(script_text)
+        return "<DepositScript: {0}".format(script_text)
+
+
+def _load_tx(btctxstore, rawtx):
+    tx = pycoin.tx.Tx.from_hex(rawtx)
+    for txin in tx.txs_in:
+        utxo_tx = btctxstore.service.get_tx(txin.previous_hash)
+        tx.unspents.append(utxo_tx.txs_out[txin.previous_index])
+    return tx
+
+
+def _make_lookups(wif, script_bin):
+    hash160_lookup = pycoin.tx.pay_to.build_hash160_lookup(
+        [util.wif2secretexponent(wif)]
+    )
+    p2sh_lookup = pycoin.tx.pay_to.build_p2sh_lookup([script_bin])
+    return hash160_lookup, p2sh_lookup
+
+
+def sign_finalize_commit(btctxstore, wif, rawtx, script_hex):
+    tx = _load_tx(btctxstore, rawtx)
+    script_bin = h2b(script_hex)
+    hash160_lookup, p2sh_lookup = _make_lookups(wif, script_bin)
+    expire_time = get_deposit_expire_time(script_bin)
+    with DepositScriptHandler(expire_time):
+        tx.sign(hash160_lookup, p2sh_lookup=p2sh_lookup,
+                spend_type="finalize_commit", spend_secret=None)
+    return tx.as_hex()
+
+
+def sign_create_commit(btctxstore, wif, rawtx, script_hex):
+    tx = _load_tx(btctxstore, rawtx)
+    script_bin = h2b(script_hex)
+    hash160_lookup, p2sh_lookup = _make_lookups(wif, script_bin)
+    expire_time = get_deposit_expire_time(script_bin)
+    hash160_lookup, p2sh_lookup = _make_lookups(wif, script_bin)
+    with DepositScriptHandler(expire_time):
+        tx.sign(hash160_lookup, p2sh_lookup=p2sh_lookup,
+                spend_type="create_commit", spend_secret=None)
+    return tx.as_hex()
+
+
+def sign_deposit_recover(btctxstore, wif, rawtx, script_hex,
+                         spend_type, spend_secret):
+    tx = _load_tx(btctxstore, rawtx)
+    script_bin = h2b(script_hex)
+    expire_time = get_deposit_expire_time(script_bin)
+    hash160_lookup, p2sh_lookup = _make_lookups(wif, script_bin)
+    with DepositScriptHandler(expire_time):
+        tx.sign(hash160_lookup, p2sh_lookup=p2sh_lookup,
+                spend_type=spend_type, spend_secret=spend_secret)
+    return tx.as_hex()
+
+
+def sign_commit_recover(btctxstore, wif, rawtx, script_hex, spend_type,
+                        spend_secret, revoke_secret):
+    tx = _load_tx(btctxstore, rawtx)
+    script_bin = h2b(script_hex)
+    delay_time = get_commit_delay_time(script_bin)
+    hash160_lookup, p2sh_lookup = _make_lookups(wif, script_bin)
+    with CommitScriptHandler(delay_time):
+        tx.sign(hash160_lookup, p2sh_lookup=p2sh_lookup,
+                spend_type=spend_type, spend_secret=spend_secret,
+                revoke_secret=revoke_secret)
+    return tx.as_hex()
 
 
 class CommitScriptHandler():
 
     def __init__(self, delay_time):
-        class ScriptChannelCommit(AbsScriptChannelCommit):
+        class CommitScript(AbsCommitScript):
             TEMPLATE = compile_commit_script(
                 "OP_PUBKEY", "OP_PUBKEY", "OP_PUBKEYHASH",
                 "OP_PUBKEYHASH", delay_time
             )
-        self.script_handler = ScriptChannelCommit
+        self.script_handler = CommitScript
 
     def __enter__(self):
         SUBCLASSES.insert(0, self.script_handler)
@@ -363,12 +429,12 @@ class CommitScriptHandler():
 class DepositScriptHandler():
 
     def __init__(self, expire_time):
-        class ScriptChannelDeposit(AbsScriptChannelDeposit):
+        class DepositScript(AbsDepositScript):
             TEMPLATE = compile_deposit_script(
                 "OP_PUBKEY", "OP_PUBKEY",
                 "OP_PUBKEYHASH", expire_time
             )
-        self.script_handler = ScriptChannelDeposit
+        self.script_handler = DepositScript
 
     def __enter__(self):
         SUBCLASSES.insert(0, self.script_handler)

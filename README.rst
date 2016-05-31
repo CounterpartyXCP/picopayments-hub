@@ -45,9 +45,9 @@ To enable this, set (and export) environment variable PYCOIN_NATIVE=openssl.
 
   $ export PYCOIN_NATIVE=openssl
 
--------
-Example
--------
+--------
+Examples
+--------
 
 TODO
 
