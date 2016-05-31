@@ -364,19 +364,20 @@ def _make_lookups(wif, script_bin):
 def sign_finalize_commit(btctxstore, wif, rawtx, script_hex):
     tx = _load_tx(btctxstore, rawtx)
     script_bin = h2b(script_hex)
-    hash160_lookup, p2sh_lookup = _make_lookups(wif, script_bin)
     expire_time = get_deposit_expire_time(script_bin)
+    hash160_lookup, p2sh_lookup = _make_lookups(wif, script_bin)
     with DepositScriptHandler(expire_time):
         tx.sign(hash160_lookup, p2sh_lookup=p2sh_lookup,
                 spend_type="finalize_commit", spend_secret=None)
+    assert(tx.bad_signature_count() == 0)
     return tx.as_hex()
 
 
 def sign_create_commit(btctxstore, wif, rawtx, script_hex):
     tx = _load_tx(btctxstore, rawtx)
     script_bin = h2b(script_hex)
-    hash160_lookup, p2sh_lookup = _make_lookups(wif, script_bin)
     expire_time = get_deposit_expire_time(script_bin)
+    hash160_lookup, p2sh_lookup = _make_lookups(wif, script_bin)
     hash160_lookup, p2sh_lookup = _make_lookups(wif, script_bin)
     with DepositScriptHandler(expire_time):
         tx.sign(hash160_lookup, p2sh_lookup=p2sh_lookup,
@@ -384,8 +385,30 @@ def sign_create_commit(btctxstore, wif, rawtx, script_hex):
     return tx.as_hex()
 
 
-def sign_deposit_recover(btctxstore, wif, rawtx, script_hex,
-                         spend_type, spend_secret):
+def sign_revoke_recover(btctxstore, wif, rawtx, script_hex, revoke_secret):
+    return _sign_commit_recover(
+        btctxstore, wif, rawtx, script_hex, "revoke", None, revoke_secret
+    )
+
+
+def sign_payout_recover(btctxstore, wif, rawtx, script_hex, spend_secret):
+    return _sign_commit_recover(
+        btctxstore, wif, rawtx, script_hex, "payout", spend_secret, None
+    )
+
+
+def sign_change_recover(btctxstore, wif, rawtx, script_hex, spend_secret):
+    return _sign_deposit_recover(btctxstore, wif, rawtx, script_hex,
+                                 "change", spend_secret)
+
+
+def sign_expire_recover(btctxstore, wif, rawtx, script_hex):
+    return _sign_deposit_recover(btctxstore, wif, rawtx,
+                                 script_hex, "expire", None)
+
+
+def _sign_deposit_recover(btctxstore, wif, rawtx, script_hex,
+                          spend_type, spend_secret):
     tx = _load_tx(btctxstore, rawtx)
     script_bin = h2b(script_hex)
     expire_time = get_deposit_expire_time(script_bin)
@@ -393,11 +416,12 @@ def sign_deposit_recover(btctxstore, wif, rawtx, script_hex,
     with DepositScriptHandler(expire_time):
         tx.sign(hash160_lookup, p2sh_lookup=p2sh_lookup,
                 spend_type=spend_type, spend_secret=spend_secret)
+    assert(tx.bad_signature_count() == 0)
     return tx.as_hex()
 
 
-def sign_commit_recover(btctxstore, wif, rawtx, script_hex, spend_type,
-                        spend_secret, revoke_secret):
+def _sign_commit_recover(btctxstore, wif, rawtx, script_hex, spend_type,
+                         spend_secret, revoke_secret):
     tx = _load_tx(btctxstore, rawtx)
     script_bin = h2b(script_hex)
     delay_time = get_commit_delay_time(script_bin)
@@ -406,6 +430,7 @@ def sign_commit_recover(btctxstore, wif, rawtx, script_hex, spend_type,
         tx.sign(hash160_lookup, p2sh_lookup=p2sh_lookup,
                 spend_type=spend_type, spend_secret=spend_secret,
                 revoke_secret=revoke_secret)
+    assert(tx.bad_signature_count() == 0)
     return tx.as_hex()
 
 

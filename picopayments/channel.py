@@ -165,10 +165,11 @@ class Channel(object):
         assert(len(state["commits_active"]) > 0)
         self._order_active(state)
         commit = state["commits_active"][-1]
-        rawtx = self._finalize_commit(
-            state["payee_wif"], commit["rawtx"],
-            util.h2b(state["deposit_script"])
+        rawtx = scripts.sign_finalize_commit(
+            self.btctxstore, state["payee_wif"], commit["rawtx"],
+            state["deposit_script"]
         )
+        self._publish(rawtx)
         commit["rawtx"] = rawtx  # update commit
         return {"channel_state": state, "txid": util.gettxid(rawtx)}
 
@@ -215,6 +216,9 @@ class Channel(object):
             state["payer_wif"], util.h2b(state["deposit_script"]),
             quantity, revoke_secret_hash, delay_time
         )
+        rawtx = scripts.sign_create_commit(
+            self.btctxstore, state["payer_wif"], rawtx, state["deposit_script"]
+        )
         script_hex = util.b2h(script)
         self._order_active(state)
         state["commits_active"].append({
@@ -240,6 +244,8 @@ class Channel(object):
             state["payer_wif"], payee_pubkey,
             spend_secret_hash, expire_time, quantity
         )
+        rawtx = self.btctxstore.sign_tx(rawtx, [state["payer_wif"]])
+        self._publish(rawtx)
         state["deposit_rawtx"] = rawtx
         state["deposit_script"] = util.b2h(script)
         return {
@@ -254,13 +260,18 @@ class Channel(object):
         state = copy.deepcopy(state)
 
         # payout recoverable commits
-        scripts = self._get_payout_recoverable(state)
-        if len(scripts) > 0:
-            for script in scripts:
-                rawtx = self._recover_commit(
+        recoverable_scripts = self._get_payout_recoverable(state)
+        if len(recoverable_scripts) > 0:
+            for script in recoverable_scripts:
+                rawtx = self._create_recover_commit(
                     state["payee_wif"], script, None,
                     state["spend_secret"], "payout"
                 )
+                rawtx = scripts.sign_payout_recover(
+                    self.btctxstore, state["payee_wif"], rawtx,
+                    util.b2h(script), state["spend_secret"]
+                )
+                self._publish(rawtx)
                 state["payout_rawtxs"].append(rawtx)
         return {"channel_state": state}
 
@@ -274,8 +285,14 @@ class Channel(object):
         revokable = self._get_revoke_recoverable(state)
         if len(revokable) > 0:
             for script, secret in revokable:
-                rawtx = self._recover_commit(
-                    state["payer_wif"], script, secret, None, "revoke")
+                rawtx = self._create_recover_commit(
+                    state["payer_wif"], script, secret, None, "revoke"
+                )
+                rawtx = scripts.sign_revoke_recover(
+                    self.btctxstore, state["payer_wif"], rawtx,
+                    util.b2h(script), secret
+                )
+                self._publish(rawtx)
                 state["revoke_rawtxs"].append(rawtx)
 
         # If spend secret exposed by payout, recover change!
@@ -284,13 +301,18 @@ class Channel(object):
         if self._can_spend_from_address(address):
             spend_secret = self._find_spend_secret(state)
             if spend_secret is not None:
-                state = self._change_recover(state, spend_secret)
+                state, rawtx = self._change_recover(state, spend_secret)
+                self._publish(rawtx)
 
         # If deposit expired recover the coins!
         if self._can_expire_recover(state):
             script = util.h2b(state["deposit_script"])
             rawtx = self._recover_deposit(state["payer_wif"],
                                           script, "expire", None)
+            rawtx = scripts.sign_expire_recover(
+                self.btctxstore, state["payer_wif"], rawtx, util.b2h(script)
+            )
+            self._publish(rawtx)
             state["expire_rawtxs"].append(rawtx)
         return {"channel_state": state}
 
@@ -383,48 +405,20 @@ class Channel(object):
         rawtx = tx.as_hex()
         return rawtx
 
-    def _recover_commit(self, wif, script, revoke_secret,
-                        spend_secret, spend_type):
+    def _create_recover_commit(self, wif, script, revoke_secret,
+                               spend_secret, spend_type):
 
         dest_address = util.wif2address(wif)
         delay_time = get_commit_delay_time(script)
-        rawtx = self._recover_tx(dest_address, script, delay_time)
-
-        # sign
-        rawtx = scripts.sign_commit_recover(
-            self.btctxstore, wif, rawtx, util.b2h(script),
-            spend_type, spend_secret, revoke_secret
-        )
-
-        assert(self._transaction_complete(rawtx))
-        self._publish(rawtx)
-        return rawtx
+        return self._recover_tx(dest_address, script, delay_time)
 
     def _recover_deposit(self, wif, script, spend_type, spend_secret):
-
         dest_address = util.wif2address(wif)
         expire_time = get_deposit_expire_time(script)
         rawtx = self._recover_tx(
             dest_address, script,
             expire_time if spend_type == "expire" else None
         )
-
-        # sign
-        rawtx = scripts.sign_deposit_recover(
-            self.btctxstore, wif, rawtx, util.b2h(script),
-            spend_type, spend_secret
-        )
-
-        assert(self._transaction_complete(rawtx))
-        self._publish(rawtx)
-        return rawtx
-
-    def _finalize_commit(self, payee_wif, commit_rawtx, deposit_script):
-        rawtx = scripts.sign_finalize_commit(
-            self.btctxstore, payee_wif, commit_rawtx,
-            util.b2h(deposit_script)
-        )
-        self._publish(rawtx)
         return rawtx
 
     def _create_commit(self, payer_wif, deposit_script, quantity,
@@ -451,9 +445,6 @@ class Channel(object):
         rawtx = self._create_tx(src_address, dest_address,
                                 quantity, extra_btc=extra_btc)
 
-        rawtx = scripts.sign_create_commit(
-            self.btctxstore, payer_wif, rawtx, util.b2h(deposit_script)
-        )
         return rawtx, commit_script
 
     def _deposit(self, payer_wif, payee_pubkey, spend_secret_hash,
@@ -472,8 +463,6 @@ class Channel(object):
 
         rawtx = self._create_tx(payer_address, dest_address,
                                 quantity, extra_btc=extra_btc)
-        rawtx = self.btctxstore.sign_tx(rawtx, [payer_wif])
-        self._publish(rawtx)
         return rawtx, script
 
     def _create_tx(self, source_address, dest_address, quantity, extra_btc=0):
@@ -565,13 +554,6 @@ class Channel(object):
             msg = "Incorrect asset: {0} != {1}"
             raise ValueError(msg.format(self.asset, unpacked["asset"]))
         return unpacked["quantity"]
-
-    def _transaction_complete(self, rawtx):
-        tx = pycoin.tx.Tx.from_hex(rawtx)
-        for txin in tx.txs_in:
-            utxo_tx = self.btctxstore.service.get_tx(txin.previous_hash)
-            tx.unspents.append(utxo_tx.txs_out[txin.previous_index])
-        return tx.bad_signature_count() == 0
 
     def _validate_transfer_quantity(self, state, quantity):
         transferred = self.get_transferred_amount(state)
@@ -765,8 +747,12 @@ class Channel(object):
         script = util.h2b(state["deposit_script"])
         rawtx = self._recover_deposit(state["payer_wif"], script,
                                       "change", spend_secret)
+        rawtx = scripts.sign_change_recover(
+            self.btctxstore, state["payer_wif"],
+            rawtx, util.b2h(script), spend_secret
+        )
         state["change_rawtxs"].append(rawtx)
-        return state
+        return state, rawtx
 
     def _get_revoke_recoverable(self, state):
         commits_revoked = state["commits_revoked"]
