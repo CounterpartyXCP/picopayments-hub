@@ -81,11 +81,13 @@ class Channel(object):
             "spend_secret_hash": util.b2h(util.hash160(secret))
         }
 
-    def set_deposit(self, state, rawtx, script_hex):
+    def set_deposit(self, state, deposit):
         # FIXME add doc string
         # FIXME validate all input
         # FIXME validate state
         state = copy.deepcopy(state)
+        rawtx = deposit["rawtx"]
+        script_hex = deposit["script"]
         self._validate_payer_deposit(rawtx, script_hex)
         script = util.h2b(script_hex)
         self._validate_deposit_spend_secret_hash(state, script)
@@ -109,11 +111,13 @@ class Channel(object):
             "revoke_secret_hash": secret_hash
         }
 
-    def set_commit(self, state, rawtx, script_hex):
+    def set_commit(self, state, commit):
         # FIXME add doc string
         # FIXME validate all input
         # FIXME validate state
         state = copy.deepcopy(state)
+        rawtx = commit["rawtx"]
+        script_hex = commit["script"]
         self._validate_payer_commit(rawtx, script_hex)
 
         script = util.h2b(script_hex)

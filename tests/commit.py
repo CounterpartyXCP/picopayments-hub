@@ -236,9 +236,7 @@ class TestCommit(unittest.TestCase):
         self.assertEqual(result["channel_state"], PAYER_AFTER)
 
     def test_set_commit(self):
-        result = self.payee.set_commit(PAYEE_AFTER_REQUEST,
-                                       EXPECTED_COMMIT["rawtx"],
-                                       EXPECTED_COMMIT["script"])
+        result = self.payee.set_commit(PAYEE_AFTER_REQUEST, EXPECTED_COMMIT)
         self.assertEqual(result["channel_state"], PAYEE_AFTER_SET_COMMIT)
 
     def test_funds_flow(self):
@@ -256,9 +254,7 @@ class TestCommit(unittest.TestCase):
                                               DELAY_TIME)
             payer_state = result["channel_state"]
 
-            result = self.payee.set_commit(payee_state,
-                                           result["commit"]["rawtx"],
-                                           result["commit"]["script"])
+            result = self.payee.set_commit(payee_state, result["commit"])
             payee_state = result["channel_state"]
 
         self.assertEqual(self.payer.get_transferred_amount(payer_state), 9)
