@@ -346,6 +346,7 @@ class AbsDepositScript(ScriptType):
 
 
 def _load_tx(btctxstore, rawtx):
+    # FIXME remove this so btctxstore is not required!
     tx = pycoin.tx.Tx.from_hex(rawtx)
     for txin in tx.txs_in:
         utxo_tx = btctxstore.service.get_tx(txin.previous_hash)
@@ -361,9 +362,9 @@ def _make_lookups(wif, script_bin):
     return hash160_lookup, p2sh_lookup
 
 
-def sign_finalize_commit(btctxstore, wif, rawtx, script_hex):
+def sign_finalize_commit(btctxstore, wif, rawtx, deposit_script_hex):
     tx = _load_tx(btctxstore, rawtx)
-    script_bin = h2b(script_hex)
+    script_bin = h2b(deposit_script_hex)
     expire_time = get_deposit_expire_time(script_bin)
     hash160_lookup, p2sh_lookup = _make_lookups(wif, script_bin)
     with DepositScriptHandler(expire_time):
@@ -373,9 +374,9 @@ def sign_finalize_commit(btctxstore, wif, rawtx, script_hex):
     return tx.as_hex()
 
 
-def sign_create_commit(btctxstore, wif, rawtx, script_hex):
+def sign_create_commit(btctxstore, wif, rawtx, deposit_script_hex):
     tx = _load_tx(btctxstore, rawtx)
-    script_bin = h2b(script_hex)
+    script_bin = h2b(deposit_script_hex)
     expire_time = get_deposit_expire_time(script_bin)
     hash160_lookup, p2sh_lookup = _make_lookups(wif, script_bin)
     hash160_lookup, p2sh_lookup = _make_lookups(wif, script_bin)

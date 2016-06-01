@@ -12,6 +12,7 @@ import requests
 from btctxstore import BtcTxStore
 from requests.auth import HTTPBasicAuth
 from bitcoinrpc.authproxy import AuthServiceProxy
+from collections import defaultdict
 from picopayments import util
 from picopayments import validate
 from picopayments.scripts import get_commit_revoke_secret_hash
@@ -166,12 +167,16 @@ class Channel(object):
         self._order_active(state)
         commit = state["commits_active"][-1]
         rawtx = scripts.sign_finalize_commit(
-            self.btctxstore, state["payee_wif"], commit["rawtx"],
-            state["deposit_script"]
+            self.btctxstore, state["payee_wif"],
+            commit["rawtx"], state["deposit_script"]
         )
         self._publish(rawtx)
         commit["rawtx"] = rawtx  # update commit
-        return {"channel_state": state, "txid": util.gettxid(rawtx)}
+        return {
+            "channel_state": state,
+            "txid": util.gettxid(rawtx),
+            "rawtx": commit
+        }
 
     def revoke_all(self, state, secrets):
         # FIXME add doc string
@@ -212,21 +217,22 @@ class Channel(object):
         # FIXME validate state
         state = copy.deepcopy(state)
         self._validate_transfer_quantity(state, quantity)
-        rawtx, script = self._create_commit(
+        rawtx, commit_script = self._create_commit(
             state["payer_wif"], util.h2b(state["deposit_script"]),
             quantity, revoke_secret_hash, delay_time
         )
         rawtx = scripts.sign_create_commit(
-            self.btctxstore, state["payer_wif"], rawtx, state["deposit_script"]
+            self.btctxstore, state["payer_wif"],
+            rawtx, state["deposit_script"]
         )
-        script_hex = util.b2h(script)
+        commit_script_hex = util.b2h(commit_script)
         self._order_active(state)
         state["commits_active"].append({
-            "rawtx": rawtx, "script": script_hex, "revoke_secret": None
+            "rawtx": rawtx, "script": commit_script_hex, "revoke_secret": None
         })
         return {
             "channel_state": state,
-            "commit": {"rawtx": rawtx, "script": script_hex}
+            "commit": {"rawtx": rawtx, "script": commit_script_hex}
         }
 
     def deposit(self, payer_wif, payee_pubkey, spend_secret_hash,
@@ -234,10 +240,8 @@ class Channel(object):
         # FIXME add doc string
         # FIXME validate all input
         # FIXME validate state
-
         self._validate_deposit(payer_wif, payee_pubkey, spend_secret_hash,
                                expire_time, quantity)
-
         state = self._init_state()
         state["payer_wif"] = payer_wif
         rawtx, script = self._deposit(
@@ -258,6 +262,7 @@ class Channel(object):
         # FIXME validate all input
         # FIXME validate state
         state = copy.deepcopy(state)
+        payouts = []
 
         # payout recoverable commits
         recoverable_scripts = self._get_payout_recoverable(state)
@@ -267,19 +272,21 @@ class Channel(object):
                     state["payee_wif"], script, None,
                     state["spend_secret"], "payout"
                 )
+                payouts.append(rawtx)
                 rawtx = scripts.sign_payout_recover(
                     self.btctxstore, state["payee_wif"], rawtx,
                     util.b2h(script), state["spend_secret"]
                 )
                 self._publish(rawtx)
                 state["payout_rawtxs"].append(rawtx)
-        return {"channel_state": state}
+        return {"channel_state": state, "payouts": payouts}
 
     def payer_update(self, state):
         # FIXME add doc string
         # FIXME validate all input
         # FIXME validate state
         state = copy.deepcopy(state)
+        commits = {"revoke": [], "change": [], "expire": []}
 
         # If revoked commit published, recover funds asap!
         revokable = self._get_revoke_recoverable(state)
@@ -288,6 +295,7 @@ class Channel(object):
                 rawtx = self._create_recover_commit(
                     state["payer_wif"], script, secret, None, "revoke"
                 )
+                commits["revoke"].append(rawtx)
                 rawtx = scripts.sign_revoke_recover(
                     self.btctxstore, state["payer_wif"], rawtx,
                     util.b2h(script), secret
@@ -301,7 +309,15 @@ class Channel(object):
         if self._can_spend_from_address(address):
             spend_secret = self._find_spend_secret(state)
             if spend_secret is not None:
-                state, rawtx = self._change_recover(state, spend_secret)
+                script = util.h2b(state["deposit_script"])
+                rawtx = self._recover_deposit(state["payer_wif"], script,
+                                              "change", spend_secret)
+                commits["change"].append(rawtx)
+                rawtx = scripts.sign_change_recover(
+                    self.btctxstore, state["payer_wif"],
+                    rawtx, util.b2h(script), spend_secret
+                )
+                state["change_rawtxs"].append(rawtx)
                 self._publish(rawtx)
 
         # If deposit expired recover the coins!
@@ -309,12 +325,13 @@ class Channel(object):
             script = util.h2b(state["deposit_script"])
             rawtx = self._recover_deposit(state["payer_wif"],
                                           script, "expire", None)
+            commits["expire"].append(rawtx)
             rawtx = scripts.sign_expire_recover(
                 self.btctxstore, state["payer_wif"], rawtx, util.b2h(script)
             )
             self._publish(rawtx)
             state["expire_rawtxs"].append(rawtx)
-        return {"channel_state": state}
+        return {"channel_state": state, "commits": commits}
 
     def payout_confirmed(self, state, minconfirms=1):
         # FIXME add doc string
@@ -742,17 +759,6 @@ class Channel(object):
                 if spend_secret is not None:
                     return spend_secret
         return None
-
-    def _change_recover(self, state, spend_secret):
-        script = util.h2b(state["deposit_script"])
-        rawtx = self._recover_deposit(state["payer_wif"], script,
-                                      "change", spend_secret)
-        rawtx = scripts.sign_change_recover(
-            self.btctxstore, state["payer_wif"],
-            rawtx, util.b2h(script), spend_secret
-        )
-        state["change_rawtxs"].append(rawtx)
-        return state, rawtx
 
     def _get_revoke_recoverable(self, state):
         commits_revoked = state["commits_revoked"]
