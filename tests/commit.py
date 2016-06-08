@@ -242,7 +242,9 @@ class TestCommit(unittest.TestCase):
     def test_create_commit(self):
         result = self.payer.create_commit(PAYER_BEFORE, 1,
                                           REVOKE_SECRET_HASH, DELAY_TIME)
-        self.assertEqual(result, FIXTURES["test_commit"]["creat_commit_result"])
+        self.assertEqual(
+            result, FIXTURES["test_commit"]["create_commit_result"]
+        )
         self.assertEqual(result["channel_state"], PAYER_AFTER)
 
     def test_set_commit(self):

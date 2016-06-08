@@ -23,6 +23,7 @@ class TestRecoverChange(unittest.TestCase):
         self.payer = picopayments.Channel(
             ASSET, api_url=API_URL, testnet=TESTNET, dryrun=DRYRUN
         )
+        self.maxDiff = None
 
     def test_recover_change(self):
         result = self.payer.payer_update(PAYER_STATE)  # recover change
