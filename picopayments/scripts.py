@@ -374,6 +374,10 @@ def sign_finalize_commit(btctxstore, wif, rawtx, deposit_script_hex):
     return tx.as_hex()
 
 
+def sign_deposit(btctxstore, payer_wif, rawtx):
+    return btctxstore.sign_tx(rawtx, [payer_wif])
+
+
 def sign_create_commit(btctxstore, wif, rawtx, deposit_script_hex):
     tx = _load_tx(btctxstore, rawtx)
     script_bin = h2b(deposit_script_hex)

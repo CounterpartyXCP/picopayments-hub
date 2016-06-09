@@ -9,5 +9,4 @@ from . import scripts  # NOQA
 from . import channel  # NOQA
 from . import validate  # NOQA
 from . import exceptions  # NOQA
-from . import blockchain  # NOQA
 from .channel import Channel  # NOQA

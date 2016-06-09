@@ -176,19 +176,11 @@ class Channel(object):
         assert(len(state["commits_active"]) > 0)
         self._order_active(state)
         commit = state["commits_active"][-1]
-
-        # TODO remove signing and publishing
-        rawtx = scripts.sign_finalize_commit(
-            self.btctxstore, state["payee_wif"],
-            commit["rawtx"], state["deposit_script"]
-        )
-        commit["rawtx"] = rawtx  # update commit
-
         return {
             "channel_state": state,
             "topublish": {
                 "rawtx": commit["rawtx"],
-                "script": state["deposit_script"],
+                "deposit_script": state["deposit_script"],
             }
         }
 
@@ -232,7 +224,7 @@ class Channel(object):
             quantity, revoke_secret_hash, delay_time
         )
 
-        # TODO remove signing and publishing
+        # TODO remove signing
         rawtx = scripts.sign_create_commit(
             self.btctxstore, state["payer_wif"],
             rawtx, state["deposit_script"]
@@ -290,7 +282,7 @@ class Channel(object):
                     "secret": state["spend_secret"]
                 })
 
-                # TODO remove signing and publishing
+                # TODO remove signing
                 rawtx = scripts.sign_payout_recover(
                     self.btctxstore, state["payee_wif"], rawtx,
                     util.b2h(script), state["spend_secret"]
@@ -318,7 +310,7 @@ class Channel(object):
                     "secret": secret
                 })
 
-                # TODO remove signing and publishing
+                # TODO remove signing
                 rawtx = scripts.sign_revoke_recover(
                     self.btctxstore, state["payer_wif"], rawtx,
                     util.b2h(script), secret
@@ -333,7 +325,7 @@ class Channel(object):
                 "rawtx": rawtx, "script": util.b2h(script)
             })
 
-            # TODO remove signing and publishing
+            # TODO remove signing
             rawtx = scripts.sign_expire_recover(
                 self.btctxstore, state["payer_wif"], rawtx, util.b2h(script)
             )
@@ -357,7 +349,7 @@ class Channel(object):
                         "secret": spend_secret
                     })
 
-                    # TODO remove signing and publishing
+                    # TODO remove signing
                     rawtx = scripts.sign_change_recover(
                         self.btctxstore, state["payer_wif"],
                         rawtx, util.b2h(script), spend_secret

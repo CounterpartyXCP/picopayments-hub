@@ -65,7 +65,7 @@ class TestDeposit(unittest.TestCase):
         )
 
         wif = result["channel_state"]["payer_wif"]
-        rawtx = picopayments.blockchain.sign_deposit(
+        rawtx = picopayments.scripts.sign_deposit(
             self.channel.btctxstore, wif, result["topublish"]
         )
         deposit = {"rawtx": rawtx, "script": result["deposit_script"]}
