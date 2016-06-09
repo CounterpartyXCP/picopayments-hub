@@ -67,7 +67,14 @@ class TestDeposit(unittest.TestCase):
             PAYER_WIF, PAYEE_PUBKEY, SPEND_SECRET_HASH,
             EXPIRE_TIME, QUANTITY
         )
-        self.assertEqual(EXPECTED_DEPOSIT, result["deposit"])
+
+        wif = result["channel_state"]["payer_wif"]
+        rawtx = picopayments.blockchain.sign_deposit(
+            self.channel.btctxstore, wif, result["topublish"]
+        )
+        deposit = {"rawtx": rawtx, "script": result["deposit_script"]}
+
+        self.assertEqual(EXPECTED_DEPOSIT, deposit)
         self.assertEqual(EXPECTED_STATE, result["channel_state"])
 
 

@@ -279,11 +279,11 @@ class Channel(object):
             state["payer_wif"], payee_pubkey,
             spend_secret_hash, expire_time, quantity
         )
-        rawtx = self.btctxstore.sign_tx(rawtx, [state["payer_wif"]])
         state["deposit_script"] = util.b2h(script)
         return {
             "channel_state": state,
-            "deposit": {"rawtx": rawtx, "script": util.b2h(script)}
+            "topublish": rawtx,
+            "deposit_script": util.b2h(script)
         }
 
     def payee_update(self, state):
