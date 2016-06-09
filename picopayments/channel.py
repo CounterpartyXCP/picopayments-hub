@@ -45,7 +45,6 @@ INITIAL_STATE = {
     "payee_wif": None,
     "spend_secret": None,
     "deposit_script": None,
-    "expire_rawtxs": [],  # ["rawtx", ...]
     "change_rawtxs": [],  # ["rawtx", ...]
     "revoke_rawtxs": [],  # ["rawtx", ...]
     "payout_rawtxs": [],  # ["rawtx", ...]
@@ -111,14 +110,11 @@ class Channel(object):
             "spend_secret_hash": util.b2h(util.hash160(secret))
         }
 
-    def set_deposit(self, state, deposit):
+    def set_deposit(self, state, script_hex):
         # TODO add doc string
         # TODO validate all input
         # TODO validate state
         state = copy.deepcopy(state)
-        rawtx = deposit["rawtx"]
-        script_hex = deposit["script"]
-        self._validate_payer_deposit(rawtx, script_hex)
         script = util.h2b(script_hex)
         self._validate_deposit_spend_secret_hash(state, script)
         self._validate_deposit_payee_pubkey(state, script)
@@ -358,8 +354,6 @@ class Channel(object):
             rawtx = scripts.sign_expire_recover(
                 self.btctxstore, state["payer_wif"], rawtx, util.b2h(script)
             )
-
-            state["expire_rawtxs"].append(rawtx)
 
         else:
 
@@ -647,16 +641,6 @@ class Channel(object):
                 return False
         return True
 
-    def _commit_spent(self, state, commit):
-        txid = util.gettxid(commit["rawtx"])
-        for rawtx in (state["payout_rawtxs"] + state["revoke_rawtxs"] +
-                      state["change_rawtxs"] + state["expire_rawtxs"]):
-            tx = pycoin.tx.Tx.from_hex(rawtx)
-            for txin in tx.txs_in:
-                if util.b2h_rev(txin.previous_hash) == txid:
-                    return True
-        return False
-
     def _validate_deposit_spend_secret_hash(self, state, script):
         given_spend_secret_hash = get_deposit_spend_secret_hash(script)
         own_spend_secret_hash = util.hash160hex(state["spend_secret"])
@@ -674,14 +658,6 @@ class Channel(object):
             raise ValueError(msg.format(
                 given_payee_pubkey, own_payee_pubkey
             ))
-
-    def _validate_payer_deposit(self, rawtx, script_hex):
-        tx = pycoin.tx.Tx.from_hex(rawtx)
-        assert(tx.bad_signature_count() == 1)
-
-        # TODO validate script
-        # TODO check given script and rawtx match
-        # TODO check given script is deposit script
 
     def _validate_payer_commit(self, rawtx, script_hex):
         tx = pycoin.tx.Tx.from_hex(rawtx)
@@ -713,15 +689,10 @@ class Channel(object):
 
     def _get_payout_recoverable(self, state):
         scripts = []
-        for commit in (state["commits_active"] +
-                       state["commits_revoked"]):
+        for commit in (state["commits_active"] + state["commits_revoked"]):
             script = util.h2b(commit["script"])
             delay_time = get_commit_delay_time(script)
-            address = util.script2address(
-                script, netcode=self.netcode
-            )
-            if self._commit_spent(state, commit):
-                continue
+            address = util.script2address(script, netcode=self.netcode)
             if self._can_spend_from_address(address):
                 utxos = self.btctxstore.retrieve_utxos([address])
                 for utxo in utxos:
