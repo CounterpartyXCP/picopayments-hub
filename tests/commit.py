@@ -15,7 +15,6 @@ FIXTURES = json.load(open("tests/fixtures.json"))
 
 
 PAYER_BEFORE = {
-    "payout_rawtxs": [],
     "revoke_rawtxs": [],
     "payer_wif": "cSthi1Ye1sbHepC5s8rNukQBAKLCyct6hLg6MCH9Ybk1cKfGcPb2",
     "deposit_script": (
@@ -32,7 +31,6 @@ PAYER_BEFORE = {
 
 
 PAYEE_BEFORE_REQUEST = {
-    "payout_rawtxs": [],
     "revoke_rawtxs": [],
     "payer_wif": None,
     "deposit_script": (
@@ -53,7 +51,6 @@ PAYEE_BEFORE_REQUEST = {
 
 
 PAYER_AFTER = {
-    "payout_rawtxs": [],
     "revoke_rawtxs": [],
     "commits_active": [
         {
@@ -75,7 +72,6 @@ REVOKE_SECRET_HASH = "bcc82b07e3c1317a52d7adbff1ef869d4e46ac35"
 
 
 PAYEE_AFTER_REQUEST = {
-    "payout_rawtxs": [],
     "revoke_rawtxs": [],
     "commits_requested": [
         "b9724d0ef63b346e77ba0316978beae6af63d823f0ebc1c8199e22d52a4274b0"
@@ -98,7 +94,6 @@ PAYEE_AFTER_REQUEST = {
 
 
 PAYEE_AFTER_SET_COMMIT = {
-    "payout_rawtxs": [],
     "revoke_rawtxs": [],
     "commits_active": [
         {
@@ -126,7 +121,6 @@ DELAY_TIME = 5
 
 
 PAYEE_BEFORE_CLOSE = {
-    "payout_rawtxs": [],
     "revoke_rawtxs": [],
     "payee_wif": "cVmyYsHfeJWmCFy7N6DUeC4aXMS8vRR57aW7eGmpFVLfSHWjZ4jc",
     "commits_active": [
@@ -145,7 +139,6 @@ PAYEE_BEFORE_CLOSE = {
 
 
 PAYEE_AFTER_CLOSE = {
-    "payout_rawtxs": [],
     "revoke_rawtxs": [],
     "spend_secret": "d688fc3400f9feb6f8c409b804c75deaa5fa1635bf252d5d5de262a5c63cb5e5",
     "deposit_script": "63522102a73443bc32f5fec6a551f71af75311b0876686156d16d367562d3d29987792d52103c7b09d53bdb0ef9cfea06c1e6f2192e6a91cdeac209402bc36c1c368021a861152ae6763a9144cc776751eb4d41f23feaf94697cb7ec2fe597a4882102a73443bc32f5fec6a551f71af75311b0876686156d16d367562d3d29987792d5ac6703ffff00b2752102a73443bc32f5fec6a551f71af75311b0876686156d16d367562d3d29987792d5ac6868",

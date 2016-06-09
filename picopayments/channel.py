@@ -37,7 +37,6 @@ INITIAL_STATE = {
     "spend_secret": None,
     "deposit_script": None,
     "revoke_rawtxs": [],  # ["rawtx", ...]
-    "payout_rawtxs": [],  # ["rawtx", ...]
 
     # Quantity not needed as payer may change it. If its heigher its
     # against our self intrest to throw away money. If its lower it
@@ -299,8 +298,6 @@ class Channel(object):
                     util.b2h(script), state["spend_secret"]
                 )
 
-                state["payout_rawtxs"].append(rawtx)
-
         return {"channel_state": state, "payouts": payouts}
 
     def payer_update(self, state):
@@ -371,15 +368,6 @@ class Channel(object):
                     )
 
         return {"channel_state": state, "topublish": topublish}
-
-    def payout_confirmed(self, state, minconfirms=1):
-        # TODO add doc string
-        # TODO validate all input
-        # TODO validate state
-        state = copy.deepcopy(state)
-        validate.unsigned(minconfirms)
-        return self._all_confirmed(state["payout_rawtxs"],
-                                   minconfirms=minconfirms)
 
     def publish(self, rawtx):
         # TODO remove this
