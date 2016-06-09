@@ -22,14 +22,9 @@ class TestRecoverChange(unittest.TestCase):
         self.payer = picopayments.Channel(
             ASSET, api_url=API_URL, testnet=TESTNET, dryrun=DRYRUN
         )
-        # self.maxDiff = None
 
     def test_recover_change(self):
         result = self.payer.payer_update(PAYER_STATE)  # recover change
-
-        # print(json.dumps(result, indent=2))
-        # print(json.dumps(result["channel_state"], indent=2))
-
         self.assertEqual(result, UPDATE_RESULT)
 
 

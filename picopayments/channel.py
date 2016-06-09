@@ -21,18 +21,18 @@ from picopayments.scripts import get_deposit_payee_pubkey
 from picopayments.scripts import get_commit_spend_secret_hash
 from picopayments.scripts import get_commit_payee_pubkey
 from picopayments.scripts import get_commit_delay_time
-from picopayments import exceptions
-from picopayments import scripts
 from picopayments.scripts import get_deposit_expire_time
 from picopayments.scripts import get_deposit_payer_pubkey
 from picopayments.scripts import compile_commit_script
 from picopayments.scripts import compile_deposit_script
 from picopayments.scripts import DepositScriptHandler
+from picopayments import exceptions
+from picopayments import scripts
 
 
-# FIXME fees per kb, auto adjust to market price or get from counterparty
-DEFAULT_TXFEE = 10000  # FIXME dont hardcode tx fee
-DEFAULT_DUSTSIZE = 5430  # FIXME dont hardcode dust size
+# TODO fees per kb, auto adjust to market price or get from counterparty
+DEFAULT_TXFEE = 10000  # TODO dont hardcode tx fee
+DEFAULT_DUSTSIZE = 5430  # TODO dont hardcode dust size
 DEFAULT_TESTNET = False
 DEFAULT_COUNTERPARTY_RPC_MAINNET_URL = "http://public.coindaddy.io:4000/api/"
 DEFAULT_COUNTERPARTY_RPC_TESTNET_URL = "http://public.coindaddy.io:14000/api/"
@@ -45,7 +45,6 @@ INITIAL_STATE = {
     "payee_wif": None,
     "spend_secret": None,
     "deposit_script": None,
-    "deposit_rawtx": None,
     "expire_rawtxs": [],  # ["rawtx", ...]
     "change_rawtxs": [],  # ["rawtx", ...]
     "revoke_rawtxs": [],  # ["rawtx", ...]
@@ -64,9 +63,9 @@ INITIAL_STATE = {
     #                           }]
 
     "commits_revoked": [],    # [{
-    #                            "rawtx": hex,  # unneeded?
-    #                            "script": hex,
-    #                            "revoke_secret": hex
+    #                             "rawtx": hex,
+    #                             "script": hex,
+    #                             "revoke_secret": hex
     #                           }]
 }
 
@@ -77,8 +76,8 @@ class Channel(object):
                  password=DEFAULT_COUNTERPARTY_RPC_PASSWORD,
                  api_url=None, testnet=DEFAULT_TESTNET, dryrun=False,
                  fee=DEFAULT_TXFEE, dust_size=DEFAULT_DUSTSIZE):
-        # FIXME add doc string
-        # FIXME validate all input
+        # TODO add doc string
+        # TODO validate all input
         if testnet:
             default_url = DEFAULT_COUNTERPARTY_RPC_TESTNET_URL
         else:
@@ -99,9 +98,9 @@ class Channel(object):
         )
 
     def setup(self, payee_wif):
-        # FIXME add doc string
-        # FIXME validate all input
-        # FIXME validate state
+        # TODO add doc string
+        # TODO validate all input
+        # TODO validate state
         secret = os.urandom(32)  # secure random number
         state = copy.deepcopy(INITIAL_STATE)
         state["payee_wif"] = payee_wif
@@ -113,9 +112,9 @@ class Channel(object):
         }
 
     def set_deposit(self, state, deposit):
-        # FIXME add doc string
-        # FIXME validate all input
-        # FIXME validate state
+        # TODO add doc string
+        # TODO validate all input
+        # TODO validate state
         state = copy.deepcopy(state)
         rawtx = deposit["rawtx"]
         script_hex = deposit["script"]
@@ -123,14 +122,13 @@ class Channel(object):
         script = util.h2b(script_hex)
         self._validate_deposit_spend_secret_hash(state, script)
         self._validate_deposit_payee_pubkey(state, script)
-        state["deposit_rawtx"] = rawtx
         state["deposit_script"] = script_hex
         return {"channel_state": state}
 
     def request_commit(self, state, quantity):
-        # FIXME add doc string
-        # FIXME validate all input
-        # FIXME validate state
+        # TODO add doc string
+        # TODO validate all input
+        # TODO validate state
         state = copy.deepcopy(state)
         self._validate_transfer_quantity(state, quantity)
         secret = util.b2h(os.urandom(32))  # secure random number
@@ -143,9 +141,9 @@ class Channel(object):
         }
 
     def set_commit(self, state, rawtx, script_hex):
-        # FIXME add doc string
-        # FIXME validate all input
-        # FIXME validate state
+        # TODO add doc string
+        # TODO validate all input
+        # TODO validate state
         state = copy.deepcopy(state)
         self._validate_payer_commit(rawtx, script_hex)
 
@@ -173,9 +171,9 @@ class Channel(object):
         return {"channel_state": state}
 
     def revoke_until(self, state, quantity):
-        # FIXME add doc string
-        # FIXME validate all input
-        # FIXME validate state
+        # TODO add doc string
+        # TODO validate all input
+        # TODO validate state
         state = copy.deepcopy(state)
         secrets = []
         self._order_active(state)
@@ -188,15 +186,15 @@ class Channel(object):
         return {"channel_state": state, "revoke_secrets": secrets}
 
     def close_channel(self, state):
-        # FIXME add doc string
-        # FIXME validate all input
-        # FIXME validate state
+        # TODO add doc string
+        # TODO validate all input
+        # TODO validate state
         state = copy.deepcopy(state)
         assert(len(state["commits_active"]) > 0)
         self._order_active(state)
         commit = state["commits_active"][-1]
 
-        # FIXME remove signing and publishing
+        # TODO remove signing and publishing
         rawtx = scripts.sign_finalize_commit(
             self.btctxstore, state["payee_wif"],
             commit["rawtx"], state["deposit_script"]
@@ -212,31 +210,27 @@ class Channel(object):
         }
 
     def revoke_all(self, state, secrets):
-        # FIXME add doc string
-        # FIXME validate all input
-        # FIXME validate state
+        # TODO add doc string
+        # TODO validate all input
+        # TODO validate state
         state = copy.deepcopy(state)
         list(map(lambda s: self._revoke(state, s), secrets))
         return {"channel_state": state}
 
     def is_deposit_confirmed(self, state, minconfirms=1):
-        # FIXME add doc string
-        # FIXME validate all input
-        # FIXME validate state
+        # TODO add doc string
+        # TODO validate all input
+        # TODO validate state
         state = copy.deepcopy(state)
         validate.unsigned(minconfirms)
         script = util.h2b(state["deposit_script"])
-        address = util.script2address(script, self.netcode)
-        if self._get_address_balance(address) == (0, 0):
-            return False
-        rawtx = state["deposit_rawtx"]
-        confirms = self.btctxstore.confirms(util.gettxid(rawtx)) or 0
+        confirms, asset_balance, btc_balance = self._deposit_status(script)
         return confirms >= minconfirms
 
     def get_transferred_amount(self, state):
-        # FIXME add doc string
-        # FIXME validate all input
-        # FIXME validate state
+        # TODO add doc string
+        # TODO validate all input
+        # TODO validate state
         state = copy.deepcopy(state)
         if len(state["commits_active"]) == 0:
             return 0
@@ -245,9 +239,9 @@ class Channel(object):
         return self._get_quantity(commit["rawtx"])
 
     def create_commit(self, state, quantity, revoke_secret_hash, delay_time):
-        # FIXME add doc string
-        # FIXME validate all input
-        # FIXME validate state
+        # TODO add doc string
+        # TODO validate all input
+        # TODO validate state
         state = copy.deepcopy(state)
         self._validate_transfer_quantity(state, quantity)
         rawtx, commit_script = self._create_commit(
@@ -255,7 +249,7 @@ class Channel(object):
             quantity, revoke_secret_hash, delay_time
         )
 
-        # FIXME remove signing and publishing
+        # TODO remove signing and publishing
         rawtx = scripts.sign_create_commit(
             self.btctxstore, state["payer_wif"],
             rawtx, state["deposit_script"]
@@ -274,9 +268,9 @@ class Channel(object):
 
     def deposit(self, payer_wif, payee_pubkey, spend_secret_hash,
                 expire_time, quantity):
-        # FIXME add doc string
-        # FIXME validate all input
-        # FIXME validate state
+        # TODO add doc string
+        # TODO validate all input
+        # TODO validate state
         self._validate_deposit(payer_wif, payee_pubkey, spend_secret_hash,
                                expire_time, quantity)
         state = copy.deepcopy(INITIAL_STATE)
@@ -286,7 +280,6 @@ class Channel(object):
             spend_secret_hash, expire_time, quantity
         )
         rawtx = self.btctxstore.sign_tx(rawtx, [state["payer_wif"]])
-        state["deposit_rawtx"] = rawtx
         state["deposit_script"] = util.b2h(script)
         return {
             "channel_state": state,
@@ -294,9 +287,9 @@ class Channel(object):
         }
 
     def payee_update(self, state):
-        # FIXME add doc string
-        # FIXME validate all input
-        # FIXME validate state
+        # TODO add doc string
+        # TODO validate all input
+        # TODO validate state
         state = copy.deepcopy(state)
         payouts = []
 
@@ -314,7 +307,7 @@ class Channel(object):
                     "secret": state["spend_secret"]
                 })
 
-                # FIXME remove signing and publishing
+                # TODO remove signing and publishing
                 rawtx = scripts.sign_payout_recover(
                     self.btctxstore, state["payee_wif"], rawtx,
                     util.b2h(script), state["spend_secret"]
@@ -325,9 +318,9 @@ class Channel(object):
         return {"channel_state": state, "payouts": payouts}
 
     def payer_update(self, state):
-        # FIXME add doc string
-        # FIXME validate all input
-        # FIXME validate state
+        # TODO add doc string
+        # TODO validate all input
+        # TODO validate state
         state = copy.deepcopy(state)
         topublish = {"revoke": [], "change": [], "expire": []}
 
@@ -344,7 +337,7 @@ class Channel(object):
                     "secret": secret
                 })
 
-                # FIXME remove signing and publishing
+                # TODO remove signing and publishing
                 rawtx = scripts.sign_revoke_recover(
                     self.btctxstore, state["payer_wif"], rawtx,
                     util.b2h(script), secret
@@ -361,7 +354,7 @@ class Channel(object):
                 "rawtx": rawtx, "script": util.b2h(script)
             })
 
-            # FIXME remove signing and publishing
+            # TODO remove signing and publishing
             rawtx = scripts.sign_expire_recover(
                 self.btctxstore, state["payer_wif"], rawtx, util.b2h(script)
             )
@@ -370,8 +363,8 @@ class Channel(object):
 
         else:
 
-            # If not expired and spend secret exposed by payout, recover
-            # change!
+            # If not expired and spend secret exposed by payout
+            # recover change!
             script = util.h2b(state["deposit_script"])
             address = util.script2address(script, self.netcode)
             if self._can_spend_from_address(address):
@@ -380,13 +373,14 @@ class Channel(object):
                     script = util.h2b(state["deposit_script"])
                     rawtx = self._recover_deposit(state["payer_wif"], script,
                                                   "change", spend_secret)
+
                     topublish["change"].append({
                         "rawtx": rawtx,
                         "script": util.b2h(script),
                         "secret": spend_secret
                     })
 
-                    # FIXME remove signing and publishing
+                    # TODO remove signing and publishing
                     rawtx = scripts.sign_change_recover(
                         self.btctxstore, state["payer_wif"],
                         rawtx, util.b2h(script), spend_secret
@@ -397,22 +391,48 @@ class Channel(object):
         return {"channel_state": state, "topublish": topublish}
 
     def payout_confirmed(self, state, minconfirms=1):
-        # FIXME add doc string
-        # FIXME validate all input
-        # FIXME validate state
+        # TODO add doc string
+        # TODO validate all input
+        # TODO validate state
         state = copy.deepcopy(state)
         validate.unsigned(minconfirms)
         return self._all_confirmed(state["payout_rawtxs"],
                                    minconfirms=minconfirms)
 
     def change_confirmed(self, state, minconfirms=1):
-        # FIXME add doc string
-        # FIXME validate all input
-        # FIXME validate state
+        # TODO add doc string
+        # TODO validate all input
+        # TODO validate state
         state = copy.deepcopy(state)
         validate.unsigned(minconfirms)
         return self._all_confirmed(state["change_rawtxs"],
                                    minconfirms=minconfirms)
+
+    def publish(self, rawtx):
+        # TODO remove this
+        txid = util.gettxid(rawtx)
+        if self.dryrun:
+            return txid
+        while self.btctxstore.confirms(util.gettxid(rawtx)) is None:
+            try:
+                self.bitcoind_rpc.sendrawtransaction(rawtx)
+                return util.gettxid(rawtx)
+                # see http://counterparty.io/docs/api/#wallet-integration
+            except Exception as e:
+                print("publishing failed: {0} {1}".format(type(e), e))
+            time.sleep(10)
+
+    def _deposit_status(self, script):
+        address = util.script2address(script, self.netcode)
+        txids = self.btctxstore.get_transactions(address)
+        if len(txids) == 0:
+            return 0, 0, 0
+        asset_balance, btc_balance = self._get_address_balance(address)
+        newest_confirms = self.btctxstore.confirms(txids[0]) or 0
+        oldest_confirms = self.btctxstore.confirms(txids[-1]) or 0
+        if newest_confirms == 0:
+            return 0, asset_balance, btc_balance
+        return oldest_confirms, asset_balance, btc_balance
 
     def _rpc_call(self, payload):
         headers = {'content-type': 'application/json'}
@@ -557,25 +577,12 @@ class Channel(object):
             "jsonrpc": "2.0",
             "id": 0,
         })
-        if not result:  # FIXME what causes this?
+        if not result:  # TODO what causes this?
             return 0, 0
         asset_balance = result[0]["quantity"]
         utxos = self.btctxstore.retrieve_utxos([address])
         btc_balance = sum(map(lambda utxo: utxo["value"], utxos))
         return asset_balance, btc_balance
-
-    def publish(self, rawtx):
-        txid = util.gettxid(rawtx)
-        if self.dryrun:
-            return txid
-        while self.btctxstore.confirms(util.gettxid(rawtx)) is None:
-            try:
-                self.bitcoind_rpc.sendrawtransaction(rawtx)
-                return util.gettxid(rawtx)
-                # see http://counterparty.io/docs/api/#wallet-integration
-            except Exception as e:
-                print("publishing failed: {0} {1}".format(type(e), e))
-            time.sleep(10)
 
     def _get_quantity(self, rawtx):
         result = self._rpc_call({
@@ -609,9 +616,9 @@ class Channel(object):
         if quantity <= transferred:
             msg = "Amount not greater transferred: {0} <= {1}"
             raise ValueError(msg.format(quantity, transferred))
-
-        total = self._get_quantity(state["deposit_rawtx"])
-        if quantity > total:
+        script = util.h2b(state["deposit_script"])
+        confirms, asset_balance, btc_balance = self._deposit_status(script)
+        if quantity > asset_balance:
             msg = "Amount greater total: {0} > {1}"
             raise ValueError(msg.fromat(quantity, total))
 
@@ -730,7 +737,6 @@ class Channel(object):
             state["payer_wif"] is not None and
 
             # deposit was made
-            state["deposit_rawtx"] is not None and
             state["deposit_script"] is not None and
 
             # deposit expired
@@ -748,8 +754,7 @@ class Channel(object):
     def _is_deposit_expired(self, state):
         script = util.h2b(state["deposit_script"])
         t = get_deposit_expire_time(script)
-        rawtx = state["deposit_rawtx"]
-        confirms = self.btctxstore.confirms(util.gettxid(rawtx)) or 0
+        confirms, asset_balance, btc_balance = self._deposit_status(script)
         return confirms >= t
 
     def _validate_deposit(self, payer_wif, payee_pubkey, spend_secret_hash,
@@ -776,8 +781,7 @@ class Channel(object):
             raise exceptions.InsufficientFunds(extra_btc, btc_balance)
 
     def _find_spend_secret(self, state):
-        for commit in state["commits_active"] + \
-                state["commits_revoked"]:
+        for commit in state["commits_active"] + state["commits_revoked"]:
             script = util.h2b(commit["script"])
             address = util.script2address(
                 script, netcode=self.netcode
@@ -793,9 +797,8 @@ class Channel(object):
         return None
 
     def _get_revoke_recoverable(self, state):
-        commits_revoked = state["commits_revoked"]
         revokable = []  # (script, secret)
-        for commit in commits_revoked:
+        for commit in state["commits_revoked"]:
             script = util.h2b(commit["script"])
             address = util.script2address(
                 script, netcode=self.netcode
