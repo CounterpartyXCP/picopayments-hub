@@ -54,7 +54,7 @@ def unsigned(number):
 
 def sequence(number):
     integer(number)
-    if not (0 <= number < scripts.MAX_SEQUENCE):
+    if not (0 <= number <= scripts.MAX_SEQUENCE):
         raise exceptions.InvalidSequence(number)
 
 

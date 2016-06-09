@@ -12,9 +12,8 @@ DRYRUN = True
 
 
 FIXTURES = json.load(open("tests/fixtures.json"))
-SPEND_SECRET = FIXTURES["test_change"]["payee_state"]["spend_secret"]
 PAYER_STATE = FIXTURES["test_change"]["payer_state"]
-PAYER_RECOVERED_CHANGE = FIXTURES["test_change"]["payer_recovered_change"]
+UPDATE_RESULT = FIXTURES["test_change"]["payer_update_result"]
 
 
 class TestRecoverChange(unittest.TestCase):
@@ -23,11 +22,15 @@ class TestRecoverChange(unittest.TestCase):
         self.payer = picopayments.Channel(
             ASSET, api_url=API_URL, testnet=TESTNET, dryrun=DRYRUN
         )
-        self.maxDiff = None
+        # self.maxDiff = None
 
     def test_recover_change(self):
         result = self.payer.payer_update(PAYER_STATE)  # recover change
-        self.assertEqual(result["channel_state"], PAYER_RECOVERED_CHANGE)
+
+        # print(json.dumps(result, indent=2))
+        # print(json.dumps(result["channel_state"], indent=2))
+
+        self.assertEqual(result, UPDATE_RESULT)
 
 
 if __name__ == "__main__":

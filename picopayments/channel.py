@@ -321,6 +321,7 @@ class Channel(object):
                 )
 
                 state["payout_rawtxs"].append(rawtx)
+
         return {"channel_state": state, "payouts": payouts}
 
     def payer_update(self, state):
@@ -351,29 +352,6 @@ class Channel(object):
 
                 state["revoke_rawtxs"].append(rawtx)
 
-        # If spend secret exposed by payout, recover change!
-        script = util.h2b(state["deposit_script"])
-        address = util.script2address(script, self.netcode)
-        if self._can_spend_from_address(address):
-            spend_secret = self._find_spend_secret(state)
-            if spend_secret is not None:
-                script = util.h2b(state["deposit_script"])
-                rawtx = self._recover_deposit(state["payer_wif"], script,
-                                              "change", spend_secret)
-                topublish["change"].append({
-                    "rawtx": rawtx,
-                    "script": util.b2h(script),
-                    "secret": spend_secret
-                })
-
-                # FIXME remove signing and publishing
-                rawtx = scripts.sign_change_recover(
-                    self.btctxstore, state["payer_wif"],
-                    rawtx, util.b2h(script), spend_secret
-                )
-
-                state["change_rawtxs"].append(rawtx)
-
         # If deposit expired recover the coins!
         if self._can_expire_recover(state):
             script = util.h2b(state["deposit_script"])
@@ -389,6 +367,33 @@ class Channel(object):
             )
 
             state["expire_rawtxs"].append(rawtx)
+
+        else:
+
+            # If not expired and spend secret exposed by payout, recover
+            # change!
+            script = util.h2b(state["deposit_script"])
+            address = util.script2address(script, self.netcode)
+            if self._can_spend_from_address(address):
+                spend_secret = self._find_spend_secret(state)
+                if spend_secret is not None:
+                    script = util.h2b(state["deposit_script"])
+                    rawtx = self._recover_deposit(state["payer_wif"], script,
+                                                  "change", spend_secret)
+                    topublish["change"].append({
+                        "rawtx": rawtx,
+                        "script": util.b2h(script),
+                        "secret": spend_secret
+                    })
+
+                    # FIXME remove signing and publishing
+                    rawtx = scripts.sign_change_recover(
+                        self.btctxstore, state["payer_wif"],
+                        rawtx, util.b2h(script), spend_secret
+                    )
+
+                    state["change_rawtxs"].append(rawtx)
+
         return {"channel_state": state, "topublish": topublish}
 
     def payout_confirmed(self, state, minconfirms=1):
@@ -559,7 +564,7 @@ class Channel(object):
         btc_balance = sum(map(lambda utxo: utxo["value"], utxos))
         return asset_balance, btc_balance
 
-    def _publish(self, rawtx):
+    def publish(self, rawtx):
         txid = util.gettxid(rawtx)
         if self.dryrun:
             return txid
