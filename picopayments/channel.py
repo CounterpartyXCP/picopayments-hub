@@ -50,7 +50,6 @@ INITIAL_STATE = {
     #                           }]
 
     "commits_revoked": [],    # [{
-    #                             "rawtx": hex,
     #                             "script": hex,
     #                             "revoke_secret": hex
     #                           }]
@@ -593,6 +592,7 @@ class Channel(object):
             if secret_hash == scripts.get_commit_revoke_secret_hash(script):
                 state["commits_active"].remove(commit)
                 commit["revoke_secret"] = secret  # save secret
+                del commit["rawtx"]  # forget rawtx so we can never publish
                 state["commits_revoked"].append(commit)
 
     def _all_confirmed(self, rawtxs, minconfirms=1):
