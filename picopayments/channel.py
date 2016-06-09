@@ -15,16 +15,7 @@ from bitcoinrpc.authproxy import AuthServiceProxy
 from collections import defaultdict
 from picopayments import util
 from picopayments import validate
-from picopayments.scripts import get_commit_revoke_secret_hash
 from picopayments.scripts import get_deposit_spend_secret_hash
-from picopayments.scripts import get_deposit_payee_pubkey
-from picopayments.scripts import get_commit_spend_secret_hash
-from picopayments.scripts import get_commit_payee_pubkey
-from picopayments.scripts import get_commit_delay_time
-from picopayments.scripts import get_deposit_expire_time
-from picopayments.scripts import get_deposit_payer_pubkey
-from picopayments.scripts import compile_commit_script
-from picopayments.scripts import compile_deposit_script
 from picopayments.scripts import DepositScriptHandler
 from picopayments import exceptions
 from picopayments import scripts
@@ -45,7 +36,6 @@ INITIAL_STATE = {
     "payee_wif": None,
     "spend_secret": None,
     "deposit_script": None,
-    "change_rawtxs": [],  # ["rawtx", ...]
     "revoke_rawtxs": [],  # ["rawtx", ...]
     "payout_rawtxs": [],  # ["rawtx", ...]
 
@@ -147,7 +137,7 @@ class Channel(object):
         self._validate_commit_secret_hash(state, script)
         self._validate_commit_payee_pubkey(state, script)
 
-        revoke_secret_hash = get_commit_revoke_secret_hash(script)
+        revoke_secret_hash = scripts.get_commit_revoke_secret_hash(script)
         for revoke_secret in state["commits_requested"][:]:
 
             # revoke secret hash must match as it would
@@ -380,8 +370,6 @@ class Channel(object):
                         rawtx, util.b2h(script), spend_secret
                     )
 
-                    state["change_rawtxs"].append(rawtx)
-
         return {"channel_state": state, "topublish": topublish}
 
     def payout_confirmed(self, state, minconfirms=1):
@@ -391,15 +379,6 @@ class Channel(object):
         state = copy.deepcopy(state)
         validate.unsigned(minconfirms)
         return self._all_confirmed(state["payout_rawtxs"],
-                                   minconfirms=minconfirms)
-
-    def change_confirmed(self, state, minconfirms=1):
-        # TODO add doc string
-        # TODO validate all input
-        # TODO validate state
-        state = copy.deepcopy(state)
-        validate.unsigned(minconfirms)
-        return self._all_confirmed(state["change_rawtxs"],
                                    minconfirms=minconfirms)
 
     def publish(self, rawtx):
@@ -472,12 +451,12 @@ class Channel(object):
                                spend_secret, spend_type):
 
         dest_address = util.wif2address(wif)
-        delay_time = get_commit_delay_time(script)
+        delay_time = scripts.get_commit_delay_time(script)
         return self._recover_tx(dest_address, script, delay_time)
 
     def _recover_deposit(self, wif, script, spend_type, spend_secret):
         dest_address = util.wif2address(wif)
-        expire_time = get_deposit_expire_time(script)
+        expire_time = scripts.get_deposit_expire_time(script)
         rawtx = self._recover_tx(
             dest_address, script,
             expire_time if spend_type == "expire" else None
@@ -488,11 +467,11 @@ class Channel(object):
                        revoke_secret_hash, delay_time):
 
         # create script
-        payer_pubkey = get_deposit_payer_pubkey(deposit_script)
+        payer_pubkey = scripts.get_deposit_payer_pubkey(deposit_script)
         assert(util.wif2pubkey(payer_wif) == payer_pubkey)
-        payee_pubkey = get_deposit_payee_pubkey(deposit_script)
+        payee_pubkey = scripts.get_deposit_payee_pubkey(deposit_script)
         spend_secret_hash = get_deposit_spend_secret_hash(deposit_script)
-        commit_script = compile_commit_script(
+        commit_script = scripts.compile_commit_script(
             payer_pubkey, payee_pubkey, spend_secret_hash,
             revoke_secret_hash, delay_time
         )
@@ -514,8 +493,8 @@ class Channel(object):
                  expire_time, quantity):
 
         payer_pubkey = util.wif2pubkey(payer_wif)
-        script = compile_deposit_script(payer_pubkey, payee_pubkey,
-                                        spend_secret_hash, expire_time)
+        script = scripts.compile_deposit_script(payer_pubkey, payee_pubkey,
+                                                spend_secret_hash, expire_time)
         dest_address = util.script2address(script, self.netcode)
         self._valid_channel_unused(dest_address)
         payer_address = util.wif2address(payer_wif)
@@ -626,7 +605,7 @@ class Channel(object):
         secret_hash = util.hash160hex(secret)
         for commit in state["commits_active"][:]:
             script = util.h2b(commit["script"])
-            if secret_hash == get_commit_revoke_secret_hash(script):
+            if secret_hash == scripts.get_commit_revoke_secret_hash(script):
                 state["commits_active"].remove(commit)
                 commit["revoke_secret"] = secret  # save secret
                 state["commits_revoked"].append(commit)
@@ -651,7 +630,7 @@ class Channel(object):
             ))
 
     def _validate_deposit_payee_pubkey(self, state, script):
-        given_payee_pubkey = get_deposit_payee_pubkey(script)
+        given_payee_pubkey = scripts.get_deposit_payee_pubkey(script)
         own_payee_pubkey = util.wif2pubkey(state["payee_wif"])
         if given_payee_pubkey != own_payee_pubkey:
             msg = "Incorrect payee pubkey: {0} != {1}"
@@ -670,7 +649,7 @@ class Channel(object):
         # TODO check given script is commit script
 
     def _validate_commit_secret_hash(self, state, script):
-        given_spend_secret_hash = get_commit_spend_secret_hash(script)
+        given_spend_secret_hash = scripts.get_commit_spend_secret_hash(script)
         own_spend_secret_hash = util.hash160hex(state["spend_secret"])
         if given_spend_secret_hash != own_spend_secret_hash:
             msg = "Incorrect spend secret hash: {0} != {1}"
@@ -679,7 +658,7 @@ class Channel(object):
             ))
 
     def _validate_commit_payee_pubkey(self, state, script):
-        given_payee_pubkey = get_commit_payee_pubkey(script)
+        given_payee_pubkey = scripts.get_commit_payee_pubkey(script)
         own_payee_pubkey = util.wif2pubkey(state["payee_wif"])
         if given_payee_pubkey != own_payee_pubkey:
             msg = "Incorrect payee pubkey: {0} != {1}"
@@ -688,10 +667,10 @@ class Channel(object):
             ))
 
     def _get_payout_recoverable(self, state):
-        scripts = []
+        _scripts = []
         for commit in (state["commits_active"] + state["commits_revoked"]):
             script = util.h2b(commit["script"])
-            delay_time = get_commit_delay_time(script)
+            delay_time = scripts.get_commit_delay_time(script)
             address = util.script2address(script, netcode=self.netcode)
             if self._can_spend_from_address(address):
                 utxos = self.btctxstore.retrieve_utxos([address])
@@ -699,8 +678,8 @@ class Channel(object):
                     txid = utxo["txid"]
                     confirms = self.btctxstore.confirms(txid)
                     if confirms >= delay_time:
-                        scripts.append(script)
-        return scripts
+                        _scripts.append(script)
+        return _scripts
 
     def _can_expire_recover(self, state):
         return (
@@ -724,7 +703,7 @@ class Channel(object):
 
     def _is_deposit_expired(self, state):
         script = util.h2b(state["deposit_script"])
-        t = get_deposit_expire_time(script)
+        t = scripts.get_deposit_expire_time(script)
         confirms, asset_balance, btc_balance = self._deposit_status(script)
         return confirms >= t
 

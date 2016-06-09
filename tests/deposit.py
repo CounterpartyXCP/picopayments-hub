@@ -50,7 +50,6 @@ EXPECTED_STATE = {
         "3bf89340a0a3074ce0ef403ebfb77cb3402d0daa29d808e2bde0ac6755b27521033faa"
         "57e0ed3a3bf89340a0a3074ce0ef403ebfb77cb3402d0daa29d808e2bde0ac6868"),
     "spend_secret": None,
-    "change_rawtxs": [],
 }
 
 
