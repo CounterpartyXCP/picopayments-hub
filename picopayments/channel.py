@@ -36,7 +36,6 @@ INITIAL_STATE = {
     "payee_wif": None,
     "spend_secret": None,
     "deposit_script": None,
-    "revoke_rawtxs": [],  # ["rawtx", ...]
 
     # Quantity not needed as payer may change it. If its heigher its
     # against our self intrest to throw away money. If its lower it
@@ -325,8 +324,6 @@ class Channel(object):
                     self.btctxstore, state["payer_wif"], rawtx,
                     util.b2h(script), secret
                 )
-
-                state["revoke_rawtxs"].append(rawtx)
 
         # If deposit expired recover the coins!
         if self._can_expire_recover(state):
