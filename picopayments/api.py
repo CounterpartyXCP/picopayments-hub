@@ -272,8 +272,8 @@ class Api(object):
                 )
                 payouts.append({
                     "rawtx": rawtx,
-                    "script": util.b2h(script),
-                    "secret": state["spend_secret"]
+                    "commit_script": util.b2h(script),
+                    "spend_secret": state["spend_secret"]
                 })
 
         return {"channel_state": state, "payouts": payouts}
@@ -294,8 +294,8 @@ class Api(object):
                 )
                 topublish["revoke"].append({
                     "rawtx": rawtx,
-                    "script": util.b2h(script),
-                    "secret": secret
+                    "commit_script": util.b2h(script),
+                    "revoke_secret": secret
                 })
 
         # If deposit expired recover the coins!
@@ -304,7 +304,7 @@ class Api(object):
             rawtx = self._recover_deposit(state["payer_wif"],
                                           script, "expire", None)
             topublish["expire"].append({
-                "rawtx": rawtx, "script": util.b2h(script)
+                "rawtx": rawtx, "deposit_script": util.b2h(script)
             })
 
         else:
@@ -321,8 +321,8 @@ class Api(object):
                                                   "change", spend_secret)
                     topublish["change"].append({
                         "rawtx": rawtx,
-                        "script": util.b2h(script),
-                        "secret": spend_secret
+                        "deposit_script": util.b2h(script),
+                        "spend_secret": spend_secret
                     })
 
         return {"channel_state": state, "topublish": topublish}
