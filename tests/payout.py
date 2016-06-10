@@ -14,9 +14,7 @@ TESTNET = True
 DRYRUN = True
 
 
-FIXTURES = json.load(open("tests/fixtures.json"))
-PAYEE_CLOSED = FIXTURES["test_payout"]["payee_closed"]
-PAYEE_AFTER = FIXTURES["test_payout"]["payee_after"]
+FIXTURES = json.load(open("tests/payout.fixtures.json"))
 
 
 class TestPayout(unittest.TestCase):
@@ -27,8 +25,8 @@ class TestPayout(unittest.TestCase):
         )
 
     def test_payout_recover(self):
-        result = self.payee.payee_update(PAYEE_CLOSED)
-        self.assertEqual(result["channel_state"], PAYEE_AFTER)
+        result = self.payee.payee_update(FIXTURES["payee_state"])
+        self.assertEqual(result, FIXTURES["payee_update_result"])
 
 
 if __name__ == "__main__":

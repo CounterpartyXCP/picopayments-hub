@@ -16,9 +16,11 @@ from collections import defaultdict
 from picopayments import util
 from picopayments import validate
 from picopayments.scripts import get_deposit_spend_secret_hash
-from picopayments.scripts import DepositScriptHandler
 from picopayments import exceptions
 from picopayments import scripts
+
+
+# XXX FIXME TODO rename to api.py
 
 
 # TODO fees per kb, auto adjust to market price or get from counterparty
@@ -224,12 +226,6 @@ class Channel(object):
             quantity, revoke_secret_hash, delay_time
         )
 
-        # TODO remove signing
-        rawtx = scripts.sign_create_commit(
-            self.btctxstore, state["payer_wif"],
-            rawtx, state["deposit_script"]
-        )
-
         commit_script_hex = util.b2h(commit_script)
         self._order_active(state)
         state["commits_active"].append({
@@ -238,7 +234,9 @@ class Channel(object):
         return {
             "channel_state": state,
             "commit_script": commit_script_hex,
-            "tosign": {"rawtx": rawtx, "script": state["deposit_script"]}
+            "tosign": {
+                "rawtx": rawtx, "deposit_script": state["deposit_script"]
+            }
         }
 
     def deposit(self, payer_wif, payee_pubkey, spend_secret_hash,
@@ -282,12 +280,6 @@ class Channel(object):
                     "secret": state["spend_secret"]
                 })
 
-                # TODO remove signing
-                rawtx = scripts.sign_payout_recover(
-                    self.btctxstore, state["payee_wif"], rawtx,
-                    util.b2h(script), state["spend_secret"]
-                )
-
         return {"channel_state": state, "payouts": payouts}
 
     def payer_update(self, state):
@@ -310,12 +302,6 @@ class Channel(object):
                     "secret": secret
                 })
 
-                # TODO remove signing
-                rawtx = scripts.sign_revoke_recover(
-                    self.btctxstore, state["payer_wif"], rawtx,
-                    util.b2h(script), secret
-                )
-
         # If deposit expired recover the coins!
         if self._can_expire_recover(state):
             script = util.h2b(state["deposit_script"])
@@ -324,11 +310,6 @@ class Channel(object):
             topublish["expire"].append({
                 "rawtx": rawtx, "script": util.b2h(script)
             })
-
-            # TODO remove signing
-            rawtx = scripts.sign_expire_recover(
-                self.btctxstore, state["payer_wif"], rawtx, util.b2h(script)
-            )
 
         else:
 
@@ -342,18 +323,11 @@ class Channel(object):
                     script = util.h2b(state["deposit_script"])
                     rawtx = self._recover_deposit(state["payer_wif"], script,
                                                   "change", spend_secret)
-
                     topublish["change"].append({
                         "rawtx": rawtx,
                         "script": util.b2h(script),
                         "secret": spend_secret
                     })
-
-                    # TODO remove signing
-                    rawtx = scripts.sign_change_recover(
-                        self.btctxstore, state["payer_wif"],
-                        rawtx, util.b2h(script), spend_secret
-                    )
 
         return {"channel_state": state, "topublish": topublish}
 

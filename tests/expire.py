@@ -11,7 +11,7 @@ TESTNET = True
 DRYRUN = True
 
 
-FIXTURES = json.load(open("tests/fixtures.json"))
+FIXTURES = json.load(open("tests/expire.fixtures.json"))
 
 
 class TestRecover(unittest.TestCase):
@@ -22,20 +22,14 @@ class TestRecover(unittest.TestCase):
         )
 
     def test_expired_to_recovering(self):
-        payer_state = FIXTURES["test_expire"]["expired"]
+        payer_state = FIXTURES["expired"]
         result = self.payer.payer_update(payer_state)  # publish expire tx
-        payer_state = result["channel_state"]
-        self.assertEqual(
-            payer_state, FIXTURES["test_expire"]["recovering_alpha"]
-        )
+        self.assertEqual(result, FIXTURES["recovering_alpha"])
 
     def test_recovering_to_closed(self):
-        payer_state = FIXTURES["test_expire"]["recovering_beta"]
+        payer_state = FIXTURES["recovering_beta"]
         result = self.payer.payer_update(payer_state)  # does nothing
-        payer_state = result["channel_state"]
-        self.assertEqual(
-            payer_state, FIXTURES["test_expire"]["recovering_beta"]
-        )
+        self.assertEqual(result, FIXTURES["recovering_beta_result"])
 
 
 if __name__ == "__main__":

@@ -6,6 +6,7 @@
 from .version import __version__  # NOQA
 from . import util  # NOQA
 from . import scripts  # NOQA
+from . import sign  # NOQA
 from . import channel  # NOQA
 from . import validate  # NOQA
 from . import exceptions  # NOQA

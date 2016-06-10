@@ -11,9 +11,7 @@ TESTNET = True
 DRYRUN = True
 
 
-FIXTURES = json.load(open("tests/fixtures.json"))
-PAYER_STATE = FIXTURES["test_change"]["payer_state"]
-UPDATE_RESULT = FIXTURES["test_change"]["payer_update_result"]
+FIXTURES = json.load(open("tests/change.fixtures.json"))
 
 
 class TestRecoverChange(unittest.TestCase):
@@ -24,8 +22,8 @@ class TestRecoverChange(unittest.TestCase):
         )
 
     def test_recover_change(self):
-        result = self.payer.payer_update(PAYER_STATE)  # recover change
-        self.assertEqual(result, UPDATE_RESULT)
+        result = self.payer.payer_update(FIXTURES["payer_state"])
+        self.assertEqual(result, FIXTURES["expected_result"])
 
 
 if __name__ == "__main__":
