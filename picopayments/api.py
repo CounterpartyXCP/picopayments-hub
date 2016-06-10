@@ -90,7 +90,7 @@ class Api(object):
         state["payee_pubkey"] = payee_pubkey
         state["spend_secret"] = util.b2h(secret)
         return {
-            "channel_state": state,
+            "state": state,
             "payee_pubkey": payee_pubkey,
             "spend_secret_hash": util.b2h(util.hash160(secret))
         }
@@ -104,7 +104,7 @@ class Api(object):
         self._validate_deposit_spend_secret_hash(state, script)
         self._validate_deposit_payee_pubkey(state, script)
         state["deposit_script"] = script_hex
-        return {"channel_state": state}
+        return {"state": state}
 
     def request_commit(self, state, quantity):
         # TODO add doc string
@@ -116,7 +116,7 @@ class Api(object):
         secret_hash = util.hash160hex(secret)
         state["commits_requested"].append(secret)
         return {
-            "channel_state": state,
+            "state": state,
             "quantity": quantity,
             "revoke_secret_hash": secret_hash
         }
@@ -149,7 +149,7 @@ class Api(object):
                     "revoke_secret": revoke_secret
                 })
                 break
-        return {"channel_state": state}
+        return {"state": state}
 
     def revoke_until(self, state, quantity):
         # TODO add doc string
@@ -164,7 +164,7 @@ class Api(object):
             else:
                 break
         list(map(lambda s: self._revoke(state, s), secrets))
-        return {"channel_state": state, "revoke_secrets": secrets}
+        return {"state": state, "revoke_secrets": secrets}
 
     def close_channel(self, state):
         # TODO add doc string
@@ -175,7 +175,7 @@ class Api(object):
         self._order_active(state)
         commit = state["commits_active"][-1]
         return {
-            "channel_state": state,
+            "state": state,
             "topublish": {
                 "rawtx": commit["rawtx"],
                 "deposit_script": state["deposit_script"],
@@ -188,7 +188,7 @@ class Api(object):
         # TODO validate state
         state = copy.deepcopy(state)
         list(map(lambda s: self._revoke(state, s), secrets))
-        return {"channel_state": state}
+        return {"state": state}
 
     def is_deposit_confirmed(self, state, minconfirms=1):
         # TODO add doc string
@@ -228,7 +228,7 @@ class Api(object):
             "rawtx": rawtx, "script": commit_script_hex, "revoke_secret": None
         })
         return {
-            "channel_state": state,
+            "state": state,
             "commit_script": commit_script_hex,
             "tosign": {
                 "rawtx": rawtx, "deposit_script": state["deposit_script"]
@@ -250,7 +250,7 @@ class Api(object):
         )
         state["deposit_script"] = util.b2h(script)
         return {
-            "channel_state": state,
+            "state": state,
             "topublish": rawtx,
             "deposit_script": util.b2h(script)
         }
@@ -276,7 +276,7 @@ class Api(object):
                     "spend_secret": state["spend_secret"]
                 })
 
-        return {"channel_state": state, "payouts": payouts}
+        return {"state": state, "payouts": payouts}
 
     def payer_update(self, state):
         # TODO add doc string
@@ -325,7 +325,7 @@ class Api(object):
                         "spend_secret": spend_secret
                     })
 
-        return {"channel_state": state, "topublish": topublish}
+        return {"state": state, "topublish": topublish}
 
     def publish(self, rawtx):
         # TODO remove this

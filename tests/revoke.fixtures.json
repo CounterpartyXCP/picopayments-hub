@@ -62,7 +62,7 @@
             ],
                 "change": []
         },
-        "channel_state": {
+        "state": {
             "deposit_script": "63522103ace51ceb3b6298812c7a643480ecd8d57c89625288f56898f6dbeb1f1431550f21028666087223829e3932b648e42df2caac57ce677f36ded247dd0cd7c1b229d05b52ae6763a914df73599d858adb83b57f88b187420c79d95d3481882103ace51ceb3b6298812c7a643480ecd8d57c89625288f56898f6dbeb1f1431550fac6702f003b2752103ace51ceb3b6298812c7a643480ecd8d57c89625288f56898f6dbeb1f1431550fac6868",
             "payee_pubkey": null,
             "commits_active": [],

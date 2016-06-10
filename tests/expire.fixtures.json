@@ -19,7 +19,7 @@
             }
             ]
         },
-        "channel_state": {
+        "state": {
             "payee_pubkey": null,
             "commits_requested": [],
             "commits_active": [],
@@ -39,7 +39,7 @@
         "spend_secret": null
     },
     "recovering_beta_result": {
-        "channel_state": {
+        "state": {
             "spend_secret": null,
             "payer_pubkey": "0399e3dde1d1853dbd99c81ba4f2c0cca351b3cceecce7cd0bd59acc5789672135",
             "commits_revoked": [],

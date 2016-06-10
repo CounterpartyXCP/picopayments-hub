@@ -51,7 +51,7 @@ class TestCommit(unittest.TestCase):
             SET_COMMIT["rawtx"],
             SET_COMMIT["script"]
         )
-        self.assertEqual(result["channel_state"], PAYEE_AFTER_SET_COMMIT)
+        self.assertEqual(result["state"], PAYEE_AFTER_SET_COMMIT)
 
     def test_funds_flow(self):
         payer_state = PAYER_BEFORE
@@ -61,27 +61,27 @@ class TestCommit(unittest.TestCase):
         for quantity in range(1, 10):
 
             result = self.api.request_commit(payee_state, quantity)
-            payee_state = result["channel_state"]
+            payee_state = result["state"]
 
             result = self.api.create_commit(payer_state, result["quantity"],
                                             result["revoke_secret_hash"],
                                             DELAY_TIME)
-            payer_state = result["channel_state"]
+            payer_state = result["state"]
             rawtx = result["tosign"]["rawtx"]
             commit_script = result["commit_script"]
 
             result = self.api.set_commit(payee_state, rawtx, commit_script)
-            payee_state = result["channel_state"]
+            payee_state = result["state"]
 
         self.assertEqual(self.api.get_transferred_amount(payer_state), 9)
         self.assertEqual(self.api.get_transferred_amount(payee_state), 9)
 
         # reverse funds
         result = self.api.revoke_until(payee_state, 4)
-        payee_state = result["channel_state"]
+        payee_state = result["state"]
 
         result = self.api.revoke_all(payer_state, result["revoke_secrets"])
-        payer_state = result["channel_state"]
+        payer_state = result["state"]
 
         self.assertEqual(self.api.get_transferred_amount(payer_state), 4)
         self.assertEqual(self.api.get_transferred_amount(payee_state), 4)

@@ -1,6 +1,6 @@
 {
     "expected_result": {
-        "channel_state": {
+        "state": {
             "commits_revoked": [],
             "payee_pubkey": null,
             "spend_secret": null,
