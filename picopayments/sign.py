@@ -22,11 +22,23 @@ def deposit(btctxstore, payer_wif, rawtx):
     return btctxstore.sign_tx(rawtx, [payer_wif])
 
 
-def finalize_commit(btctxstore, wif, rawtx, deposit_script_hex):
+def created_commit(btctxstore, payer_wif, rawtx, deposit_script):
     tx = _load_tx(btctxstore, rawtx)
-    script_bin = h2b(deposit_script_hex)
+    script_bin = h2b(deposit_script)
     expire_time = scripts.get_deposit_expire_time(script_bin)
-    hash160_lookup, p2sh_lookup = _make_lookups(wif, script_bin)
+    hash160_lookup, p2sh_lookup = _make_lookups(payer_wif, script_bin)
+    hash160_lookup, p2sh_lookup = _make_lookups(payer_wif, script_bin)
+    with _DepositScriptHandler(expire_time):
+        tx.sign(hash160_lookup, p2sh_lookup=p2sh_lookup,
+                spend_type="create_commit", spend_secret=None)
+    return tx.as_hex()
+
+
+def finalize_commit(btctxstore, payee_wif, rawtx, deposit_script):
+    tx = _load_tx(btctxstore, rawtx)
+    script_bin = h2b(deposit_script)
+    expire_time = scripts.get_deposit_expire_time(script_bin)
+    hash160_lookup, p2sh_lookup = _make_lookups(payee_wif, script_bin)
     with _DepositScriptHandler(expire_time):
         tx.sign(hash160_lookup, p2sh_lookup=p2sh_lookup,
                 spend_type="finalize_commit", spend_secret=None)
@@ -34,39 +46,25 @@ def finalize_commit(btctxstore, wif, rawtx, deposit_script_hex):
     return tx.as_hex()
 
 
-def created_commit(btctxstore, wif, rawtx, deposit_script_hex):
-    tx = _load_tx(btctxstore, rawtx)
-    script_bin = h2b(deposit_script_hex)
-    expire_time = scripts.get_deposit_expire_time(script_bin)
-    hash160_lookup, p2sh_lookup = _make_lookups(wif, script_bin)
-    hash160_lookup, p2sh_lookup = _make_lookups(wif, script_bin)
-    with _DepositScriptHandler(expire_time):
-        tx.sign(hash160_lookup, p2sh_lookup=p2sh_lookup,
-                spend_type="create_commit", spend_secret=None)
-    return tx.as_hex()
+def revoke_recover(btctxstore, payer_wif, rawtx, commit_script, revoke_secret):
+    return _sign_commit_recover(btctxstore, payer_wif, rawtx, commit_script,
+                                "revoke", None, revoke_secret)
 
 
-def revoke_recover(btctxstore, wif, rawtx, script_hex, revoke_secret):
-    return _sign_commit_recover(
-        btctxstore, wif, rawtx, script_hex, "revoke", None, revoke_secret
-    )
+def payout_recover(btctxstore, payee_wif, rawtx, commit_script, spend_secret):
+    return _sign_commit_recover(btctxstore, payee_wif, rawtx, commit_script,
+                                "payout", spend_secret, None)
 
 
-def payout_recover(btctxstore, wif, rawtx, script_hex, spend_secret):
-    return _sign_commit_recover(
-        btctxstore, wif, rawtx, script_hex, "payout", spend_secret, None
-    )
-
-
-def change_recover(btctxstore, wif, rawtx, script_hex, spend_secret):
+def change_recover(btctxstore, payer_wif, rawtx, deposit_script, spend_secret):
     return _sign_deposit_recover(
-        btctxstore, wif, rawtx, script_hex, "change", spend_secret
+        btctxstore, payer_wif, rawtx, deposit_script, "change", spend_secret
     )
 
 
-def expire_recover(btctxstore, wif, rawtx, script_hex):
+def expire_recover(btctxstore, payer_wif, rawtx, deposit_script):
     return _sign_deposit_recover(
-        btctxstore, wif, rawtx, script_hex, "expire", None
+        btctxstore, payer_wif, rawtx, deposit_script, "expire", None
     )
 
 

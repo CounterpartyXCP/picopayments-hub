@@ -6,6 +6,7 @@ from . import expire  # NOQA
 from . import change  # NOQA
 from . import commit  # NOQA
 from . import scripts  # NOQA
+from . import sign  # NOQA
 from . import payout  # NOQA
 
 

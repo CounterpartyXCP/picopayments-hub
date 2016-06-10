@@ -23,7 +23,7 @@ class TestRecover(unittest.TestCase):
 
     def test_expired_to_recovering(self):
         payer_state = FIXTURES["expired"]
-        result = self.api.payer_update(payer_state)  # publish expire tx
+        result = self.api.payer_update(payer_state)  # creates expire tx
         self.assertEqual(result, FIXTURES["recovering_alpha"])
 
     def test_recovering_to_closed(self):
