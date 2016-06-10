@@ -38,7 +38,6 @@
             "revoke_secret": "1b2b22e836852e7de54877eb8da471c28710f1b1122caae01a055aac3f4a40d3"
         }
         ],
-            "spend_secret": null,
             "payee_pubkey": null,
             "commits_requested": [],
             "commits_active": [],
@@ -68,7 +67,6 @@
             "commits_active": [],
             "payer_pubkey": "03ace51ceb3b6298812c7a643480ecd8d57c89625288f56898f6dbeb1f1431550f",
             "commits_requested": [],
-            "spend_secret": null,
             "commits_revoked": [
             {
                 "revoke_secret": "6cee999715e0a60455972485ba99f7c53f3553e2fcb122c6e9f36f8e920972b6",

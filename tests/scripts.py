@@ -34,7 +34,6 @@ COMMIT_SCRIPT = (
     "02224b63a140724dd08fa6818ec1cda07f7e5e746d5ae865dc6e72c097"
     "0b0a1bb1ac68"
 )
-print(PAYOUT_RAWTX)
 
 
 class TestScripts(unittest.TestCase):
