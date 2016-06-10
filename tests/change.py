@@ -17,12 +17,12 @@ FIXTURES = json.load(open("tests/change.fixtures.json"))
 class TestRecoverChange(unittest.TestCase):
 
     def setUp(self):
-        self.payer = picopayments.Channel(
+        self.api = picopayments.Api(
             ASSET, api_url=API_URL, testnet=TESTNET, dryrun=DRYRUN
         )
 
     def test_recover_change(self):
-        result = self.payer.payer_update(FIXTURES["payer_state"])
+        result = self.api.payer_update(FIXTURES["payer_state"])
         self.assertEqual(result, FIXTURES["expected_result"])
 
 

@@ -12,15 +12,11 @@ import requests
 from btctxstore import BtcTxStore
 from requests.auth import HTTPBasicAuth
 from bitcoinrpc.authproxy import AuthServiceProxy
-from collections import defaultdict
 from picopayments import util
 from picopayments import validate
 from picopayments.scripts import get_deposit_spend_secret_hash
 from picopayments import exceptions
 from picopayments import scripts
-
-
-# XXX FIXME TODO rename to api.py
 
 
 # TODO fees per kb, auto adjust to market price or get from counterparty
@@ -58,7 +54,7 @@ INITIAL_STATE = {
 }
 
 
-class Channel(object):
+class Api(object):
 
     def __init__(self, asset, user=DEFAULT_COUNTERPARTY_RPC_USER,
                  password=DEFAULT_COUNTERPARTY_RPC_PASSWORD,
@@ -543,7 +539,7 @@ class Channel(object):
         confirms, asset_balance, btc_balance = self._deposit_status(script)
         if quantity > asset_balance:
             msg = "Amount greater total: {0} > {1}"
-            raise ValueError(msg.fromat(quantity, total))
+            raise ValueError(msg.fromat(quantity, asset_balance))
 
     def _order_active(self, state):
 

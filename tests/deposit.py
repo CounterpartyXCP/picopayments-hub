@@ -15,12 +15,12 @@ FIXTURES = json.load(open("tests/deposit.fixtures.json"))
 class TestDeposit(unittest.TestCase):
 
     def setUp(self):
-        self.channel = picopayments.Channel(
+        self.api = picopayments.Api(
             ASSET, api_url=API_URL, testnet=TESTNET, dryrun=DRYRUN
         )
 
     def test_deposit(self):
-        result = self.channel.deposit(
+        result = self.api.deposit(
             FIXTURES["payer_wif"],
             FIXTURES["payee_pubkey"],
             FIXTURES["spend_secret_hash"],

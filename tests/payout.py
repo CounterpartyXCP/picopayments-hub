@@ -20,12 +20,12 @@ FIXTURES = json.load(open("tests/payout.fixtures.json"))
 class TestPayout(unittest.TestCase):
 
     def setUp(self):
-        self.payee = picopayments.Channel(
+        self.api = picopayments.Api(
             ASSET, api_url=API_URL, testnet=TESTNET, dryrun=DRYRUN
         )
 
     def test_payout_recover(self):
-        result = self.payee.payee_update(FIXTURES["payee_state"])
+        result = self.api.payee_update(FIXTURES["payee_state"])
         self.assertEqual(result, FIXTURES["payee_update_result"])
 
 
