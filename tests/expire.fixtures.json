@@ -1,9 +1,9 @@
 {
     "expired": {
         "deposit_script": "6352210389bdba52b9820a4d672bbb14b6c01aa54963cc0f1419b14a01e9ebeb62ebef1f210327f017c35a46b759536309e6de256ad44ad609c1c4aed0e2cdb82f62490f75f852ae6763a914a7ec62542b0d393d43442aadf8d55f7da1e303cb88210389bdba52b9820a4d672bbb14b6c01aa54963cc0f1419b14a01e9ebeb62ebef1fac6755b275210389bdba52b9820a4d672bbb14b6c01aa54963cc0f1419b14a01e9ebeb62ebef1fac6868",
-        "payer_wif": "cMtErY7rdk8gycybQ9nPVQ4FchyvsMYMyQHjdgobnFMFfMU6eFj3",
+        "payer_pubkey": "0389bdba52b9820a4d672bbb14b6c01aa54963cc0f1419b14a01e9ebeb62ebef1f",
         "commits_revoked": [],
-        "payee_wif": null,
+        "payee_pubkey": null,
         "commits_requested": [],
         "commits_active": [],
         "spend_secret": null
@@ -20,10 +20,10 @@
             ]
         },
         "channel_state": {
-            "payee_wif": null,
+            "payee_pubkey": null,
             "commits_requested": [],
             "commits_active": [],
-            "payer_wif": "cMtErY7rdk8gycybQ9nPVQ4FchyvsMYMyQHjdgobnFMFfMU6eFj3",
+            "payer_pubkey": "0389bdba52b9820a4d672bbb14b6c01aa54963cc0f1419b14a01e9ebeb62ebef1f",
             "spend_secret": null,
             "commits_revoked": [],
             "deposit_script": "6352210389bdba52b9820a4d672bbb14b6c01aa54963cc0f1419b14a01e9ebeb62ebef1f210327f017c35a46b759536309e6de256ad44ad609c1c4aed0e2cdb82f62490f75f852ae6763a914a7ec62542b0d393d43442aadf8d55f7da1e303cb88210389bdba52b9820a4d672bbb14b6c01aa54963cc0f1419b14a01e9ebeb62ebef1fac6755b275210389bdba52b9820a4d672bbb14b6c01aa54963cc0f1419b14a01e9ebeb62ebef1fac6868"
@@ -31,9 +31,9 @@
     },
     "recovering_beta": {
         "deposit_script": "6352210399e3dde1d1853dbd99c81ba4f2c0cca351b3cceecce7cd0bd59acc5789672135210327f017c35a46b759536309e6de256ad44ad609c1c4aed0e2cdb82f62490f75f852ae6763a914a7ec62542b0d393d43442aadf8d55f7da1e303cb88210399e3dde1d1853dbd99c81ba4f2c0cca351b3cceecce7cd0bd59acc5789672135ac6755b275210399e3dde1d1853dbd99c81ba4f2c0cca351b3cceecce7cd0bd59acc5789672135ac6868",
-        "payer_wif": "cMwtNdKijb7ej6yrmkhQyfvVQ5LibNFURQ8zdpiRFWxhFJ2aohwR",
+        "payer_pubkey": "0399e3dde1d1853dbd99c81ba4f2c0cca351b3cceecce7cd0bd59acc5789672135",
         "commits_revoked": [],
-        "payee_wif": null,
+        "payee_pubkey": null,
         "commits_requested": [],
         "commits_active": [],
         "spend_secret": null
@@ -41,10 +41,10 @@
     "recovering_beta_result": {
         "channel_state": {
             "spend_secret": null,
-            "payer_wif": "cMwtNdKijb7ej6yrmkhQyfvVQ5LibNFURQ8zdpiRFWxhFJ2aohwR",
+            "payer_pubkey": "0399e3dde1d1853dbd99c81ba4f2c0cca351b3cceecce7cd0bd59acc5789672135",
             "commits_revoked": [],
             "deposit_script": "6352210399e3dde1d1853dbd99c81ba4f2c0cca351b3cceecce7cd0bd59acc5789672135210327f017c35a46b759536309e6de256ad44ad609c1c4aed0e2cdb82f62490f75f852ae6763a914a7ec62542b0d393d43442aadf8d55f7da1e303cb88210399e3dde1d1853dbd99c81ba4f2c0cca351b3cceecce7cd0bd59acc5789672135ac6755b275210399e3dde1d1853dbd99c81ba4f2c0cca351b3cceecce7cd0bd59acc5789672135ac6868",
-            "payee_wif": null,
+            "payee_pubkey": null,
             "commits_requested": [],
             "commits_active": []
         },

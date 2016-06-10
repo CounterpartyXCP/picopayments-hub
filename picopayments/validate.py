@@ -21,12 +21,6 @@ def hexdata(data):
         raise exceptions.InvalidHexData(data)
 
 
-def wif(wif, netcode):
-    string(wif)
-    if not pycoin.key.validate.is_wif_valid(wif, allowable_netcodes=[netcode]):
-        raise exceptions.InvalidWif(wif)
-
-
 def pubkey(pubkey_hex):
     hexdata(pubkey_hex)
     sec = pycoin.serialize.h2b(pubkey_hex)

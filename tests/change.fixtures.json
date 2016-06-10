@@ -2,9 +2,9 @@
     "expected_result": {
         "channel_state": {
             "commits_revoked": [],
-            "payee_wif": null,
+            "payee_pubkey": null,
             "spend_secret": null,
-            "payer_wif": "cQRX2dyAf1VpkhqiYAMD1Rvc8ZEksVg78rF82wRH5EePKwoD6KoW",
+            "payer_pubkey": "02d052373cae8cfc103a6f6b386c28a7e750f1c073da3ac5e0eb4b8b3d6e324f1c",
             "commits_active": [
             {
                 "rawtx": "0100000001220d2c49971e04af08221926da1012acf46ae5a63a81d8ac7ee635e1459dad7b00000000fd4501004730440220393ddb4815d10e7cdd803559a4b74bfaaf47a37c5ca71648f75876f5b622239b022008f397825611c558fd5af0552b15a5c3657ca85f6023d1e2148dfb8f77b4f8f801483045022100fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd036414002207fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a001514cb063522102d052373cae8cfc103a6f6b386c28a7e750f1c073da3ac5e0eb4b8b3d6e324f1c21034bad5ce410ac5e7ba34c1e9c652e1bbcf061634390ed95aa9d4d716820877d7e52ae6763a9140e0c109e4750d3974f48ec2399fe36372aecabf0882102d052373cae8cfc103a6f6b386c28a7e750f1c073da3ac5e0eb4b8b3d6e324f1cac6703ffff00b2752102d052373cae8cfc103a6f6b386c28a7e750f1c073da3ac5e0eb4b8b3d6e324f1cac6868ffffffff03463c00000000000017a9146c060d97d11c14c4601084a1a7c297547f170f678700000000000000001e6a1cc3062035f89ff065c502014bb161de116c0f3d58bc78e01382d4ffdc7c5100000000000017a9148b5d0930c4fe33e98cd8fe793198dc561f9e93538700000000",
@@ -28,8 +28,8 @@
         }
     },
     "payer_state": {
-        "payee_wif": null,
-        "payer_wif": "cQRX2dyAf1VpkhqiYAMD1Rvc8ZEksVg78rF82wRH5EePKwoD6KoW",
+        "payee_pubkey": null,
+        "payer_pubkey": "02d052373cae8cfc103a6f6b386c28a7e750f1c073da3ac5e0eb4b8b3d6e324f1c",
         "spend_secret": null,
         "deposit_script": "63522102d052373cae8cfc103a6f6b386c28a7e750f1c073da3ac5e0eb4b8b3d6e324f1c21034bad5ce410ac5e7ba34c1e9c652e1bbcf061634390ed95aa9d4d716820877d7e52ae6763a9140e0c109e4750d3974f48ec2399fe36372aecabf0882102d052373cae8cfc103a6f6b386c28a7e750f1c073da3ac5e0eb4b8b3d6e324f1cac6703ffff00b2752102d052373cae8cfc103a6f6b386c28a7e750f1c073da3ac5e0eb4b8b3d6e324f1cac6868",
         "commits_active": [
@@ -43,8 +43,8 @@
             "commits_revoked": []
     },
     "payee_state": {
-        "payee_wif": "cVYmUiZGycCvtR9EmS8YMBS4aUvDsLqgcZtyg3aRNaPwouEn4dBQ",
-        "payer_wif": null,
+        "payee_pubkey": "034bad5ce410ac5e7ba34c1e9c652e1bbcf061634390ed95aa9d4d716820877d7e",
+        "payer_pubkey": null,
         "spend_secret": "08a05684632abe83b5f61d10ac8d72a3bad334b5e3cc449fbde090aad64a9a2c",
         "deposit_script": "63522102d052373cae8cfc103a6f6b386c28a7e750f1c073da3ac5e0eb4b8b3d6e324f1c21034bad5ce410ac5e7ba34c1e9c652e1bbcf061634390ed95aa9d4d716820877d7e52ae6763a9140e0c109e4750d3974f48ec2399fe36372aecabf0882102d052373cae8cfc103a6f6b386c28a7e750f1c073da3ac5e0eb4b8b3d6e324f1cac6703ffff00b2752102d052373cae8cfc103a6f6b386c28a7e750f1c073da3ac5e0eb4b8b3d6e324f1cac6868",
         "commits_active": [

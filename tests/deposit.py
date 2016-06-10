@@ -21,7 +21,7 @@ class TestDeposit(unittest.TestCase):
 
     def test_deposit(self):
         result = self.api.deposit(
-            FIXTURES["payer_wif"],
+            FIXTURES["payer_pubkey"],
             FIXTURES["payee_pubkey"],
             FIXTURES["spend_secret_hash"],
             FIXTURES["expire_time"],

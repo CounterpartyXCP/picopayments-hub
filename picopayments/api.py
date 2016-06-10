@@ -30,8 +30,8 @@ DEFAULT_COUNTERPARTY_RPC_PASSWORD = "1234"
 
 
 INITIAL_STATE = {
-    "payer_wif": None,
-    "payee_wif": None,
+    "payer_pubkey": None,
+    "payee_pubkey": None,
     "spend_secret": None,
     "deposit_script": None,
 
@@ -81,17 +81,17 @@ class Api(object):
             "http://bitcoinrpcuser:bitcoinrpcpass@127.0.0.1:18332"
         )
 
-    def setup(self, payee_wif):
+    def setup(self, payee_pubkey):
         # TODO add doc string
         # TODO validate all input
         # TODO validate state
         secret = os.urandom(32)  # secure random number
         state = copy.deepcopy(INITIAL_STATE)
-        state["payee_wif"] = payee_wif
+        state["payee_pubkey"] = payee_pubkey
         state["spend_secret"] = util.b2h(secret)
         return {
             "channel_state": state,
-            "payee_pubkey": util.wif2pubkey(state["payee_wif"]),
+            "payee_pubkey": payee_pubkey,
             "spend_secret_hash": util.b2h(util.hash160(secret))
         }
 
@@ -218,7 +218,7 @@ class Api(object):
         state = copy.deepcopy(state)
         self._validate_transfer_quantity(state, quantity)
         rawtx, commit_script = self._create_commit(
-            state["payer_wif"], util.h2b(state["deposit_script"]),
+            state["payer_pubkey"], util.h2b(state["deposit_script"]),
             quantity, revoke_secret_hash, delay_time
         )
 
@@ -235,17 +235,17 @@ class Api(object):
             }
         }
 
-    def deposit(self, payer_wif, payee_pubkey, spend_secret_hash,
+    def deposit(self, payer_pubkey, payee_pubkey, spend_secret_hash,
                 expire_time, quantity):
         # TODO add doc string
         # TODO validate all input
         # TODO validate state
-        self._validate_deposit(payer_wif, payee_pubkey, spend_secret_hash,
+        self._validate_deposit(payer_pubkey, payee_pubkey, spend_secret_hash,
                                expire_time, quantity)
         state = copy.deepcopy(INITIAL_STATE)
-        state["payer_wif"] = payer_wif
+        state["payer_pubkey"] = payer_pubkey
         rawtx, script = self._deposit(
-            state["payer_wif"], payee_pubkey,
+            state["payer_pubkey"], payee_pubkey,
             spend_secret_hash, expire_time, quantity
         )
         state["deposit_script"] = util.b2h(script)
@@ -267,7 +267,7 @@ class Api(object):
         if len(recoverable_scripts) > 0:
             for script in recoverable_scripts:
                 rawtx = self._create_recover_commit(
-                    state["payee_wif"], script, None,
+                    state["payee_pubkey"], script, None,
                     state["spend_secret"], "payout"
                 )
                 payouts.append({
@@ -290,7 +290,7 @@ class Api(object):
         if len(revokable) > 0:
             for script, secret in revokable:
                 rawtx = self._create_recover_commit(
-                    state["payer_wif"], script, secret, None, "revoke"
+                    state["payer_pubkey"], script, secret, None, "revoke"
                 )
                 topublish["revoke"].append({
                     "rawtx": rawtx,
@@ -301,7 +301,7 @@ class Api(object):
         # If deposit expired recover the coins!
         if self._can_expire_recover(state):
             script = util.h2b(state["deposit_script"])
-            rawtx = self._recover_deposit(state["payer_wif"],
+            rawtx = self._recover_deposit(state["payer_pubkey"],
                                           script, "expire", None)
             topublish["expire"].append({
                 "rawtx": rawtx, "deposit_script": util.b2h(script)
@@ -317,8 +317,8 @@ class Api(object):
                 spend_secret = self._find_spend_secret(state)
                 if spend_secret is not None:
                     script = util.h2b(state["deposit_script"])
-                    rawtx = self._recover_deposit(state["payer_wif"], script,
-                                                  "change", spend_secret)
+                    rawtx = self._recover_deposit(
+                        state["payer_pubkey"], script, "change", spend_secret)
                     topublish["change"].append({
                         "rawtx": rawtx,
                         "deposit_script": util.b2h(script),
@@ -393,15 +393,15 @@ class Api(object):
         rawtx = tx.as_hex()
         return rawtx
 
-    def _create_recover_commit(self, wif, script, revoke_secret,
+    def _create_recover_commit(self, pubkey, script, revoke_secret,
                                spend_secret, spend_type):
 
-        dest_address = util.wif2address(wif)
+        dest_address = util.pubkey2address(pubkey, netcode=self.netcode)
         delay_time = scripts.get_commit_delay_time(script)
         return self._recover_tx(dest_address, script, delay_time)
 
-    def _recover_deposit(self, wif, script, spend_type, spend_secret):
-        dest_address = util.wif2address(wif)
+    def _recover_deposit(self, pubkey, script, spend_type, spend_secret):
+        dest_address = util.pubkey2address(pubkey, netcode=self.netcode)
         expire_time = scripts.get_deposit_expire_time(script)
         rawtx = self._recover_tx(
             dest_address, script,
@@ -409,12 +409,12 @@ class Api(object):
         )
         return rawtx
 
-    def _create_commit(self, payer_wif, deposit_script, quantity,
+    def _create_commit(self, payer_pubkey, deposit_script, quantity,
                        revoke_secret_hash, delay_time):
 
         # create script
-        payer_pubkey = scripts.get_deposit_payer_pubkey(deposit_script)
-        assert(util.wif2pubkey(payer_wif) == payer_pubkey)
+        expected_pubkey = scripts.get_deposit_payer_pubkey(deposit_script)
+        assert(payer_pubkey == expected_pubkey)
         payee_pubkey = scripts.get_deposit_payee_pubkey(deposit_script)
         spend_secret_hash = get_deposit_spend_secret_hash(deposit_script)
         commit_script = scripts.compile_commit_script(
@@ -435,15 +435,14 @@ class Api(object):
 
         return rawtx, commit_script
 
-    def _deposit(self, payer_wif, payee_pubkey, spend_secret_hash,
+    def _deposit(self, payer_pubkey, payee_pubkey, spend_secret_hash,
                  expire_time, quantity):
 
-        payer_pubkey = util.wif2pubkey(payer_wif)
         script = scripts.compile_deposit_script(payer_pubkey, payee_pubkey,
                                                 spend_secret_hash, expire_time)
         dest_address = util.script2address(script, self.netcode)
         self._valid_channel_unused(dest_address)
-        payer_address = util.wif2address(payer_wif)
+        payer_address = util.pubkey2address(payer_pubkey, self.netcode)
 
         # provide extra btc for future closing channel fees
         # change tx or recover + commit tx + payout tx or revoke tx
@@ -578,11 +577,18 @@ class Api(object):
 
     def _validate_deposit_payee_pubkey(self, state, script):
         given_payee_pubkey = scripts.get_deposit_payee_pubkey(script)
-        own_payee_pubkey = util.wif2pubkey(state["payee_wif"])
-        if given_payee_pubkey != own_payee_pubkey:
+        if given_payee_pubkey != state["payee_pubkey"]:
             msg = "Incorrect payee pubkey: {0} != {1}"
             raise ValueError(msg.format(
-                given_payee_pubkey, own_payee_pubkey
+                given_payee_pubkey, state["payee_pubkey"]
+            ))
+
+    def _validate_commit_payee_pubkey(self, state, script):
+        given_payee_pubkey = scripts.get_commit_payee_pubkey(script)
+        if given_payee_pubkey != state["payee_pubkey"]:
+            msg = "Incorrect payee pubkey: {0} != {1}"
+            raise ValueError(msg.format(
+                given_payee_pubkey, state["payee_pubkey"]
             ))
 
     def _validate_payer_commit(self, rawtx, script_hex):
@@ -604,15 +610,6 @@ class Api(object):
                 given_spend_secret_hash, own_spend_secret_hash
             ))
 
-    def _validate_commit_payee_pubkey(self, state, script):
-        given_payee_pubkey = scripts.get_commit_payee_pubkey(script)
-        own_payee_pubkey = util.wif2pubkey(state["payee_wif"])
-        if given_payee_pubkey != own_payee_pubkey:
-            msg = "Incorrect payee pubkey: {0} != {1}"
-            raise ValueError(msg.format(
-                given_payee_pubkey, own_payee_pubkey
-            ))
-
     def _get_payout_recoverable(self, state):
         _scripts = []
         for commit in (state["commits_active"] + state["commits_revoked"]):
@@ -630,9 +627,6 @@ class Api(object):
 
     def _can_expire_recover(self, state):
         return (
-            # we know the payer wif
-            state["payer_wif"] is not None and
-
             # deposit was made
             state["deposit_script"] is not None and
 
@@ -654,18 +648,18 @@ class Api(object):
         confirms, asset_balance, btc_balance = self._deposit_status(script)
         return confirms >= t
 
-    def _validate_deposit(self, payer_wif, payee_pubkey, spend_secret_hash,
+    def _validate_deposit(self, payer_pubkey, payee_pubkey, spend_secret_hash,
                           expire_time, quantity):
 
         # validate untrusted input data
-        validate.wif(payer_wif, self.netcode)
+        validate.pubkey(payer_pubkey)
         validate.pubkey(payee_pubkey)
         validate.hash160(spend_secret_hash)
         validate.sequence(expire_time)
         validate.quantity(quantity)
 
         # get balances
-        address = util.wif2address(payer_wif)
+        address = util.pubkey2address(payer_pubkey, self.netcode)
         asset_balance, btc_balance = self._get_address_balance(address)
 
         # check asset balance
