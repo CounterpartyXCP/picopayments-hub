@@ -30,7 +30,6 @@ DEFAULT_COUNTERPARTY_RPC_PASSWORD = "1234"
 
 
 INITIAL_STATE = {
-    "payer_pubkey": None,
     "payee_pubkey": None,
     "deposit_script": None,
 
@@ -227,9 +226,9 @@ class Api(object):
         # TODO validate state
         state = copy.deepcopy(state)
         self._validate_transfer_quantity(state, quantity)
+        deposit_script = util.h2b(state["deposit_script"])
         rawtx, commit_script = self._create_commit(
-            state["payer_pubkey"], util.h2b(state["deposit_script"]),
-            quantity, revoke_secret_hash, delay_time
+            deposit_script, quantity, revoke_secret_hash, delay_time
         )
 
         commit_script_hex = util.b2h(commit_script)
@@ -253,9 +252,8 @@ class Api(object):
         self._validate_deposit(payer_pubkey, payee_pubkey, spend_secret_hash,
                                expire_time, quantity)
         state = copy.deepcopy(INITIAL_STATE)
-        state["payer_pubkey"] = payer_pubkey
         rawtx, script = self._deposit(
-            state["payer_pubkey"], payee_pubkey,
+            payer_pubkey, payee_pubkey,
             spend_secret_hash, expire_time, quantity
         )
         state["deposit_script"] = util.b2h(script)
@@ -289,6 +287,8 @@ class Api(object):
         # TODO validate all input
         # TODO validate state
         state = copy.deepcopy(state)
+        deposit_script = util.h2b(state["deposit_script"])
+        payer_pubkey = scripts.get_deposit_payer_pubkey(deposit_script)
         topublish = {"revoke": [], "change": [], "expire": []}
 
         # If revoked commit published, recover funds asap!
@@ -296,7 +296,7 @@ class Api(object):
         if len(revokable) > 0:
             for script, secret in revokable:
                 rawtx = self._create_recover_commit(
-                    state["payer_pubkey"], script, "revoke"
+                    payer_pubkey, script, "revoke"
                 )
                 topublish["revoke"].append({
                     "rawtx": rawtx,
@@ -306,30 +306,26 @@ class Api(object):
 
         # If deposit expired recover the coins!
         if self._can_expire_recover(state):
-            script = util.h2b(state["deposit_script"])
             rawtx = self._recover_deposit(
-                state["payer_pubkey"], script, "expire"
-            )
+                payer_pubkey, deposit_script, "expire")
             topublish["expire"].append({
-                "rawtx": rawtx, "deposit_script": util.b2h(script)
+                "rawtx": rawtx, "deposit_script": state["deposit_script"]
             })
 
         else:
 
             # If not expired and spend secret exposed by payout
             # recover change!
-            script = util.h2b(state["deposit_script"])
-            address = util.script2address(script, self.netcode)
+            address = util.script2address(deposit_script, self.netcode)
             if self._can_spend_from_address(address):
                 _spend_secret = self._find_spend_secret(state)
                 if _spend_secret is not None:
-                    script = util.h2b(state["deposit_script"])
                     rawtx = self._recover_deposit(
-                        state["payer_pubkey"], script, "change"
+                        payer_pubkey, deposit_script, "change"
                     )
                     topublish["change"].append({
                         "rawtx": rawtx,
-                        "deposit_script": util.b2h(script),
+                        "deposit_script": state["deposit_script"],
                         "spend_secret": _spend_secret
                     })
 
@@ -415,12 +411,11 @@ class Api(object):
         )
         return rawtx
 
-    def _create_commit(self, payer_pubkey, deposit_script, quantity,
+    def _create_commit(self, deposit_script, quantity,
                        revoke_secret_hash, delay_time):
 
         # create script
-        expected_pubkey = scripts.get_deposit_payer_pubkey(deposit_script)
-        assert(payer_pubkey == expected_pubkey)
+        payer_pubkey = scripts.get_deposit_payer_pubkey(deposit_script)
         payee_pubkey = scripts.get_deposit_payee_pubkey(deposit_script)
         spend_secret_hash = get_deposit_spend_secret_hash(deposit_script)
         commit_script = scripts.compile_commit_script(

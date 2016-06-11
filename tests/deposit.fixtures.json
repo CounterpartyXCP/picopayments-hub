@@ -6,7 +6,6 @@
     "quantity": 1337,
     "expected_result": {
         "state": {
-            "payer_pubkey": "033faa57e0ed3a3bf89340a0a3074ce0ef403ebfb77cb3402d0daa29d808e2bde0",
             "commits_active": [],
             "commits_revoked": [],
             "commits_requested": [],
