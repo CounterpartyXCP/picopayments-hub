@@ -34,13 +34,13 @@ class TestCommit(unittest.TestCase):
         self.maxDiff = None
 
     def test_create_commit(self):
-        result = self.api.create_commit(
+        result = self.api.payer_create_commit(
             PAYER_BEFORE, 1, REVOKE_SECRET_HASH, DELAY_TIME
         )
         self.assertEqual(result, FIXTURES["create_commit_result"])
 
     def test_set_commit(self):
-        result = self.api.set_commit(
+        result = self.api.payee_add_commit(
             PAYEE_AFTER_REQUEST,
             SET_COMMIT["rawtx"],
             SET_COMMIT["script"]
@@ -60,20 +60,23 @@ class TestCommit(unittest.TestCase):
             secret_hash = picopayments.util.hash160hex(secret)
             secrets[secret_hash] = secret
 
-            result = self.api.request_commit(
+            result = self.api.payee_request_commit(
                 payee_state, quantity, secret_hash
             )
             payee_state = result["state"]
 
-            result = self.api.create_commit(payer_state, result["quantity"],
-                                            result["revoke_secret_hash"],
-                                            DELAY_TIME)
+            result = self.api.payer_create_commit(
+                payer_state, result["quantity"],
+                result["revoke_secret_hash"],
+                DELAY_TIME
+            )
             payer_state = result["state"]
             rawtx = result["tosign"]["rawtx"]
-            # TODO sign here
+            # FIXME sign here
             commit_script = result["commit_script"]
 
-            result = self.api.set_commit(payee_state, rawtx, commit_script)
+            result = self.api.payee_add_commit(payee_state, rawtx,
+                                               commit_script)
             payee_state = result["state"]
 
         self.assertEqual(self.api.get_transferred_amount(payer_state), 9)

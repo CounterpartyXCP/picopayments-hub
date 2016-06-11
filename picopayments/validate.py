@@ -8,6 +8,7 @@ import re
 import pycoin
 from . import exceptions
 from . import scripts
+from . import util
 
 
 def string(s):
@@ -56,3 +57,56 @@ def quantity(number):
     integer(number)
     if not (0 <= number < 2100000000000000):
         raise exceptions.InvalidQuantity(number)
+
+
+def deposit_script(deposit_script_hex, expected_payee_pubkey,
+                   expected_spend_secret_hash):
+    hexdata(deposit_script_hex)
+    script_bin = util.h2b(deposit_script_hex)
+
+    # FIXME check deposit script opcodes
+
+    # deposit spend secret hash matches expected spend secret hash
+    found_hash = scripts.get_deposit_spend_secret_hash(script_bin)
+    if found_hash != expected_spend_secret_hash:
+        raise exceptions.IncorrectSpendSecretHash(
+            found_hash, expected_spend_secret_hash
+        )
+
+    # deposit payee pubkey matches expected payee pubkey
+    found_pubkey = scripts.get_deposit_payee_pubkey(script_bin)
+    if found_pubkey != expected_payee_pubkey:
+        raise exceptions.IncorrectPubKey(found_pubkey, expected_payee_pubkey)
+
+
+def commit_script(commit_script_hex, deposit_script_hex):
+    hexdata(commit_script_hex)
+    deposit_script = util.h2b(deposit_script_hex)
+    _commit_script = util.h2b(commit_script_hex)
+
+    # FIXME check commit script opcodes
+
+    # validate payee pubkey
+    deposit_payee_pubkey = scripts.get_deposit_payee_pubkey(deposit_script)
+    commit_payee_pubkey = scripts.get_commit_payee_pubkey(_commit_script)
+    if deposit_payee_pubkey != commit_payee_pubkey:
+        raise exceptions.IncorrectPubKey(commit_payee_pubkey,
+                                         deposit_payee_pubkey)
+
+    # validate payer pubkey
+    deposit_payer_pubkey = scripts.get_deposit_payer_pubkey(deposit_script)
+    commit_payer_pubkey = scripts.get_commit_payer_pubkey(_commit_script)
+    if deposit_payer_pubkey != commit_payer_pubkey:
+        raise exceptions.IncorrectPubKey(commit_payer_pubkey,
+                                         deposit_payer_pubkey)
+
+    # validate spend secret hash
+    deposit_spend_hash = scripts.get_deposit_spend_secret_hash(deposit_script)
+    commit_spend_hash = scripts.get_commit_spend_secret_hash(_commit_script)
+    if deposit_spend_hash != commit_spend_hash:
+        raise exceptions.IncorrectSpendSecretHash(commit_spend_hash,
+                                                  deposit_spend_hash)
+
+
+def state(state_data):
+    pass  # FIXME implement

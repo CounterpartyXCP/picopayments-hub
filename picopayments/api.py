@@ -78,33 +78,204 @@ class Api(object):
             "http://bitcoinrpcuser:bitcoinrpcpass@127.0.0.1:18332"
         )
 
-    def set_deposit(self, deposit_script):
-        # TODO add doc string
-        # TODO validate all input
-        # TODO validate state
+    def payer_make_deposit(self, payer_pubkey, payee_pubkey,
+                           spend_secret_hash, expire_time, quantity):
+        """Create deposit and setup initial payer state.
+
+        Args:
+            payer_pubkey (str): TODO
+            payee_pubkey (str): TODO
+            spend_secret_hash (str): TODO
+            expire_time (int): TODO
+            quantity (int): TODO
+
+        Returns:
+            {
+                "state": channel_state,
+                "topublish": unsigned_deposit_rawtx,
+                "deposit_script": hex_encoded
+            }
+
+        Raises:
+            picopayments.exceptions.InvalidHexData
+            picopayments.exceptions.InvalidPubKey
+            picopayments.exceptions.InvalidHash160
+            picopayments.exceptions.InvalidSequence
+            picopayments.exceptions.InvalidQuantity
+            picopayments.exceptions.InsufficientFunds
+            picopayments.exceptions.ChannelAlreadyUsed
+        """
+
+        # validate input
+        self._validate_deposit(payer_pubkey, payee_pubkey, spend_secret_hash,
+                               expire_time, quantity)
+
+        # create deposit
+        rawtx, script = self._create_deposit(
+            payer_pubkey, payee_pubkey, spend_secret_hash, expire_time, quantity)
+
+        # setup initial state
         state = copy.deepcopy(INITIAL_STATE)
-        script_bin = util.h2b(deposit_script)
+        state["deposit_script"] = util.b2h(script)
+
+        return {
+            "state": state,
+            "topublish": rawtx,
+            "deposit_script": util.b2h(script)
+        }
+
+    def payee_set_deposit(self, deposit_script, expected_payee_pubkey,
+                          expected_spend_secret_hash):
+        """Setup initial payee state for given deposit.
+
+        Args:
+            deposit_script (str): Channel deposit p2sh script.
+            expected_payee_pubkey (str): To validate deposit for payee.
+            expected_spend_secret_hash (str): To validate deposit secret hash.
+
+        Returns: {"state": updated_state}
+
+        Raises:
+            picopayments.exceptions.InvalidHexData
+            picopayments.exceptions.InvalidPubKey
+            picopayments.exceptions.InvalidDepositScript
+            picopayments.exceptions.IncorrectPubKey
+            picopayments.exceptions.IncorrectSpendSecretHash
+        """
+
+        # validate input
+        validate.pubkey(expected_payee_pubkey)
+        validate.deposit_script(deposit_script, expected_payee_pubkey,
+                                expected_spend_secret_hash)
+
+        # setup initial state
+        state = copy.deepcopy(INITIAL_STATE)
         state["deposit_script"] = deposit_script
+
         return {"state": state}
 
-    def request_commit(self, state, quantity, secret_hash):
-        # TODO add doc string
-        # TODO validate all input
-        # TODO validate state
+    def payee_request_commit(self, state, quantity, revoke_secret_hash):
+        """Request commit for given quantity and revoke secret hash.
+
+        Args:
+            state (dict): Current payee channel state.
+            quantity (int): Asset quantity for commit.
+            revoke_secret_hash (str): Revoke secret hash for commit.
+
+        Returns:
+            {
+                "state": updated_channel_state,
+                "quantity": quantity,
+                "revoke_secret_hash": revoke_secret_hash
+            }
+
+        Raises:
+            picopayments.exceptions.InvalidState
+            picopayments.exceptions.InvalidHash160
+            picopayments.exceptions.InvalidQuantity
+            ValueError
+        """
         state = copy.deepcopy(state)
+
+        # validate input
+        validate.state(state)
+        validate.quantity(quantity)
+        validate.hash160(revoke_secret_hash)
         self._validate_transfer_quantity(state, quantity)
-        state["commits_requested"].append(secret_hash)
+
+        # update state
+        state["commits_requested"].append(revoke_secret_hash)
+
         return {
             "state": state,
             "quantity": quantity,
-            "revoke_secret_hash": secret_hash
+            "revoke_secret_hash": revoke_secret_hash
         }
 
-    def set_commit(self, state, rawtx, commit_script):
-        # TODO add doc string
-        # TODO validate all input
-        # TODO validate state
+    def payer_create_commit(self, state, quantity,
+                            revoke_secret_hash, delay_time):
+        """Create commit for given quantit, revoke secret hash and delay time.
+
+        Args:
+            state (dict): Current payer channel state.
+            quantity (int): Asset quantity for commit.
+            revoke_secret_hash (str): Revoke secret hash for commit.
+            delay_time (int): Blocks payee must wait before payout.
+
+        Returns:
+            {
+                "state": updated_channel_state,
+                "commit_script": hex_encoded,
+                "tosign": {
+                    "rawtx": unsigned_commit_rawtx,
+                    "deposit_script": hex_encoded
+                }
+            }
+
+        Raises:
+            picopayments.exceptions.InvalidState
+            picopayments.exceptions.InvalidQuantity
+            picopayments.exceptions.InvalidHash160
+            picopayments.exceptions.InvalidSequence
+            ValueError
+        """
+
         state = copy.deepcopy(state)
+
+        # validate input
+        validate.state(state)
+        validate.quantity(quantity)
+        validate.hash160(revoke_secret_hash)
+        validate.sequence(delay_time)
+        self._validate_transfer_quantity(state, quantity)
+
+        # create deposit script and rawtx
+        deposit_script = util.h2b(state["deposit_script"])
+        rawtx, commit_script = self._create_commit(
+            deposit_script, quantity, revoke_secret_hash, delay_time
+        )
+
+        # update state
+        self._order_active(state)
+        state["commits_active"].append({
+            "rawtx": rawtx, "script": util.b2h(commit_script)
+        })
+
+        return {
+            "state": state,
+            "commit_script": util.b2h(commit_script),
+            "tosign": {
+                "rawtx": rawtx,
+                "deposit_script": state["deposit_script"]
+            }
+        }
+
+    def payee_add_commit(self, state, commit_rawtx, commit_script):
+        """Add commit to channel state.
+
+        Args:
+            state (dict): Current payee channel state.
+            commit_rawtx (str): Commit transaction signed by payer.
+            commit_script (str): Commit p2sh script.
+
+        Returns: {"state": updated_state}
+
+        Raises:
+            picopayments.exceptions.InvalidHexData
+            picopayments.exceptions.InvalidState
+            picopayments.exceptions.IncorrectPubKey
+            picopayments.exceptions.IncorrectSpendSecretHash
+        """
+        state = copy.deepcopy(state)
+
+        # validate input
+        validate.state(state)
+        validate.commit_script(commit_script, state["deposit_script"])
+        # TODO validate rawtx for deposit script
+        # TODO validate rawtx signed by payer
+        # TODO validate rawtx asset correct
+
+        # update state
         script_bin = util.h2b(commit_script)
         script_revoke_secret_hash = get_commit_revoke_secret_hash(script_bin)
         for revoke_secret_hash in state["commits_requested"][:]:
@@ -119,11 +290,12 @@ class Api(object):
                 # add to active
                 self._order_active(state)
                 state["commits_active"].append({
-                    "rawtx": rawtx,
+                    "rawtx": commit_rawtx,
                     "script": commit_script
                 })
-                break
-        return {"state": state}
+                return {"state": state}
+
+        raise ValueError("No revoke secret for given commit script.")
 
     def revoke_secret_hashes_until(self, state, quantity):
         # TODO add doc string
@@ -185,49 +357,6 @@ class Api(object):
         self._order_active(state)
         commit = state["commits_active"][-1]
         return self._get_quantity(commit["rawtx"])
-
-    def create_commit(self, state, quantity, revoke_secret_hash, delay_time):
-        # TODO add doc string
-        # TODO validate all input
-        # TODO validate state
-        state = copy.deepcopy(state)
-        self._validate_transfer_quantity(state, quantity)
-        deposit_script = util.h2b(state["deposit_script"])
-        rawtx, commit_script = self._create_commit(
-            deposit_script, quantity, revoke_secret_hash, delay_time
-        )
-
-        commit_script_hex = util.b2h(commit_script)
-        self._order_active(state)
-        state["commits_active"].append({
-            "rawtx": rawtx, "script": commit_script_hex
-        })
-        return {
-            "state": state,
-            "commit_script": commit_script_hex,
-            "tosign": {
-                "rawtx": rawtx, "deposit_script": state["deposit_script"]
-            }
-        }
-
-    def deposit(self, payer_pubkey, payee_pubkey, spend_secret_hash,
-                expire_time, quantity):
-        # TODO add doc string
-        # TODO validate all input
-        # TODO validate state
-        self._validate_deposit(payer_pubkey, payee_pubkey, spend_secret_hash,
-                               expire_time, quantity)
-        state = copy.deepcopy(INITIAL_STATE)
-        rawtx, script = self._deposit(
-            payer_pubkey, payee_pubkey,
-            spend_secret_hash, expire_time, quantity
-        )
-        state["deposit_script"] = util.b2h(script)
-        return {
-            "state": state,
-            "topublish": rawtx,
-            "deposit_script": util.b2h(script)
-        }
 
     def payee_update(self, state):
         # TODO add doc string
@@ -337,7 +466,7 @@ class Api(object):
             ))
         return response_data["result"]
 
-    def _valid_channel_unused(self, channel_address):
+    def _validate_channel_unused(self, channel_address):
         txs = self.btctxstore.get_transactions(channel_address)
         if len(txs) > 0:
             raise exceptions.ChannelAlreadyUsed(channel_address, txs)
@@ -404,13 +533,13 @@ class Api(object):
 
         return rawtx, commit_script
 
-    def _deposit(self, payer_pubkey, payee_pubkey, spend_secret_hash,
-                 expire_time, quantity):
+    def _create_deposit(self, payer_pubkey, payee_pubkey, spend_secret_hash,
+                        expire_time, quantity):
 
         script = scripts.compile_deposit_script(payer_pubkey, payee_pubkey,
                                                 spend_secret_hash, expire_time)
         dest_address = util.script2address(script, self.netcode)
-        self._valid_channel_unused(dest_address)
+        self._validate_channel_unused(dest_address)
         payer_address = util.pubkey2address(payer_pubkey, self.netcode)
 
         # provide extra btc for future closing channel fees
@@ -499,10 +628,6 @@ class Api(object):
         return unpacked["quantity"]
 
     def _validate_transfer_quantity(self, state, quantity):
-        transferred = self.get_transferred_amount(state)
-        if quantity <= transferred:
-            msg = "Amount not greater transferred: {0} <= {1}"
-            raise ValueError(msg.format(quantity, transferred))
         script = util.h2b(state["deposit_script"])
         confirms, asset_balance, btc_balance = self._deposit_status(script)
         if quantity > asset_balance:

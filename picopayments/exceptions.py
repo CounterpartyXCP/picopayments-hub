@@ -80,3 +80,33 @@ class InvalidUnsigned(Exception):
     def __init__(self, x):
         msg = "Invalid unsigned: '{0}'"
         super(InvalidUnsigned, self).__init__(msg.format(x))
+
+
+class InvalidDepositScript(Exception):
+
+    def __init__(self, x):
+        msg = "Invalid deposit script: '{0}'"
+        super(InvalidDepositScript, self).__init__(msg.format(x))
+
+
+class InvalidState(Exception):
+
+    def __init__(self, x):
+        msg = "Invalid state: '{0}'"
+        super(InvalidState, self).__init__(msg.format(x))
+
+
+class IncorrectPubKey(Exception):
+
+    def __init__(self, found, expected):
+        msg = "Incorrect pubkey: found '{0}' != '{1} expected!"
+        super(IncorrectPubKey, self).__init__(msg.format(found, expected))
+
+
+class IncorrectSpendSecretHash(Exception):
+
+    def __init__(self, found, expected):
+        msg = "Incorrect spend secret hash: found '{0}' != '{1} expected!"
+        super(IncorrectSpendSecretHash, self).__init__(
+            msg.format(found, expected)
+        )
