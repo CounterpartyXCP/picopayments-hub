@@ -27,7 +27,12 @@ class TestDeposit(unittest.TestCase):
             FIXTURES["expire_time"],
             FIXTURES["quantity"]
         )
-        self.assertEqual(FIXTURES["expected_result"], result)
+        self.assertEqual(FIXTURES["expected_deposit_result"], result)
+
+    def test_set_deposit(self):
+        deposit_script = FIXTURES["expected_deposit_result"]["deposit_script"]
+        result = self.api.set_deposit(deposit_script)
+        self.assertEqual(FIXTURES["expected_set_deposit_result"], result)
 
 
 if __name__ == "__main__":
