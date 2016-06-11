@@ -25,8 +25,8 @@ class TestPayout(unittest.TestCase):
         )
 
     def test_payout_recover(self):
-        result = self.api.payee_update(FIXTURES["payee_state"])
-        self.assertEqual(result, FIXTURES["payee_update_result"])
+        result = self.api.payee_payouts(FIXTURES["payee_state"])
+        self.assertEqual(result, FIXTURES["payee_payouts_result"])
 
 
 if __name__ == "__main__":

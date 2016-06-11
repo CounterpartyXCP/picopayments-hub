@@ -69,7 +69,7 @@ class Api(object):
         self.testnet = testnet
         self.user = user
         self.password = password
-        self.asset = asset
+        self.asset = asset  # FIXME add to channel state
         self.netcode = "BTC" if not self.testnet else "XTN"
         self.btctxstore = BtcTxStore(
             testnet=self.testnet, dryrun=dryrun, service="insight"
@@ -296,7 +296,7 @@ class Api(object):
 
         raise ValueError("No revoke secret for given commit script.")
 
-    def get_revoke_secret_hashes_above(self, state, quantity):
+    def payee_revoke_secret_hashes_above(self, state, quantity):
         """Get revoke secret hashes for commits above the given quantity.
 
         Args:
@@ -387,56 +387,96 @@ class Api(object):
             "deposit_script": state["deposit_script"],
         }
 
-    def is_deposit_confirmed(self, state, minconfirms=1):
-        # TODO add doc string
-        # TODO validate all input
-        # TODO validate state
-        state = copy.deepcopy(state)
-        validate.is_unsigned(minconfirms)
-        script = util.h2b(state["deposit_script"])
-        confirms, asset_balance, btc_balance = self._deposit_status(script)
-        return confirms >= minconfirms
-
     def get_transferred_amount(self, state):
-        # TODO add doc string
-        # TODO validate all input
-        # TODO validate state
+        """Get asset quantity transferred from payer to payee.
+
+        Args:
+            state (dict): Current payee/payer channel state.
+
+        Returns:
+            Quantity transferred in satoshis.
+
+        Raises:
+            picopayments.exceptions.InvalidState
+        """
         state = copy.deepcopy(state)
+
         if len(state["commits_active"]) == 0:
             return 0
         self._order_active(state)
         commit = state["commits_active"][-1]
         return self._get_quantity(commit["rawtx"])
 
-    def payee_update(self, state):
-        # TODO add doc string
-        # TODO validate all input
-        # TODO validate state
-        state = copy.deepcopy(state)
-        deposit_script = util.h2b(state["deposit_script"])
-        payee_pubkey = scripts.get_deposit_payee_pubkey(deposit_script)
-        payouts = []
+    def payee_payouts(self, state):
+        """Find published commits and make payout transactions.
 
-        # payout recoverable commits
+        Args:
+            state (dict): Current payee channel state.
+
+        Returns:
+            [{
+                "payout_rawtx": unsigned_rawtx,
+                "commit_script": hex_encoded
+            }]
+
+        Raises:
+            picopayments.exceptions.InvalidState
+        """
+        state = copy.deepcopy(state)
+
+        # validate input
+        validate.state(state)
+
+        # find recoverables and make payout transactions
+        payouts = []
         recoverable_scripts = self._get_payout_recoverable(state)
         if len(recoverable_scripts) > 0:
+            deposit_script = util.h2b(state["deposit_script"])
+            payee_pubkey = scripts.get_deposit_payee_pubkey(deposit_script)
             for script in recoverable_scripts:
                 rawtx = self._create_recover_commit(
                     payee_pubkey, script, "payout"
                 )
                 payouts.append({
-                    "rawtx": rawtx, "commit_script": util.b2h(script)
+                    "payout_rawtx": rawtx, "commit_script": util.b2h(script)
                 })
-        return {"state": state, "payouts": payouts}
+        return payouts
 
-    def payer_update(self, state):
-        # TODO add doc string
-        # TODO validate all input
-        # TODO validate state
+    def payer_recoverables(self, state):
+        """Find and make recoverable change, timeout and revoke transactions.
+
+        Args:
+            state (dict): Current payee channel state.
+
+        Returns:
+            {
+                "change":[{
+                    "change_rawtx": unsigned_rawtx,
+                    "deposit_script": hex_encoded,
+                    "spend_secret": hex_encoded
+                }],
+                "expire":[{
+                    "expire_rawtx": unsigned_rawtx,
+                    "deposit_script": hex_encoded
+                }],
+                "revoke":[{
+                    "revoke_rawtx": unsigned_rawtx,
+                    "commit_script": hex_encoded,
+                    "revoke_secret": hex_encoded
+                }]
+            }
+
+        Raises:
+            picopayments.exceptions.InvalidState
+        """
         state = copy.deepcopy(state)
+
+        # validate input
+        validate.state(state)
+
         deposit_script = util.h2b(state["deposit_script"])
         payer_pubkey = scripts.get_deposit_payer_pubkey(deposit_script)
-        topublish = {"revoke": [], "change": [], "expire": []}
+        recoverables = {"revoke": [], "change": [], "expire": []}
 
         # If revoked commit published, recover funds asap!
         revokable = self._get_revoke_recoverable(state)
@@ -445,8 +485,8 @@ class Api(object):
                 rawtx = self._create_recover_commit(
                     payer_pubkey, script, "revoke"
                 )
-                topublish["revoke"].append({
-                    "rawtx": rawtx,
+                recoverables["revoke"].append({
+                    "revoke_rawtx": rawtx,
                     "commit_script": util.b2h(script),
                     "revoke_secret": secret
                 })
@@ -455,8 +495,9 @@ class Api(object):
         if self._can_expire_recover(state):
             rawtx = self._recover_deposit(
                 payer_pubkey, deposit_script, "expire")
-            topublish["expire"].append({
-                "rawtx": rawtx, "deposit_script": state["deposit_script"]
+            recoverables["expire"].append({
+                "expire_rawtx": rawtx,
+                "deposit_script": state["deposit_script"]
             })
 
         else:
@@ -470,16 +511,24 @@ class Api(object):
                     rawtx = self._recover_deposit(
                         payer_pubkey, deposit_script, "change"
                     )
-                    topublish["change"].append({
-                        "rawtx": rawtx,
+                    recoverables["change"].append({
+                        "change_rawtx": rawtx,
                         "deposit_script": state["deposit_script"],
                         "spend_secret": _spend_secret
                     })
 
-        return {"state": state, "topublish": topublish}
+        return recoverables
+
+    def is_deposit_confirmed(self, state, minconfirms=1):
+        # FIXME replace with deposit_status
+        state = copy.deepcopy(state)
+        validate.is_unsigned(minconfirms)
+        script = util.h2b(state["deposit_script"])
+        confirms, asset_balance, btc_balance = self._deposit_status(script)
+        return confirms >= minconfirms
 
     def publish(self, rawtx):
-        # TODO remove this
+        # FIXME remove this
         txid = util.gettxid(rawtx)
         if self.dryrun:
             return txid

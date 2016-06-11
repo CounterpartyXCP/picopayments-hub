@@ -26,7 +26,7 @@ class TestRevoke(unittest.TestCase):
 
     def test_revoke(self):
         payer_state = FIXTURES["payer_state"]
-        result = self.api.payer_update(payer_state)
+        result = self.api.payer_recoverables(payer_state)
         self.assertEqual(result, FIXTURES["update_result"])
 
 

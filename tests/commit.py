@@ -83,7 +83,9 @@ class TestCommit(unittest.TestCase):
         self.assertEqual(self.api.get_transferred_amount(payee_state), 9)
 
         # payee reviels secrets
-        secret_hashes = self.api.get_revoke_secret_hashes_above(payee_state, 4)
+        secret_hashes = self.api.payee_revoke_secret_hashes_above(
+            payee_state, 4
+        )
         revoke_secrets = [secrets[sh] for sh in secret_hashes]
 
         # payee revokes commits

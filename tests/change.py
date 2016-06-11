@@ -22,7 +22,7 @@ class TestRecoverChange(unittest.TestCase):
         )
 
     def test_recover_change(self):
-        result = self.api.payer_update(FIXTURES["payer_state"])
+        result = self.api.payer_recoverables(FIXTURES["payer_state"])
         self.assertEqual(result, FIXTURES["expected_result"])
 
 
