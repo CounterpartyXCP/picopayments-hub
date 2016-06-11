@@ -3,7 +3,6 @@
 # License: MIT (see LICENSE file)
 
 
-import os
 import copy
 import pycoin
 import time
@@ -15,6 +14,7 @@ from bitcoinrpc.authproxy import AuthServiceProxy
 from picopayments import util
 from picopayments import validate
 from picopayments.scripts import get_deposit_spend_secret_hash
+from picopayments.scripts import get_commit_revoke_secret_hash
 from picopayments import exceptions
 from picopayments import scripts
 
@@ -37,13 +37,12 @@ INITIAL_STATE = {
     # Quantity not needed as payer may change it. If its heigher its
     # against our self intrest to throw away money. If its lower it
     # gives us a better resolution when reversing the channel.
-    "commits_requested": [],  # ["revoke_secret_hex"]
+    "commits_requested": [],  # ["revoke_secret_hash"]
 
     # must be ordered lowest to heighest at all times!
     "commits_active": [],     # [{
     #                             "rawtx": hex,
     #                             "script": hex,
-    #                             "revoke_secret": hex
     #                           }]
 
     "commits_revoked": [],    # [{
@@ -119,15 +118,13 @@ class Api(object):
         state["deposit_script"] = deposit_script
         return {"state": state}
 
-    def request_commit(self, state, quantity):
+    def request_commit(self, state, quantity, secret_hash):
         # TODO add doc string
         # TODO validate all input
         # TODO validate state
         state = copy.deepcopy(state)
         self._validate_transfer_quantity(state, quantity)
-        secret = util.b2h(os.urandom(32))  # secure random number
-        secret_hash = util.hash160hex(secret)
-        state["commits_requested"].append(secret)
+        state["commits_requested"].append(secret_hash)
         return {
             "state": state,
             "quantity": quantity,
@@ -144,40 +141,40 @@ class Api(object):
         script_bin = util.h2b(commit_script)
         self._validate_commit_payee_pubkey(state, script_bin)
 
-        revoke_secret_hash = scripts.get_commit_revoke_secret_hash(script_bin)
-        for revoke_secret in state["commits_requested"][:]:
+        script_revoke_secret_hash = get_commit_revoke_secret_hash(script_bin)
+        for revoke_secret_hash in state["commits_requested"][:]:
 
             # revoke secret hash must match as it would
             # otherwise break the channels reversability
-            if revoke_secret_hash == util.hash160hex(revoke_secret):
+            if script_revoke_secret_hash == revoke_secret_hash:
 
                 # remove from requests
-                state["commits_requested"].remove(revoke_secret)
+                state["commits_requested"].remove(revoke_secret_hash)
 
                 # add to active
                 self._order_active(state)
                 state["commits_active"].append({
                     "rawtx": rawtx,
-                    "script": commit_script,
-                    "revoke_secret": revoke_secret
+                    "script": commit_script
                 })
                 break
         return {"state": state}
 
-    def revoke_until(self, state, quantity):
+    def revoke_secret_hashes_until(self, state, quantity):
         # TODO add doc string
         # TODO validate all input
         # TODO validate state
         state = copy.deepcopy(state)
-        secrets = []
+        revoke_secret_hashes = []
         self._order_active(state)
         for commit in reversed(state["commits_active"][:]):
             if quantity < self._get_quantity(commit["rawtx"]):
-                secrets.append(commit["revoke_secret"])
+                script = util.h2b(commit["script"])
+                secret_hash = get_commit_revoke_secret_hash(script)
+                revoke_secret_hashes.append(secret_hash)
             else:
                 break
-        list(map(lambda s: self._revoke(state, s), secrets))
-        return {"state": state, "revoke_secrets": secrets}
+        return revoke_secret_hashes
 
     def close_channel(self, state):
         # TODO add doc string
@@ -238,7 +235,7 @@ class Api(object):
         commit_script_hex = util.b2h(commit_script)
         self._order_active(state)
         state["commits_active"].append({
-            "rawtx": rawtx, "script": commit_script_hex, "revoke_secret": None
+            "rawtx": rawtx, "script": commit_script_hex
         })
         return {
             "state": state,
@@ -280,7 +277,7 @@ class Api(object):
         if len(recoverable_scripts) > 0:
             for script in recoverable_scripts:
                 rawtx = self._create_recover_commit(
-                    state["payee_pubkey"], script, None, "payout"
+                    state["payee_pubkey"], script, "payout"
                 )
                 payouts.append({
                     "rawtx": rawtx, "commit_script": util.b2h(script)
@@ -299,7 +296,7 @@ class Api(object):
         if len(revokable) > 0:
             for script, secret in revokable:
                 rawtx = self._create_recover_commit(
-                    state["payer_pubkey"], script, secret, "revoke"
+                    state["payer_pubkey"], script, "revoke"
                 )
                 topublish["revoke"].append({
                     "rawtx": rawtx,
@@ -404,9 +401,7 @@ class Api(object):
         rawtx = tx.as_hex()
         return rawtx
 
-    def _create_recover_commit(self, pubkey, script,
-                               revoke_secret, spend_type):
-
+    def _create_recover_commit(self, pubkey, script, spend_type):
         dest_address = util.pubkey2address(pubkey, netcode=self.netcode)
         delay_time = scripts.get_commit_delay_time(script)
         return self._recover_tx(dest_address, script, delay_time)
@@ -561,7 +556,7 @@ class Api(object):
         secret_hash = util.hash160hex(secret)
         for commit in state["commits_active"][:]:
             script = util.h2b(commit["script"])
-            if secret_hash == scripts.get_commit_revoke_secret_hash(script):
+            if secret_hash == get_commit_revoke_secret_hash(script):
                 state["commits_active"].remove(commit)
                 commit["revoke_secret"] = secret  # save secret
                 del commit["rawtx"]  # forget rawtx so we can never publish
