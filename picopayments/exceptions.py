@@ -68,6 +68,13 @@ class InvalidInteger(Exception):
         super(InvalidInteger, self).__init__(msg.format(x))
 
 
+class InvalidList(Exception):
+
+    def __init__(self, x):
+        msg = "Invalid list: '{0}'"
+        super(InvalidList, self).__init__(msg.format(x))
+
+
 class InvalidQuantity(Exception):
 
     def __init__(self, x):

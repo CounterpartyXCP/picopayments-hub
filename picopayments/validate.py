@@ -11,57 +11,62 @@ from . import scripts
 from . import util
 
 
-def string(s):
+def is_string(s):
     if not isinstance(s, six.string_types):
         raise exceptions.InvalidString(s)
 
 
-def hexdata(data):
-    string(data)
+def is_hex(data):
+    is_string(data)
     if not re.match("^[0-9a-f]*$", data):
         raise exceptions.InvalidHexData(data)
 
 
 def pubkey(pubkey_hex):
-    hexdata(pubkey_hex)
+    is_hex(pubkey_hex)
     sec = pycoin.serialize.h2b(pubkey_hex)
     if len(sec) != 33:  # compressed only!
         raise exceptions.InvalidPubKey(pubkey_hex)
 
 
 def hash160(hash_hex):
-    hexdata(hash_hex)
+    is_hex(hash_hex)
     hash_bin = pycoin.serialize.h2b(hash_hex)
     if len(hash_bin) != 20:
         raise exceptions.InvalidHash160(hash_hex)
 
 
-def integer(i):
+def is_integer(i):
     if not isinstance(i, six.integer_types):
         raise exceptions.InvalidString(i)
 
 
-def unsigned(number):
-    integer(number)
+def is_list(l):
+    if not isinstance(l, list):
+        raise exceptions.InvalidList(l)
+
+
+def is_unsigned(number):
+    is_integer(number)
     if number < 0:
         raise exceptions.InvalidUnsigned(number)
 
 
-def sequence(number):
-    integer(number)
+def is_sequence(number):
+    is_integer(number)
     if not (0 <= number <= scripts.MAX_SEQUENCE):
         raise exceptions.InvalidSequence(number)
 
 
-def quantity(number):
-    integer(number)
+def is_quantity(number):
+    is_integer(number)
     if not (0 <= number < 2100000000000000):
         raise exceptions.InvalidQuantity(number)
 
 
 def deposit_script(deposit_script_hex, expected_payee_pubkey,
                    expected_spend_secret_hash):
-    hexdata(deposit_script_hex)
+    is_hex(deposit_script_hex)
     script_bin = util.h2b(deposit_script_hex)
 
     # FIXME check deposit script opcodes
@@ -80,7 +85,7 @@ def deposit_script(deposit_script_hex, expected_payee_pubkey,
 
 
 def commit_script(commit_script_hex, deposit_script_hex):
-    hexdata(commit_script_hex)
+    is_hex(commit_script_hex)
     deposit_script = util.h2b(deposit_script_hex)
     _commit_script = util.h2b(commit_script_hex)
 

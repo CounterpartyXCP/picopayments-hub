@@ -83,7 +83,7 @@ class TestCommit(unittest.TestCase):
         self.assertEqual(self.api.get_transferred_amount(payee_state), 9)
 
         # payee reviels secrets
-        secret_hashes = self.api.revoke_secret_hashes_until(payee_state, 4)
+        secret_hashes = self.api.get_revoke_secret_hashes_above(payee_state, 4)
         revoke_secrets = [secrets[sh] for sh in secret_hashes]
 
         # payee revokes commits
@@ -97,7 +97,7 @@ class TestCommit(unittest.TestCase):
         self.assertEqual(self.api.get_transferred_amount(payer_state), 4)
 
     def test_close(self):
-        result = self.api.close_channel(PAYEE_BEFORE_CLOSE)
+        result = self.api.payee_highest_commit(PAYEE_BEFORE_CLOSE)
         self.assertEqual(result, FIXTURES["expected_close_result"])
 
 

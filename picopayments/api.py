@@ -179,7 +179,7 @@ class Api(object):
 
         # validate input
         validate.state(state)
-        validate.quantity(quantity)
+        validate.is_quantity(quantity)
         validate.hash160(revoke_secret_hash)
         self._validate_transfer_quantity(state, quantity)
 
@@ -219,14 +219,13 @@ class Api(object):
             picopayments.exceptions.InvalidSequence
             ValueError
         """
-
         state = copy.deepcopy(state)
 
         # validate input
         validate.state(state)
-        validate.quantity(quantity)
+        validate.is_quantity(quantity)
         validate.hash160(revoke_secret_hash)
-        validate.sequence(delay_time)
+        validate.is_sequence(delay_time)
         self._validate_transfer_quantity(state, quantity)
 
         # create deposit script and rawtx
@@ -271,9 +270,9 @@ class Api(object):
         # validate input
         validate.state(state)
         validate.commit_script(commit_script, state["deposit_script"])
-        # TODO validate rawtx for deposit script
-        # TODO validate rawtx signed by payer
-        # TODO validate rawtx asset correct
+        # FIXME validate rawtx for deposit script
+        # FIXME validate rawtx signed by payer
+        # FIXME validate rawtx asset correct
 
         # update state
         script_bin = util.h2b(commit_script)
@@ -297,11 +296,26 @@ class Api(object):
 
         raise ValueError("No revoke secret for given commit script.")
 
-    def revoke_secret_hashes_until(self, state, quantity):
-        # TODO add doc string
-        # TODO validate all input
-        # TODO validate state
+    def get_revoke_secret_hashes_above(self, state, quantity):
+        """Get revoke secret hashes for commits above the given quantity.
+
+        Args:
+            state (dict): Current payee channel state.
+            quantity (int): Return revoke secret hash if commit gt quantity.
+
+        Returns: List of hex encoded revoke secret hashes.
+
+        Raises:
+            picopayments.exceptions.InvalidState
+            picopayments.exceptions.InvalidQuantity
+        """
         state = copy.deepcopy(state)
+
+        # validate input
+        validate.state(state)
+        validate.is_quantity(quantity)
+
+        # get revoke secret hashes
         revoke_secret_hashes = []
         self._order_active(state)
         for commit in reversed(state["commits_active"][:]):
@@ -311,38 +325,74 @@ class Api(object):
                 revoke_secret_hashes.append(secret_hash)
             else:
                 break
+
         return revoke_secret_hashes
 
-    def close_channel(self, state):
-        # TODO add doc string
-        # TODO validate all input
-        # TODO validate state
-        state = copy.deepcopy(state)
-        assert(len(state["commits_active"]) > 0)
-        self._order_active(state)
-        commit = state["commits_active"][-1]
-        return {
-            "state": state,
-            "topublish": {
-                "rawtx": commit["rawtx"],
-                "deposit_script": state["deposit_script"],
-            }
-        }
-
     def revoke_all(self, state, secrets):
-        # TODO add doc string
-        # TODO validate all input
-        # TODO validate state
+        """Revoke all commits matching the given secrets.
+
+        Args:
+            state (dict): Current payee/payer channel state.
+            secrets (list): List of hex encoded commit revoke secrets.
+
+        Returns: {"state": updated_state}
+
+        Raises:
+            picopayments.exceptions.InvalidState
+        """
         state = copy.deepcopy(state)
+
+        # validate input
+        validate.state(state)
+        validate.is_list(secrets)
+        for secret in secrets:
+            validate.is_hex(secret)
+
+        # update state
         list(map(lambda s: self._revoke(state, s), secrets))
+
         return {"state": state}
+
+    def payee_highest_commit(self, state):
+        """Get highest commit be signed/published for closing the channel.
+
+        Args:
+            state (dict): Current payee channel state.
+
+        Returns:
+            If no commits have been made:
+                None
+
+            If commits have been made:
+                {
+                    "commit_rawtx": half_signed_commit_rawtx,
+                    "deposit_script": hex_encoded
+                }
+
+        Raises:
+            picopayments.exceptions.InvalidState
+        """
+        state = copy.deepcopy(state)
+
+        # validate input
+        validate.state(state)
+
+        self._order_active(state)
+        if len(state["commits_active"]) == 0:
+            return None
+        commit = state["commits_active"][-1]
+
+        return {
+            "commit_rawtx": commit["rawtx"],
+            "deposit_script": state["deposit_script"],
+        }
 
     def is_deposit_confirmed(self, state, minconfirms=1):
         # TODO add doc string
         # TODO validate all input
         # TODO validate state
         state = copy.deepcopy(state)
-        validate.unsigned(minconfirms)
+        validate.is_unsigned(minconfirms)
         script = util.h2b(state["deposit_script"])
         confirms, asset_balance, btc_balance = self._deposit_status(script)
         return confirms >= minconfirms
@@ -651,7 +701,7 @@ class Api(object):
                 state["commits_revoked"].append(commit)
 
     def _all_confirmed(self, rawtxs, minconfirms=1):
-        validate.unsigned(minconfirms)
+        validate.is_unsigned(minconfirms)
         if len(rawtxs) == 0:
             return False
         for rawtx in rawtxs:
@@ -705,8 +755,8 @@ class Api(object):
         validate.pubkey(payer_pubkey)
         validate.pubkey(payee_pubkey)
         validate.hash160(spend_secret_hash)
-        validate.sequence(expire_time)
-        validate.quantity(quantity)
+        validate.is_sequence(expire_time)
+        validate.is_quantity(quantity)
 
         # get balances
         address = util.pubkey2address(payer_pubkey, self.netcode)
