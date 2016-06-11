@@ -30,7 +30,6 @@ DEFAULT_COUNTERPARTY_RPC_PASSWORD = "1234"
 
 
 INITIAL_STATE = {
-    "payee_pubkey": None,
     "deposit_script": None,
 
     # Quantity not needed as payer may change it. If its heigher its
@@ -79,41 +78,12 @@ class Api(object):
             "http://bitcoinrpcuser:bitcoinrpcpass@127.0.0.1:18332"
         )
 
-    def payee_setup(self, payee_pubkey, spend_secret_hash):
-        """Setup payment channel.
-
-        Args:
-            payee_pubkey: Payee hex encoded public key in sec format.
-            spend_secret_hash: Hex encoded hash160 of spend secret.
-
-        Returns:
-            {
-                "payee_state": state,
-                "payee_pubkey": payee_pubkey,
-                "spend_secret_hash": hex_encoded_secret_hash
-            }
-
-        Raises:
-            picopayments.exceptions.InvalidPubKey
-            picopayments.exceptions.InvalidHash160
-        """
-        validate.pubkey(payee_pubkey)
-        validate.hash160(spend_secret_hash)
-        state = copy.deepcopy(INITIAL_STATE)
-        state["payee_pubkey"] = payee_pubkey
-        return {
-            "payee_state": state,
-            "payee_pubkey": payee_pubkey,
-            "spend_secret_hash": spend_secret_hash
-        }
-
-    def set_deposit(self, state, deposit_script):
+    def set_deposit(self, deposit_script):
         # TODO add doc string
         # TODO validate all input
         # TODO validate state
-        state = copy.deepcopy(state)
+        state = copy.deepcopy(INITIAL_STATE)
         script_bin = util.h2b(deposit_script)
-        self._validate_deposit_payee_pubkey(state, script_bin)
         state["deposit_script"] = deposit_script
         return {"state": state}
 
@@ -135,11 +105,7 @@ class Api(object):
         # TODO validate all input
         # TODO validate state
         state = copy.deepcopy(state)
-        self._validate_payer_commit(rawtx, commit_script)
-
         script_bin = util.h2b(commit_script)
-        self._validate_commit_payee_pubkey(state, script_bin)
-
         script_revoke_secret_hash = get_commit_revoke_secret_hash(script_bin)
         for revoke_secret_hash in state["commits_requested"][:]:
 
@@ -268,6 +234,8 @@ class Api(object):
         # TODO validate all input
         # TODO validate state
         state = copy.deepcopy(state)
+        deposit_script = util.h2b(state["deposit_script"])
+        payee_pubkey = scripts.get_deposit_payee_pubkey(deposit_script)
         payouts = []
 
         # payout recoverable commits
@@ -275,7 +243,7 @@ class Api(object):
         if len(recoverable_scripts) > 0:
             for script in recoverable_scripts:
                 rawtx = self._create_recover_commit(
-                    state["payee_pubkey"], script, "payout"
+                    payee_pubkey, script, "payout"
                 )
                 payouts.append({
                     "rawtx": rawtx, "commit_script": util.b2h(script)
@@ -566,32 +534,6 @@ class Api(object):
             if confirms < minconfirms:
                 return False
         return True
-
-    def _validate_deposit_payee_pubkey(self, state, script):
-        given_payee_pubkey = scripts.get_deposit_payee_pubkey(script)
-        if given_payee_pubkey != state["payee_pubkey"]:
-            msg = "Incorrect payee pubkey: {0} != {1}"
-            raise ValueError(msg.format(
-                given_payee_pubkey, state["payee_pubkey"]
-            ))
-
-    def _validate_commit_payee_pubkey(self, state, script):
-        given_payee_pubkey = scripts.get_commit_payee_pubkey(script)
-        if given_payee_pubkey != state["payee_pubkey"]:
-            msg = "Incorrect payee pubkey: {0} != {1}"
-            raise ValueError(msg.format(
-                given_payee_pubkey, state["payee_pubkey"]
-            ))
-
-    def _validate_payer_commit(self, rawtx, script_hex):
-        tx = pycoin.tx.Tx.from_hex(rawtx)
-        assert(tx.bad_signature_count() == 1)
-
-        # TODO validate script
-        # TODO validate rawtx signed by payer
-        # TODO check it is for the current deposit
-        # TODO check given script and rawtx match
-        # TODO check given script is commit script
 
     def _get_payout_recoverable(self, state):
         _scripts = []
