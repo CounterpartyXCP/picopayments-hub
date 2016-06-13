@@ -9,6 +9,7 @@
         "expire": []
     },
     "payer_state": {
+        "asset": "A14456548018133352000",
         "deposit_script": "63522102d052373cae8cfc103a6f6b386c28a7e750f1c073da3ac5e0eb4b8b3d6e324f1c21034bad5ce410ac5e7ba34c1e9c652e1bbcf061634390ed95aa9d4d716820877d7e52ae6763a9140e0c109e4750d3974f48ec2399fe36372aecabf0882102d052373cae8cfc103a6f6b386c28a7e750f1c073da3ac5e0eb4b8b3d6e324f1cac6703ffff00b2752102d052373cae8cfc103a6f6b386c28a7e750f1c073da3ac5e0eb4b8b3d6e324f1cac6868",
         "commits_active": [
         {
@@ -21,6 +22,7 @@
             "commits_revoked": []
     },
     "payee_state": {
+        "asset": "A14456548018133352000",
         "deposit_script": "63522102d052373cae8cfc103a6f6b386c28a7e750f1c073da3ac5e0eb4b8b3d6e324f1c21034bad5ce410ac5e7ba34c1e9c652e1bbcf061634390ed95aa9d4d716820877d7e52ae6763a9140e0c109e4750d3974f48ec2399fe36372aecabf0882102d052373cae8cfc103a6f6b386c28a7e750f1c073da3ac5e0eb4b8b3d6e324f1cac6703ffff00b2752102d052373cae8cfc103a6f6b386c28a7e750f1c073da3ac5e0eb4b8b3d6e324f1cac6868",
         "commits_active": [
         {

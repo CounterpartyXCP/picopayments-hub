@@ -30,6 +30,8 @@ DEFAULT_COUNTERPARTY_RPC_PASSWORD = "1234"
 
 
 INITIAL_STATE = {
+    "asset": None,
+
     "deposit_script": None,
 
     # Quantity not needed as payer may change it. If its heigher its
@@ -52,7 +54,7 @@ INITIAL_STATE = {
 
 class Api(object):
 
-    def __init__(self, asset, user=DEFAULT_COUNTERPARTY_RPC_USER,
+    def __init__(self, user=DEFAULT_COUNTERPARTY_RPC_USER,
                  password=DEFAULT_COUNTERPARTY_RPC_PASSWORD,
                  api_url=None, testnet=DEFAULT_TESTNET, dryrun=False,
                  fee=DEFAULT_TXFEE, dust_size=DEFAULT_DUSTSIZE):
@@ -69,7 +71,6 @@ class Api(object):
         self.testnet = testnet
         self.user = user
         self.password = password
-        self.asset = asset  # FIXME add to channel state
         self.netcode = "BTC" if not self.testnet else "XTN"
         self.btctxstore = BtcTxStore(
             testnet=self.testnet, dryrun=dryrun, service="insight"
@@ -78,7 +79,7 @@ class Api(object):
             "http://bitcoinrpcuser:bitcoinrpcpass@127.0.0.1:18332"
         )
 
-    def payer_make_deposit(self, payer_pubkey, payee_pubkey,
+    def payer_make_deposit(self, asset, payer_pubkey, payee_pubkey,
                            spend_secret_hash, expire_time, quantity):
         """Create deposit and setup initial payer state.
 
@@ -107,15 +108,18 @@ class Api(object):
         """
 
         # validate input
-        self._validate_deposit(payer_pubkey, payee_pubkey, spend_secret_hash,
-                               expire_time, quantity)
+        self._validate_deposit(asset, payer_pubkey, payee_pubkey,
+                               spend_secret_hash, expire_time, quantity)
 
         # create deposit
         rawtx, script = self._create_deposit(
-            payer_pubkey, payee_pubkey, spend_secret_hash, expire_time, quantity)
+            asset, payer_pubkey, payee_pubkey,
+            spend_secret_hash, expire_time, quantity
+        )
 
         # setup initial state
         state = copy.deepcopy(INITIAL_STATE)
+        state["asset"] = asset
         state["deposit_script"] = util.b2h(script)
 
         return {
@@ -124,8 +128,8 @@ class Api(object):
             "deposit_script": util.b2h(script)
         }
 
-    def payee_set_deposit(self, deposit_script, expected_payee_pubkey,
-                          expected_spend_secret_hash):
+    def payee_set_deposit(self, asset, deposit_script,
+                          expected_payee_pubkey, expected_spend_secret_hash):
         """Setup initial payee state for given deposit.
 
         Args:
@@ -144,12 +148,14 @@ class Api(object):
         """
 
         # validate input
+        # FIXME validate asset
         validate.pubkey(expected_payee_pubkey)
         validate.deposit_script(deposit_script, expected_payee_pubkey,
                                 expected_spend_secret_hash)
 
         # setup initial state
         state = copy.deepcopy(INITIAL_STATE)
+        state["asset"] = asset
         state["deposit_script"] = deposit_script
 
         return {"state": state}
@@ -231,7 +237,8 @@ class Api(object):
         # create deposit script and rawtx
         deposit_script = util.h2b(state["deposit_script"])
         rawtx, commit_script = self._create_commit(
-            deposit_script, quantity, revoke_secret_hash, delay_time
+            state["asset"], deposit_script, quantity,
+            revoke_secret_hash, delay_time
         )
 
         # update state
@@ -319,7 +326,7 @@ class Api(object):
         revoke_secret_hashes = []
         self._order_active(state)
         for commit in reversed(state["commits_active"][:]):
-            if quantity < self._get_quantity(commit["rawtx"]):
+            if quantity < self._get_quantity(state["asset"], commit["rawtx"]):
                 script = util.h2b(commit["script"])
                 secret_hash = get_commit_revoke_secret_hash(script)
                 revoke_secret_hashes.append(secret_hash)
@@ -405,7 +412,7 @@ class Api(object):
             return 0
         self._order_active(state)
         commit = state["commits_active"][-1]
-        return self._get_quantity(commit["rawtx"])
+        return self._get_quantity(state["asset"], commit["rawtx"])
 
     def payee_payouts(self, state):
         """Find published commits and make payout transactions.
@@ -435,7 +442,7 @@ class Api(object):
             payee_pubkey = scripts.get_deposit_payee_pubkey(deposit_script)
             for script in recoverable_scripts:
                 rawtx = self._create_recover_commit(
-                    payee_pubkey, script, "payout"
+                    state["asset"], payee_pubkey, script, "payout"
                 )
                 payouts.append({
                     "payout_rawtx": rawtx, "commit_script": util.b2h(script)
@@ -483,7 +490,7 @@ class Api(object):
         if len(revokable) > 0:
             for script, secret in revokable:
                 rawtx = self._create_recover_commit(
-                    payer_pubkey, script, "revoke"
+                    state["asset"], payer_pubkey, script, "revoke"
                 )
                 recoverables["revoke"].append({
                     "revoke_rawtx": rawtx,
@@ -494,7 +501,8 @@ class Api(object):
         # If deposit expired recover the coins!
         if self._can_expire_recover(state):
             rawtx = self._recover_deposit(
-                payer_pubkey, deposit_script, "expire")
+                state["asset"], payer_pubkey, deposit_script, "expire"
+            )
             recoverables["expire"].append({
                 "expire_rawtx": rawtx,
                 "deposit_script": state["deposit_script"]
@@ -505,11 +513,11 @@ class Api(object):
             # If not expired and spend secret exposed by payout
             # recover change!
             address = util.script2address(deposit_script, self.netcode)
-            if self._can_spend_from_address(address):
+            if self._can_spend_from_address(state["asset"], address):
                 _spend_secret = self._find_spend_secret(state)
                 if _spend_secret is not None:
                     rawtx = self._recover_deposit(
-                        payer_pubkey, deposit_script, "change"
+                        state["asset"], payer_pubkey, deposit_script, "change"
                     )
                     recoverables["change"].append({
                         "change_rawtx": rawtx,
@@ -524,7 +532,9 @@ class Api(object):
         state = copy.deepcopy(state)
         validate.is_unsigned(minconfirms)
         script = util.h2b(state["deposit_script"])
-        confirms, asset_balance, btc_balance = self._deposit_status(script)
+        confirms, asset_balance, btc_balance = self._deposit_status(
+            state["asset"], script
+        )
         return confirms >= minconfirms
 
     def publish(self, rawtx):
@@ -541,12 +551,12 @@ class Api(object):
                 print("publishing failed: {0} {1}".format(type(e), e))
             time.sleep(10)
 
-    def _deposit_status(self, script):
+    def _deposit_status(self, asset, script):
         address = util.script2address(script, self.netcode)
         txids = self.btctxstore.get_transactions(address)
         if len(txids) == 0:
             return 0, 0, 0
-        asset_balance, btc_balance = self._get_address_balance(address)
+        asset_balance, btc_balance = self._get_address_balance(asset, address)
         newest_confirms = self.btctxstore.confirms(txids[0]) or 0
         oldest_confirms = self.btctxstore.confirms(txids[-1]) or 0
         if newest_confirms == 0:
@@ -570,15 +580,22 @@ class Api(object):
         if len(txs) > 0:
             raise exceptions.ChannelAlreadyUsed(channel_address, txs)
 
-    def _recover_tx(self, dest_address, script, sequence=None):
+    def _recover_tx(self, asset, dest_address, script, sequence=None):
 
         # get channel info
         src_address = util.script2address(script, self.netcode)
-        asset_balance, btc_balance = self._get_address_balance(src_address)
+        asset_balance, btc_balance = self._get_address_balance(
+            asset, src_address
+        )
 
         # create expire tx
-        rawtx = self._create_tx(src_address, dest_address, asset_balance,
-                                extra_btc=btc_balance - self.fee)
+        rawtx = self._create_tx(
+            asset,
+            src_address,
+            dest_address,
+            asset_balance,
+            extra_btc=btc_balance -
+            self.fee)
 
         # prep for script compliance and signing
         tx = pycoin.tx.Tx.from_hex(rawtx)
@@ -593,21 +610,21 @@ class Api(object):
         rawtx = tx.as_hex()
         return rawtx
 
-    def _create_recover_commit(self, pubkey, script, spend_type):
+    def _create_recover_commit(self, asset, pubkey, script, spend_type):
         dest_address = util.pubkey2address(pubkey, netcode=self.netcode)
         delay_time = scripts.get_commit_delay_time(script)
-        return self._recover_tx(dest_address, script, delay_time)
+        return self._recover_tx(asset, dest_address, script, delay_time)
 
-    def _recover_deposit(self, pubkey, script, spend_type):
+    def _recover_deposit(self, asset, pubkey, script, spend_type):
         dest_address = util.pubkey2address(pubkey, netcode=self.netcode)
         expire_time = scripts.get_deposit_expire_time(script)
         rawtx = self._recover_tx(
-            dest_address, script,
+            asset, dest_address, script,
             expire_time if spend_type == "expire" else None
         )
         return rawtx
 
-    def _create_commit(self, deposit_script, quantity,
+    def _create_commit(self, asset, deposit_script, quantity,
                        revoke_secret_hash, delay_time):
 
         # create script
@@ -622,18 +639,20 @@ class Api(object):
         # create tx
         src_address = util.script2address(deposit_script, self.netcode)
         dest_address = util.script2address(commit_script, self.netcode)
-        asset_balance, btc_balance = self._get_address_balance(src_address)
+        asset_balance, btc_balance = self._get_address_balance(
+            asset, src_address
+        )
         if quantity == asset_balance:  # spend all btc as change tx not needed
             extra_btc = btc_balance - self.fee
         else:  # provide extra btc for future payout/revoke tx fees
             extra_btc = (self.fee + self.dust_size)
-        rawtx = self._create_tx(src_address, dest_address,
+        rawtx = self._create_tx(asset, src_address, dest_address,
                                 quantity, extra_btc=extra_btc)
 
         return rawtx, commit_script
 
-    def _create_deposit(self, payer_pubkey, payee_pubkey, spend_secret_hash,
-                        expire_time, quantity):
+    def _create_deposit(self, asset, payer_pubkey, payee_pubkey,
+                        spend_secret_hash, expire_time, quantity):
 
         script = scripts.compile_deposit_script(payer_pubkey, payee_pubkey,
                                                 spend_secret_hash, expire_time)
@@ -645,11 +664,12 @@ class Api(object):
         # change tx or recover + commit tx + payout tx or revoke tx
         extra_btc = (self.fee + self.dust_size) * 3
 
-        rawtx = self._create_tx(payer_address, dest_address,
+        rawtx = self._create_tx(asset, payer_address, dest_address,
                                 quantity, extra_btc=extra_btc)
         return rawtx, script
 
-    def _create_tx(self, source_address, dest_address, quantity, extra_btc=0):
+    def _create_tx(self, asset, source_address,
+                   dest_address, quantity, extra_btc=0):
         assert(extra_btc >= 0)
         rawtx = self._rpc_call({
             "method": "create_send",
@@ -657,20 +677,20 @@ class Api(object):
                 "source": source_address,
                 "destination": dest_address,
                 "quantity": quantity,
-                "asset": self.asset,
+                "asset": asset,
                 "regular_dust_size": extra_btc or self.dust_size,
                 "fee": self.fee
             },
             "jsonrpc": "2.0",
             "id": 0,
         })
-        assert(self._get_quantity(rawtx) == quantity)
+        assert(self._get_quantity(asset, rawtx) == quantity)
         return rawtx
 
-    def _can_spend_from_address(self, address):
+    def _can_spend_from_address(self, asset, address):
 
         # has assets, btc
-        if self._get_address_balance(address) == (0, 0):
+        if self._get_address_balance(asset, address) == (0, 0):
             return False
 
         # TODO check if btc > fee
@@ -680,13 +700,13 @@ class Api(object):
         latest_confirms = self.btctxstore.confirms(txids[0])
         return latest_confirms > 0
 
-    def _get_address_balance(self, address):
+    def _get_address_balance(self, asset, address):
         result = self._rpc_call({
             "method": "get_balances",
             "params": {
                 "filters": [
                     {'field': 'address', 'op': '==', 'value': address},
-                    {'field': 'asset', 'op': '==', 'value': self.asset},
+                    {'field': 'asset', 'op': '==', 'value': asset},
                 ]
             },
             "jsonrpc": "2.0",
@@ -699,7 +719,7 @@ class Api(object):
         btc_balance = sum(map(lambda utxo: utxo["value"], utxos))
         return asset_balance, btc_balance
 
-    def _get_quantity(self, rawtx):
+    def _get_quantity(self, expected_asset, rawtx):
         result = self._rpc_call({
             "method": "get_tx_info",
             "params": {
@@ -721,14 +741,16 @@ class Api(object):
         if message_type_id != 0:
             msg = "Incorrect message type id: {0} != {1}"
             raise ValueError(msg.format(message_type_id, 0))
-        if self.asset != unpacked["asset"]:
-            msg = "Incorrect asset: {0} != {1}"
-            raise ValueError(msg.format(self.asset, unpacked["asset"]))
+        if expected_asset != unpacked["asset"]:
+            msg = "Incorrect asset: expected {0} != {1} found!"
+            raise ValueError(msg.format(expected_asset, unpacked["asset"]))
         return unpacked["quantity"]
 
     def _validate_transfer_quantity(self, state, quantity):
         script = util.h2b(state["deposit_script"])
-        confirms, asset_balance, btc_balance = self._deposit_status(script)
+        confirms, asset_balance, btc_balance = self._deposit_status(
+            state["asset"], script
+        )
         if quantity > asset_balance:
             msg = "Amount greater total: {0} > {1}"
             raise ValueError(msg.fromat(quantity, asset_balance))
@@ -736,7 +758,7 @@ class Api(object):
     def _order_active(self, state):
 
         def sort_func(entry):
-            return self._get_quantity(entry["rawtx"])
+            return self._get_quantity(state["asset"], entry["rawtx"])
         state["commits_active"].sort(key=sort_func)
 
     def _revoke(self, state, secret):
@@ -765,7 +787,7 @@ class Api(object):
             script = util.h2b(commit["script"])
             delay_time = scripts.get_commit_delay_time(script)
             address = util.script2address(script, netcode=self.netcode)
-            if self._can_spend_from_address(address):
+            if self._can_spend_from_address(state["asset"], address):
                 utxos = self.btctxstore.retrieve_utxos([address])
                 for utxo in utxos:
                     txid = utxo["txid"]
@@ -789,16 +811,18 @@ class Api(object):
     def _can_deposit_spend(self, state):
         script = util.h2b(state["deposit_script"])
         address = util.script2address(script, self.netcode)
-        return self._can_spend_from_address(address)
+        return self._can_spend_from_address(state["asset"], address)
 
     def _is_deposit_expired(self, state):
         script = util.h2b(state["deposit_script"])
         t = scripts.get_deposit_expire_time(script)
-        confirms, asset_balance, btc_balance = self._deposit_status(script)
+        confirms, asset_balance, btc_balance = self._deposit_status(
+            state["asset"], script
+        )
         return confirms >= t
 
-    def _validate_deposit(self, payer_pubkey, payee_pubkey, spend_secret_hash,
-                          expire_time, quantity):
+    def _validate_deposit(self, asset, payer_pubkey, payee_pubkey,
+                          spend_secret_hash, expire_time, quantity):
 
         # validate untrusted input data
         validate.pubkey(payer_pubkey)
@@ -806,10 +830,11 @@ class Api(object):
         validate.hash160(spend_secret_hash)
         validate.is_sequence(expire_time)
         validate.is_quantity(quantity)
+        # FIXME validate asset
 
         # get balances
         address = util.pubkey2address(payer_pubkey, self.netcode)
-        asset_balance, btc_balance = self._get_address_balance(address)
+        asset_balance, btc_balance = self._get_address_balance(asset, address)
 
         # check asset balance
         if asset_balance < quantity:
@@ -843,6 +868,6 @@ class Api(object):
             address = util.script2address(
                 script, netcode=self.netcode
             )
-            if self._can_spend_from_address(address):
+            if self._can_spend_from_address(state["asset"], address):
                 revokable.append((script, commit["revoke_secret"]))
         return revokable

@@ -21,6 +21,7 @@ class TestDeposit(unittest.TestCase):
 
     def test_deposit(self):
         result = self.api.payer_make_deposit(
+            ASSET,
             FIXTURES["payer_pubkey"],
             FIXTURES["payee_pubkey"],
             FIXTURES["spend_secret_hash"],
@@ -34,7 +35,8 @@ class TestDeposit(unittest.TestCase):
         expected_payee_pubkey = FIXTURES["payee_pubkey"]
         expected_spend_secret_hash = FIXTURES["spend_secret_hash"]
         result = self.api.payee_set_deposit(
-            deposit_script, expected_payee_pubkey, expected_spend_secret_hash
+            ASSET, deposit_script, expected_payee_pubkey,
+            expected_spend_secret_hash
         )
         self.assertEqual(FIXTURES["expected_set_deposit_result"], result)
 

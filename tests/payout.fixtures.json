@@ -1,5 +1,6 @@
 {
     "payer_state": {
+        "asset": "A14456548018133352000",
         "commits_revoked": [
         {
             "revoke_secret": "5346a8ad74d43262935b74f152799310544aa56130940f3a50968c5a97e9c738",
@@ -48,6 +49,7 @@
         ]
     },
     "payee_state": {
+        "asset": "A14456548018133352000",
         "commits_revoked": [
         {
             "revoke_secret": "5346a8ad74d43262935b74f152799310544aa56130940f3a50968c5a97e9c738",
