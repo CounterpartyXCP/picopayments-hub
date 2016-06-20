@@ -40,5 +40,9 @@ def script2address(script, netcode="BTC"):
     return pycoin.tx.pay_to.address_for_pay_to_script(script, netcode=netcode)
 
 
+def scripthex2address(script_hex, netcode="BTC"):
+    return script2address(h2b(script_hex), netcode=netcode)
+
+
 def hash160hex(hexdata):
     return b2h(hash160(h2b(hexdata)))

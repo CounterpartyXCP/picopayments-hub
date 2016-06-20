@@ -7,12 +7,14 @@ import picopayments
 ASSET = "A14456548018133352000"
 USER = "rpc"
 PASSWORD = "1234"
-API_URL = "http://127.0.0.1:14000/api/"
+# API_URL = "http://127.0.0.1:14000/api/"
+API_URL = "http://45.55.201.116:14000/api/"
 TESTNET = True
 DRYRUN = True
 
 
 FIXTURES = json.load(open("tests/commit.fixtures.json"))
+
 
 PAYER_BEFORE = FIXTURES["payer_before"]
 PAYEE_BEFORE_CLOSE = FIXTURES["payee_before_close"]
@@ -29,21 +31,30 @@ class TestCommit(unittest.TestCase):
 
     def setUp(self):
         self.api = picopayments.Api(
-            ASSET, api_url=API_URL, testnet=TESTNET, dryrun=DRYRUN
+            url=API_URL, testnet=TESTNET, dryrun=DRYRUN
         )
         self.maxDiff = None
 
     def test_create_commit(self):
-        result = self.api.payer_create_commit(
-            PAYER_BEFORE, 1, REVOKE_SECRET_HASH, DELAY_TIME
+        result = self.api.call(
+            method="mpc_create_commit",
+            params={
+                "state": PAYER_BEFORE,
+                "quantity": 1,
+                "revoke_secret_hash": REVOKE_SECRET_HASH,
+                "delay_time": DELAY_TIME,
+            }
         )
         self.assertEqual(result, FIXTURES["create_commit_result"])
 
     def test_set_commit(self):
-        result = self.api.payee_add_commit(
-            PAYEE_AFTER_REQUEST,
-            SET_COMMIT["rawtx"],
-            SET_COMMIT["script"]
+        result = self.api.call(
+            method="mpc_add_commit",
+            params={
+                "state": PAYEE_AFTER_REQUEST,
+                "commit_rawtx": SET_COMMIT["rawtx"],
+                "commit_script": SET_COMMIT["script"]
+            }
         )
         self.assertEqual(result, SET_COMMIT_RESULT)
 
@@ -60,46 +71,112 @@ class TestCommit(unittest.TestCase):
             secret_hash = picopayments.util.hash160hex(secret)
             secrets[secret_hash] = secret
 
-            result = self.api.payee_request_commit(
-                payee_state, quantity, secret_hash
+            result = self.api.call(
+                method="mpc_request_commit",
+                params={
+                    "state": payee_state,
+                    "quantity": quantity,
+                    "revoke_secret_hash": secret_hash,
+                }
             )
             payee_state = result["state"]
 
-            result = self.api.payer_create_commit(
-                payer_state, result["quantity"],
-                result["revoke_secret_hash"],
-                DELAY_TIME
+            result = self.api.call(
+                method="mpc_create_commit",
+                params={
+                    "state": payer_state,
+                    "quantity": result["quantity"],
+                    "revoke_secret_hash": result["revoke_secret_hash"],
+                    "delay_time": DELAY_TIME,
+                }
             )
             payer_state = result["state"]
             rawtx = result["tosign"]["rawtx"]
             # FIXME sign here
             commit_script = result["commit_script"]
 
-            result = self.api.payee_add_commit(payee_state, rawtx,
-                                               commit_script)
+            result = self.api.call(
+                method="mpc_add_commit",
+                params={
+                    "state": payee_state,
+                    "commit_rawtx": rawtx,
+                    "commit_script": commit_script
+                }
+            )
             payee_state = result["state"]
 
-        self.assertEqual(self.api.get_transferred_amount(payer_state), 9)
-        self.assertEqual(self.api.get_transferred_amount(payee_state), 9)
+        self.assertEqual(
+            self.api.call(
+                method="mpc_transferred_amount",
+                params={"state": payer_state}
+            ),
+            9
+        )
+        self.assertEqual(
+            self.api.call(
+                method="mpc_transferred_amount",
+                params={
+                    "state": payee_state
+                }
+            ),
+            9
+        )
 
         # payee reviels secrets
-        secret_hashes = self.api.payee_revoke_secret_hashes_above(
-            payee_state, 4
+        secret_hashes = self.api.call(
+            method="mpc_revoke_secret_hashes_above",
+            params={
+                "state": payee_state,
+                "quantity": 4
+            }
         )
         revoke_secrets = [secrets[sh] for sh in secret_hashes]
 
         # payee revokes commits
-        result = self.api.revoke_all(payee_state, revoke_secrets)
+        result = self.api.call(
+            method="mpc_revoke_all",
+            params={
+                "state": payee_state,
+                "secrets": revoke_secrets
+            }
+        )
         payee_state = result["state"]
-        self.assertEqual(self.api.get_transferred_amount(payee_state), 4)
+        self.assertEqual(
+            self.api.call(
+                method="mpc_transferred_amount",
+                params={
+                    "state": payee_state
+                }
+            ),
+            4
+        )
 
         # payer revokes commits
-        result = self.api.revoke_all(payer_state, revoke_secrets)
+        result = self.api.call(
+            method="mpc_revoke_all",
+            params={
+                "state": payer_state,
+                "secrets": revoke_secrets
+            }
+        )
         payer_state = result["state"]
-        self.assertEqual(self.api.get_transferred_amount(payer_state), 4)
+        self.assertEqual(
+            self.api.call(
+                method="mpc_transferred_amount",
+                params={
+                    "state": payer_state
+                }
+            ),
+            4
+        )
 
     def test_close(self):
-        result = self.api.payee_highest_commit(PAYEE_BEFORE_CLOSE)
+        result = self.api.call(
+            method="mpc_highest_commit",
+            params={
+                "state": PAYEE_BEFORE_CLOSE
+            }
+        )
         self.assertEqual(result, FIXTURES["expected_close_result"])
 
 

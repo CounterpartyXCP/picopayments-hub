@@ -9,7 +9,8 @@ import picopayments
 
 
 ASSET = "A14456548018133352000"
-API_URL = "http://127.0.0.1:14000/api/"
+# API_URL = "http://127.0.0.1:14000/api/"
+API_URL = "http://45.55.201.116:14000/api/"
 TESTNET = True
 DRYRUN = True
 
@@ -21,12 +22,17 @@ class TestRevoke(unittest.TestCase):
 
     def setUp(self):
         self.api = picopayments.Api(
-            ASSET, api_url=API_URL, testnet=TESTNET, dryrun=DRYRUN
+            url=API_URL, testnet=TESTNET, dryrun=DRYRUN
         )
 
     def test_revoke(self):
         payer_state = FIXTURES["payer_state"]
-        result = self.api.payer_recoverables(payer_state)
+        result = self.api.call(
+            method="mpc_recoverables",
+            params={
+                "state": payer_state
+            }
+        )
         self.assertEqual(result, FIXTURES["update_result"])
 
 
