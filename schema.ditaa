@@ -1,15 +1,16 @@
               +----------------------------------------+
-              | Keys                              cB44 |
+              | Secrets                           cB44 |
               |                                        |
-  +---------->| o pubkey (hex, str)                    |
-  |           | o wif (wif, str)                       |
+  +---------->| o hash (hex, str)                      |
+  |           | o value (hex, str)                     |
   |           +----------------------------------------+
   |
   |           +----------------------------------------+
-  |           | Secrets                           cB44 |
+  |           | Keys                              cB44 |
   |           |                                        |
-  |  +------->| o hash (hex, str)                      |
-  |  |        | o value (hex, str)                     |
+  |  +------->| o pubkey (hex, str)                    |
+  |  |        | o wif (wif, str)                       |
+  |  |        | o cached_address (Base58, str)         |
   |  |        +----------------------------------------+
   |  |
   |  |        +----------------------------------------+
@@ -44,31 +45,39 @@
   |  |  +---->| o id (pkey, int)                       |
   |  |  |     | o asset (str)                          |
   |  |  |     | o deposit_script (hex, str)            |
-  +--|--|-----| o cached_payee_pubkey (hex, str)       |
-  +--|--|-----| o cached_payer_pubkey (hex, str)       |
-     |  |     | o cached_spend_secret_hash (hex, str)  |
-     |  |     +----------------------------------------+
-     |  |
-     |  |     +----------------------------------------+
-     |  |     | CommitRequested                   cGRE |
-     |  |     |                                        |
-     |  +-----| o channel_id (fkey, int)               |
-     +--|-----| o revoke_secret_hash (hex, str)        |
-     |  |     +----------------------------------------+
-     |  |
-     |  |     +----------------------------------------+
-     |  |     | CommitActive                      cGRE |
-     |  |     |                                        |
-     |  +-----| o channel_id (fkey, int)               |
-     |  |     | o rawtx (hex)                          |
-     |  |     | o script (hex)                         |
-     +--|-----| o cached_revoke_secret_hash (hex, str) |
+  |  |  |     | o cached_deposit_address (Base58, str) |
+  |  +--|-----| o cached_payee_pubkey (hex, str)       |
+  |  +--|-----| o cached_payer_pubkey (hex, str)       |
+  |     |     | o cached_payee_address (Base58, str)   |
+  |     |     | o cached_payer_address (Base58, str)   |
+  |     |     | o cached_expire_time (blocks, int)     |
+  |     |     | o cached_spend_secret_hash (hex, str)  |
+  |     |     +----------------------------------------+
+  |     |
+  |     |     +----------------------------------------+
+  |     |     | CommitRequested                   cGRE |
+  |     |     |                                        |
+  |     +-----| o channel_id (fkey, int)               |
+  +-----|-----| o revoke_secret_hash (hex, str)        |
+  |     |     +----------------------------------------+
+  |     |
+  |     |     +----------------------------------------+
+  |     |     | CommitActive                      cGRE |
+  |     |     |                                        |
+  |     +-----| o channel_id (fkey, int)               |
+  |     |     | o rawtx (hex, str)                     |
+  |     |     | o script (hex, str)                    |
+  |     |     | o cached_commit_address (Base58, str)  |
+  |     |     | o cached_delay_time (blocks, int)      |
+  +-----|-----| o cached_revoke_secret_hash (hex, str) |
         |     +----------------------------------------+
         |
         |     +----------------------------------------+
         |     | CommitRevoked                     cGRE |
         |     |                                        |
         +-----| o channel_id (fkey, int)               |
-              | o script (hex)                         |
-              | o revoke_secret (hex)                  |
+              | o script (hex, str)                    |
+              | o revoke_secret (hex, str)             |
+              | o cached_commit_address (Base58, str)  |
+              | o cached_delay_time (blocks, int)      |
               +----------------------------------------+
