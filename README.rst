@@ -44,6 +44,10 @@ To enable this, set (and export) environment variable PYCOIN_NATIVE=openssl.
   $ export PYCOIN_NATIVE=openssl
 
 
+=========
+API Calls
+=========
+
 ---------------
 mpc_hub_clients
 ---------------
@@ -151,9 +155,8 @@ mpc_hub_sync
     }
 
 
-======
-Schema
-======
+=========
+DB Schema
+=========
 
 .. image:: schema.png
-
