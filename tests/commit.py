@@ -21,7 +21,7 @@ PAYEE_BEFORE_CLOSE = FIXTURES["payee_before_close"]
 PAYEE_BEFORE_REQUEST = FIXTURES["payee_before_request"]
 REVOKE_SECRET_HASH = FIXTURES["revoke_secret_hash"]
 PAYEE_AFTER_REQUEST = FIXTURES["payee_after_request"]
-SET_COMMIT_RESULT = FIXTURES["set_commit_result"]
+ADD_COMMIT_RESULT = FIXTURES["add_commit_result"]
 SET_COMMIT = FIXTURES["set_commit"]
 DELAY_TIME = FIXTURES["delay_time"]
 PAYEE_CLOSED = FIXTURES["payee_closed"]
@@ -47,8 +47,8 @@ class TestCommit(unittest.TestCase):
         )
         self.assertEqual(result, FIXTURES["create_commit_result"])
 
-    def test_set_commit(self):
-        result = self.api.call(
+    def test_add_commit(self):
+        payee_state = self.api.call(
             method="mpc_add_commit",
             params={
                 "state": PAYEE_AFTER_REQUEST,
@@ -56,7 +56,7 @@ class TestCommit(unittest.TestCase):
                 "commit_script": SET_COMMIT["script"]
             }
         )
-        self.assertEqual(result, SET_COMMIT_RESULT)
+        self.assertEqual(payee_state, ADD_COMMIT_RESULT)
 
     def test_funds_flow(self):
         payer_state = PAYER_BEFORE
@@ -91,11 +91,11 @@ class TestCommit(unittest.TestCase):
                 }
             )
             payer_state = result["state"]
-            rawtx = result["tosign"]["rawtx"]
+            rawtx = result["tosign"]["commit_rawtx"]
             # FIXME sign here
             commit_script = result["commit_script"]
 
-            result = self.api.call(
+            payee_state = self.api.call(
                 method="mpc_add_commit",
                 params={
                     "state": payee_state,
@@ -103,7 +103,6 @@ class TestCommit(unittest.TestCase):
                     "commit_script": commit_script
                 }
             )
-            payee_state = result["state"]
 
         self.assertEqual(
             self.api.call(
@@ -133,14 +132,13 @@ class TestCommit(unittest.TestCase):
         revoke_secrets = [secrets[sh] for sh in secret_hashes]
 
         # payee revokes commits
-        result = self.api.call(
+        payee_state = self.api.call(
             method="mpc_revoke_all",
             params={
                 "state": payee_state,
                 "secrets": revoke_secrets
             }
         )
-        payee_state = result["state"]
         self.assertEqual(
             self.api.call(
                 method="mpc_transferred_amount",
@@ -152,14 +150,13 @@ class TestCommit(unittest.TestCase):
         )
 
         # payer revokes commits
-        result = self.api.call(
+        payer_state = self.api.call(
             method="mpc_revoke_all",
             params={
                 "state": payer_state,
                 "secrets": revoke_secrets
             }
         )
-        payer_state = result["state"]
         self.assertEqual(
             self.api.call(
                 method="mpc_transferred_amount",

@@ -3,13 +3,11 @@
 # License: MIT (see LICENSE file)
 
 
-import time
 import json
 import requests
 from btctxstore import BtcTxStore
 from requests.auth import HTTPBasicAuth
 from bitcoinrpc.authproxy import AuthServiceProxy
-from picopayments import util
 
 
 DEFAULT_TESTNET = False
@@ -28,7 +26,6 @@ class Api(object):
             default_url = DEFAULT_COUNTERPARTY_RPC_TESTNET_URL
         else:
             default_url = DEFAULT_COUNTERPARTY_RPC_MAINNET_URL
-        self.dryrun = dryrun
         self.url = url or default_url
         self.user = user
         self.password = password
@@ -57,16 +54,3 @@ class Api(object):
                 repr(response.text)
             ))
         return response_data["result"]
-
-    def publish(self, rawtx):
-        # FIXME remove this
-        if self.dryrun:
-            return util.gettxid(rawtx)
-        while self.btctxstore.confirms(util.gettxid(rawtx)) is None:
-            try:
-                self.bitcoind_rpc.sendrawtransaction(rawtx)
-                return util.gettxid(rawtx)
-                # see http://counterparty.io/docs/api/#wallet-integration
-            except Exception as e:
-                print("publishing failed: {0} {1}".format(type(e), e))
-            time.sleep(10)

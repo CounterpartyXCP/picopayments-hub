@@ -89,7 +89,7 @@ view_readme: setup graphs
 
 
 graphs:
-	ditaa channel.ditaa channel.png
+	ditaa schema.ditaa schema.png
 
 
 bitcoind_startserver:
