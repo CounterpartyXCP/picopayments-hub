@@ -4,7 +4,3 @@
 
 
 from .version import __version__  # NOQA
-from . import util  # NOQA
-from . import scripts  # NOQA
-from . import api  # NOQA
-from .api import Api  # NOQA

@@ -18,7 +18,7 @@ PicoPayments
 .. _IssuesLink: https://github.com/F483/picopayments/issues
 
 
-Decentral micropayment hub.
+Decentral micropayment hub for counterparty assets.
 
 
 ====================

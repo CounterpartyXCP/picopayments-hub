@@ -14,7 +14,7 @@ url = "http://127.0.0.1:14000/api/"
 
 
 asset = "A14456548018133352000"
-api = picopayments.Api(url=url, testnet=True)
+api = picopayments.util.Api(url=url, testnet=True)
 
 
 # setup alice (payer)

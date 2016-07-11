@@ -10,7 +10,8 @@ exec(open('picopayments/version.py').read())  # load __version__
 
 setup(
     name='picopayments',
-    description="Low level storj protocol reference implementation.",
+    scripts=['picopayments/bin/picopayments'],
+    description="Decentral micropayment hub for counterparty assets.",
     long_description=open("README.rst").read(),
     keywords="storj, reference, protocol, DHT",
     url='http://storj.io',

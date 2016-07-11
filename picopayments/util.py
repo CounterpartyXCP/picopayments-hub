@@ -1,48 +1,32 @@
-import pycoin
-from pycoin.serialize import b2h  # NOQA
-from pycoin.serialize import h2b  # NOQA
-from pycoin.serialize import b2h_rev  # NOQA
-from pycoin.encoding import hash160  # NOQA
+# coding: utf-8
+# Copyright (c) 2016 Fabian Barkhau <fabian.barkhau@gmail.com>
+# License: MIT (see LICENSE file)
 
 
-def gettxid(rawtx):
-    tx = pycoin.tx.Tx.from_hex(rawtx)
-    return b2h_rev(tx.hash())
+import json
+import requests
+from requests.auth import HTTPBasicAuth
 
 
-def wif2sec(wif):
-    return pycoin.key.Key.from_text(wif).sec()
+class Api(object):
 
+    def __init__(self, user, password, url, testnet):
+        self.url = url
+        self.user = user
+        self.password = password
 
-def wif2pubkey(wif):
-    return b2h(wif2sec(wif))
-
-
-def wif2address(wif):
-    return pycoin.key.Key.from_text(wif).address()
-
-
-def wif2secretexponent(wif):
-    return pycoin.key.Key.from_text(wif).secret_exponent()
-
-
-def pubkey2address(pubkey, netcode="BTC"):
-    return sec2address(h2b(pubkey), netcode=netcode)
-
-
-def sec2address(sec, netcode="BTC"):
-    prefix = pycoin.networks.address_prefix_for_netcode(netcode)
-    digest = pycoin.encoding.hash160(sec)
-    return pycoin.encoding.hash160_sec_to_bitcoin_address(digest, prefix)
-
-
-def script2address(script, netcode="BTC"):
-    return pycoin.tx.pay_to.address_for_pay_to_script(script, netcode=netcode)
-
-
-def scripthex2address(script_hex, netcode="BTC"):
-    return script2address(h2b(script_hex), netcode=netcode)
-
-
-def hash160hex(hexdata):
-    return b2h(hash160(h2b(hexdata)))
+    def call(self, method, params):
+        payload = {
+            "method": method, "params": params, "jsonrpc": "2.0", "id": 0
+        }
+        headers = {'content-type': 'application/json'}
+        auth = HTTPBasicAuth(self.user, self.password)
+        response = requests.post(self.url, data=json.dumps(payload),
+                                 headers=headers, auth=auth)
+        response_data = json.loads(response.text)
+        if "result" not in response_data:
+            print(json.dumps(payload, indent=2))
+            raise Exception("Rpc call failed! {0}".format(
+                repr(response.text)
+            ))
+        return response_data["result"]
