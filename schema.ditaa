@@ -13,12 +13,10 @@
 |   |  |                                        |
 |   +->| o id (pkey, int)                       |
 |      | o asset (str)                          |
-|      | o setup_ttl (seconds, int)             |
-|      | o deposit_delay (blocks, int)          |
+|      | o setup_ttl (blocks, int)              |
 |      | o deposit_limit (satoshis, int)        |
 |      | o deposit_ratio (float)                |
 |      | o timeout_limit (blocks, int)          |
-|      | o timeout_ratio (float)                |
 |      | o fee_setup (satoshis, int)            |
 |      | o fee_sync (satoshis, int)             |
 |      | o timestamp (unixtime, int)            |

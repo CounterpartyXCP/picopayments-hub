@@ -1,35 +1,68 @@
+# coding: utf-8
+# Copyright (c) 2016 Fabian Barkhau <fabian.barkhau@gmail.com>
+# License: MIT (see LICENSE file)
+
+
 import os
+import sys
 import argparse
 
 
 def parse(args):
 
+    # pre parse testnet to modify defaults depending on network
+    testnet = "--testnet" in sys.argv
+
     description = "Decentral micropayment hub for counterparty assets."
     parser = argparse.ArgumentParser(description=description)
 
-    # testnet
-    parser.add_argument('--testnet', action='store_true',
-                        help="Use bitcoin testnet instead of mainnet.")
+    parser.add_argument(
+        '--testnet', action='store_true',
+        help="Use bitcoin testnet instead of mainnet."
+    )
+    parser.add_argument(
+        '--version', action='store_true',
+        help="Display version number."
+    )
 
-    # counterparty user
-    default = "rpc"
-    msg = "Counterparty service username: {0}"
-    parser.add_argument('--user', default=default, help=msg.format(default))
+    # display terms
+    parser.add_argument(
+        '--terms', metavar="ASSET", default=None,
+        help="Display current terms for given asset."
+    )
 
-    # counterparty password
-    default = "1234"
-    msg = "Counterparty service password: {0}"
-    parser.add_argument('--password', default=default, help=msg.format(default))
+    # root file path
+    default = os.path.join(os.path.expanduser("~"), ".picopayments")
+    parser.add_argument(
+        '--root', default=default, metavar="PATH",
+        help="Location of application files: {0}".format(default)
+    )
 
-    # counterparty url
-    default = "http://public.coindaddy.io:4000/api/"
-    # testnet = "http://public.coindaddy.io:14000/api/"
-    msg = "Counterparty service url: {0}"
-    parser.add_argument('--url', default=default, help=msg.format(default))
+    # server
+    parser.add_argument(
+        '--host', default="localhost", metavar="PORT",
+        help="Server host: {0}".format("localhost")
+    )
+    default = 5000 if testnet else 15000
+    parser.add_argument(
+        '--port', type=int, default=default, metavar="PORT",
+        help="Server port: {0}".format(default)
+    )
 
-    # database path
-    default = os.path.join(os.path.expanduser("~"), ".picopayments.db")
-    msg = "Picopayment database path: {0}"
-    parser.add_argument('--database', default=default, help=msg.format(default))
+    # counterpartylib api
+    default_port = 14000 if testnet else 4000
+    default = "http://public.coindaddy.io:{0}/api/".format(default_port)
+    parser.add_argument(
+        '--cp_url', default=default, metavar="URL",
+        help="Counterparty api: {0}".format(default)
+    )
+    parser.add_argument(
+        '--cp_username', default="rpc", metavar="VALUE",
+        help="Counterparty username: {0}".format("rpc")
+    )
+    parser.add_argument(
+        '--cp_password', default="1234", metavar="VALUE",
+        help="Counterparty password: {0}".format("1234")
+    )
 
     return vars(parser.parse_args(args=args))

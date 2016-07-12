@@ -97,14 +97,12 @@ Channel culled if deposit not made fast enough.
         "spend_secret_hash": "hex",
         "pubkey": "hex",
         "channel_terms": {
-            "setup_ttl": seconds,
-            "deposit_delay": blocks,
-            "deposit_limit": satoshis,
-            "deposit_ratio": float,
-            "timeout_limit": blocks,
-            "timeout_ratio": float,
-            "fee_setup": satoshis,
-            "fee_sync": satoshis
+            "setup_ttl": blocks,  # client deposit must be confirmed within
+            "deposit_limit": satoshis,  # max server will invest in channel
+            "deposit_ratio": float,  # deposit ratio compared to client
+            "timeout_limit": blocks,  # max timeout server will set
+            "fee_setup": satoshis,  # fee per channel setup
+            "fee_sync": satoshisa  # fee per sync
         }
     }
 

@@ -5,8 +5,29 @@
 
 
 import sys
-from picopayments.server import start
+import json
+from picopayments import cli
+from picopayments import api
+from picopayments import cfg
+from picopayments import terms
+from picopayments import __version__
+from werkzeug.serving import run_simple
 
 
-if __name__ == "__main__":   # pragma: no cover
-    start(sys.argv[1:])  # pragma: no cover
+if __name__ == "__main__":
+
+    # parse args and load configuration
+    args = cli.parse(sys.argv[1:])
+    cfg.load(args)
+
+    # display version
+    if "--version" in sys.argv:
+        print(__version__)
+
+    # display current terms for asset
+    if args["terms"] is not None:
+        print(json.dumps(terms.read(args["terms"]), indent=2))
+
+    # start server
+    else:
+        run_simple(cfg.host, cfg.port, api.application)
