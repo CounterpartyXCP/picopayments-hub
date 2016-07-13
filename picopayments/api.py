@@ -6,7 +6,18 @@
 from werkzeug.wrappers import Request, Response
 from jsonrpc import JSONRPCResponseManager, dispatcher
 from picopayments import cfg
-from picopayments.util import rpccall
+from picopayments import util
+from picopayments import terms
+
+
+@dispatcher.add_method
+def mpc_hub_terms(assets=None):
+    all_trems = terms.read()
+    if assets:
+        for key in all_trems.keys():
+            if key not in assets:
+                all_trems.pop(key)
+    return all_trems
 
 
 @dispatcher.add_method
@@ -37,7 +48,10 @@ def mpc_hub_sync(channel_handle, unused_revoke_secret_hash,
 def _add_counterparty_call(method):
 
     def counterparty_method(**kwargs):
-        return rpccall(cfg.url, method, kwargs, cfg.user, cfg.password)
+        return util.rpccall(
+            cfg.counterparty_url, method, kwargs,
+            cfg.counterparty_username, cfg.counterparty_password
+        )
     dispatcher[method] = counterparty_method
 
 

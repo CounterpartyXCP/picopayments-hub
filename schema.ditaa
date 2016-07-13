@@ -1,7 +1,8 @@
        +----------------------------------------+
-       | Full Duplex Channel               cGRE |
+       | HubConnection                     cGRE |
        |                                        |
        | o handle (hex)                         |
+       | o asset (str)                          |
 +------| o send_channel_id (fkey, int)          |
 +------| o recv_channel_id (fkey, int)          |
 |   +--| o terms_id (fkey, int)                 |
@@ -26,7 +27,6 @@
 |      | MicropaymentChannel               cGRE |
 |      |                                        |
 +----->| o id (pkey, int)                       |
-|      | o asset (str)                          |
 |      | o deposit_script (hex, str)            |
 |      | o cached_deposit_address (Base58, str) |
 |  +---| o cached_payee_pubkey (hex, str)       |
@@ -41,8 +41,9 @@
 |  |   | Keys                              cB44 |
 |  |   |                                        |
 |  +-->| o pubkey (hex, str)                    |
+|      | o asset (str)                          |
 |      | o wif (wif, str)                       |
-|      | o cached_address (Base58, str)         |
+|      | o address (Base58, str)                |
 |      +----------------------------------------+
 |
 |      +----------------------------------------+

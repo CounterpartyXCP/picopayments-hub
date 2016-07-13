@@ -5,10 +5,10 @@
 
 
 import sys
-import json
 from picopayments import cli
 from picopayments import api
 from picopayments import cfg
+from picopayments import db
 from picopayments import terms
 from picopayments import __version__
 from werkzeug.serving import run_simple
@@ -16,17 +16,18 @@ from werkzeug.serving import run_simple
 
 if __name__ == "__main__":
 
-    # parse args and load configuration
-    args = cli.parse(sys.argv[1:])
-    cfg.load(args)
+    # setup
+    args = cli.parse(sys.argv[1:])  # parse args
+    cfg.load(args)  # load configuration
+    terms.read()  # make sure terms file exists
 
     # display version
     if "--version" in sys.argv:
         print(__version__)
 
-    # display current terms for asset
-    if args["terms"] is not None:
-        print(json.dumps(terms.read(args["terms"]), indent=2))
+    # display funding address for asset
+    if args["fund"] is not None:
+        print(db.get_fund_address(args["fund"]))
 
     # start server
     else:

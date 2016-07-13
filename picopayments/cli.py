@@ -16,19 +16,22 @@ def parse(args):
     description = "Decentral micropayment hub for counterparty assets."
     parser = argparse.ArgumentParser(description=description)
 
+    # network to use
     parser.add_argument(
         '--testnet', action='store_true',
         help="Use bitcoin testnet instead of mainnet."
     )
+
+    # display version
     parser.add_argument(
         '--version', action='store_true',
         help="Display version number."
     )
 
-    # display terms
+    # display deposit address
     parser.add_argument(
-        '--terms', metavar="ASSET", default=None,
-        help="Display current terms for given asset."
+        '--fund', default=None, metavar="ASSET",
+        help="Display address, used to fund the given asset."
     )
 
     # root file path

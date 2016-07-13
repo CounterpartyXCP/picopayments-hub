@@ -76,6 +76,29 @@ Optionally the entries can be limited to a set of provided clients and assets.
 
 
 ---------------
+mpc_hub_clients
+---------------
+
+Get current terms of the hub.
+
+::
+
+    Arguments: {
+        "assets": [asset]
+    }
+
+    Response: {
+        "asset": {
+            "setup_ttl": blocks,  # client deposit must be confirmed within
+            "deposit_limit": satoshis,  # max server will invest in channel
+            "deposit_ratio": float,  # deposit ratio compared to client
+            "timeout_limit": blocks,  # max timeout server will set
+            "fee_setup": satoshis,  # fee per channel setup
+            "fee_sync": satoshisa  # fee per sync
+        }
+    }
+
+---------------
 mpc_hub_request
 ---------------
 

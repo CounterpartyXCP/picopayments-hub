@@ -64,7 +64,7 @@ DEFAULT_TESTNET = {
 }
 
 
-def read(asset):
+def read():
     terms_file = cfg.testnet_terms if cfg.testnet else cfg.mainnet_terms
     terms_path = os.path.join(cfg.root, terms_file)
 
@@ -78,10 +78,9 @@ def read(asset):
         default_terms = DEFAULT_TESTNET if cfg.testnet else DEFAULT_MAINNET
         with open(terms_path, 'w') as outfile:
             json.dump(default_terms, outfile, indent=2)
-        return default_terms.get(asset)
+        return default_terms
 
     # read terms
     else:
         with open(terms_path, 'r') as infile:
-            terms = json.load(infile)
-            return terms.get(asset)
+            return json.load(infile)
