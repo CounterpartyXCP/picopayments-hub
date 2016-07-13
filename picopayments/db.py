@@ -9,32 +9,80 @@ from . import cfg
 
 
 # old version -> migrate sql
-MIGRATIONS = {
+_MIGRATIONS = {
     0: open('picopayments/sql/migration_0.sql').read(),
 }
 
+_GET_USERVERSION = 'PRAGMA user_version'
+_SET_USERVERSION = 'PRAGMA user_version = {0}'
+_GET_ASSET_KEYS = "SELECT * FROM KeyPool WHERE asset = :asset"
+_GET_ALL_KEYS = "SELECT * FROM KeyPool"
+_CNT_ASSET_KEYS = "SELECT :asset, count() FROM KeyPool WHERE asset = :asset"
+_CNT_KEYS_PER_ASSET = "SELECT asset, count() FROM KeyPool GROUP BY asset"
+_ADD_KEY = "INSERT INTO KeyPool VALUES (:asset, :pubkey, :wif, :address)"
 
-def migrate(connection):
-    cursor = connection.cursor()
-    current_version = cursor.execute('PRAGMA user_version').fetchall()[0][0]
-    while current_version in MIGRATIONS:
-        cursor.execute(MIGRATIONS[current_version])
-        current_version += 1
-        cursor.execute('PRAGMA user_version = {0}'.format(current_version))
+_connection = None  # set in initialize
 
 
-def get_connection():
+def _row_to_dict_factory(cursor, row):
+    return {k[0]: row[i] for i, k in enumerate(cursor.getdescription())}
+
+
+def _exec(sql, args=None):
+    """Execute sql"""
+    cursor = _connection.cursor()
+    return cursor.execute(sql, args)
+
+
+def _one(sql, args=None, asdict=True):
+    """Execute sql and fetch one row."""
+    cursor = _connection.cursor()
+    if asdict:
+        cursor.setrowtrace(_row_to_dict_factory)
+    return cursor.execute(sql, args).fetchone()
+
+
+def _all(sql, args=None, asdict=True):
+    """Execute sql and fetch all rows."""
+    cursor = _connection.cursor()
+    if asdict:
+        cursor.setrowtrace(_row_to_dict_factory)
+    return cursor.execute(sql, args).fetchall()
+
+
+def _migrate():
+    db_version = _one(_GET_USERVERSION)["user_version"]
+    while db_version in _MIGRATIONS:
+        _exec(_MIGRATIONS[db_version])
+        db_version += 1
+        _exec(_SET_USERVERSION.format(db_version))
+
+
+def initialize():
     db_file = cfg.testnet_database if cfg.testnet else cfg.mainnet_database
     db_path = os.path.join(cfg.root, db_file)
     if not os.path.exists(os.path.dirname(db_path)):  # ensure root path exists
         os.makedirs(os.path.dirname(db_path))
-    connection = apsw.Connection(db_path)
-    migrate(connection)
-    return connection
+    globals()["_connection"] = apsw.Connection(db_path)
+    _migrate()
 
 
-def get_fund_address(asset, connection=None):
-    if connection is None:
-        connection = get_connection()
-    print("TODO implement get_fund_address")
-    return None
+def add_keys(keys):
+    cursor = _connection.cursor()
+    cursor.execute("BEGIN TRANSACTION")
+    cursor.executemany(_ADD_KEY, keys)
+    cursor.execute("COMMIT")
+
+
+def count_keys(asset=None):
+    if asset is not None:
+        return dict(_all(_CNT_ASSET_KEYS, {"asset": asset}, asdict=False))
+    else:
+        return dict(_all(_CNT_KEYS_PER_ASSET, asdict=False))
+
+
+def get_keys(asset=None):
+    if asset is not None:
+        return _all(_GET_ASSET_KEYS, {"asset": asset})
+    else:
+        return _all(_GET_ALL_KEYS)

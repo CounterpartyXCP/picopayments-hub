@@ -5,21 +5,16 @@
 
 
 import sys
-from picopayments import cli
 from picopayments import api
 from picopayments import cfg
-from picopayments import db
-from picopayments import terms
+from picopayments import ctrl
 from picopayments import __version__
 from werkzeug.serving import run_simple
 
 
 if __name__ == "__main__":
 
-    # setup
-    args = cli.parse(sys.argv[1:])  # parse args
-    cfg.load(args)  # load configuration
-    terms.read()  # make sure terms file exists
+    args = ctrl.initialize()
 
     # display version
     if "--version" in sys.argv:
@@ -27,7 +22,7 @@ if __name__ == "__main__":
 
     # display funding address for asset
     if args["fund"] is not None:
-        print(db.get_fund_address(args["fund"]))
+        print(ctrl.get_fund_address(args["fund"]))
 
     # start server
     else:

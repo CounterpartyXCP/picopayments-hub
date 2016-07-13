@@ -3,6 +3,7 @@
 # License: MIT (see LICENSE file)
 
 
+import copy
 import os
 import json
 from . import cfg
@@ -78,9 +79,12 @@ def read():
         default_terms = DEFAULT_TESTNET if cfg.testnet else DEFAULT_MAINNET
         with open(terms_path, 'w') as outfile:
             json.dump(default_terms, outfile, indent=2)
-        return default_terms
+        terms_data = copy.deepcopy(default_terms)
 
     # read terms
     else:
         with open(terms_path, 'r') as infile:
-            return json.load(infile)
+            terms_data = json.load(infile)
+
+    # FIXME validate terms data
+    return terms_data

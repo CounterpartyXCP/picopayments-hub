@@ -12,7 +12,7 @@ CREATE TABLE Terms(
     timestamp                   DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE Keys(
+CREATE TABLE KeyPool(
     asset                       TEXT NOT NULL,
     pubkey                      TEXT NOT NULL UNIQUE,               -- hex public key
     wif                         TEXT NOT NULL UNIQUE,               -- bitcoin wif
