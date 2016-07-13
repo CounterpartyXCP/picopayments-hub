@@ -21,8 +21,8 @@ if __name__ == "__main__":
         print(__version__)
 
     # display funding address for asset
-    if args["fund"] is not None:
-        print(ctrl.get_fund_address(args["fund"]))
+    if args["fund_address"] is not None:
+        print(ctrl.get_funding_address(args["fund_address"]))
 
     # start server
     else:

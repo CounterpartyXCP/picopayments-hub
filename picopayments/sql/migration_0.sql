@@ -9,14 +9,15 @@ CREATE TABLE Terms(
     timeout_limit               INTEGER NOT NULL,                   -- blocks
     fee_setup                   INTEGER NOT NULL,                   -- satoshis
     fee_sync                    INTEGER NOT NULL,                   -- satoshis
-    timestamp                   DATETIME DEFAULT CURRENT_TIMESTAMP
+    unixtimestamp               timestamp default (strftime('%s', 'now')) 
 );
 
-CREATE TABLE KeyPool(
+CREATE TABLE Keys(
     asset                       TEXT NOT NULL,
     pubkey                      TEXT NOT NULL UNIQUE,               -- hex public key
     wif                         TEXT NOT NULL UNIQUE,               -- bitcoin wif
-    address                     TEXT NOT NULL UNIQUE                -- bitcoin address
+    address                     TEXT NOT NULL UNIQUE,               -- bitcoin address
+    unixtimestamp               timestamp default (strftime('%s', 'now')) 
 );
 
 CREATE TABLE Secrets(

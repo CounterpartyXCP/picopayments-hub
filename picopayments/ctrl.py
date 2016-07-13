@@ -44,26 +44,15 @@ def create_key(asset):
     }
 
 
-def get_fund_address(asset):
-    print(json.dumps(db.get_keys(), indent=2))
-    # entries = db.get_keys(asset=asset)
-    # FIXME return key with least funds
-    # return entries[0]
-
-
-def fill_key_pool(terms_data):
-    entries = db.count_keys()
-    for asset in terms_data.keys():
-        count = entries.get(asset, 0)
-        if count < cfg.key_pool_size:
-            needed = cfg.key_pool_size - count
-            db.add_keys([create_key(asset) for i in range(needed)])
+def get_funding_address(asset):
+    key = create_key(asset)
+    db.add_keys([key])
+    return key["address"]
 
 
 def initialize():
     args = cli.parse(sys.argv[1:])  # parse args
     cfg.load(args)  # load configuration
-    terms_data = terms.read()  # make sure terms file exists
+    terms.read()  # make sure terms file exists
     db.initialize()  # create db and migrate if needed
-    fill_key_pool(terms_data)
     return args

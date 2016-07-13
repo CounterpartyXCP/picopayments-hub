@@ -27,10 +27,6 @@ counterparty_username = None  # loaded from args
 counterparty_password = None  # loaded from args
 
 
-# wallet
-key_pool_size = 8  # TODO load from args
-
-
 def load(args):
     globals()["testnet"] = args["testnet"]
 

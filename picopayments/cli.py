@@ -30,7 +30,7 @@ def parse(args):
 
     # display deposit address
     parser.add_argument(
-        '--fund', default=None, metavar="ASSET",
+        '--fund_address', default=None, metavar="ASSET",
         help="Display address, used to fund the given asset."
     )
 

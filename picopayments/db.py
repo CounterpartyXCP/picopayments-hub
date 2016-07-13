@@ -15,11 +15,15 @@ _MIGRATIONS = {
 
 _GET_USERVERSION = 'PRAGMA user_version'
 _SET_USERVERSION = 'PRAGMA user_version = {0}'
-_GET_ASSET_KEYS = "SELECT * FROM KeyPool WHERE asset = :asset"
-_GET_ALL_KEYS = "SELECT * FROM KeyPool"
-_CNT_ASSET_KEYS = "SELECT :asset, count() FROM KeyPool WHERE asset = :asset"
-_CNT_KEYS_PER_ASSET = "SELECT asset, count() FROM KeyPool GROUP BY asset"
-_ADD_KEY = "INSERT INTO KeyPool VALUES (:asset, :pubkey, :wif, :address)"
+_GET_ASSET_KEYS = "SELECT * FROM Keys WHERE asset = :asset"
+_GET_ALL_KEYS = "SELECT * FROM Keys"
+_CNT_ASSET_KEYS = "SELECT :asset, count() FROM Keys WHERE asset = :asset"
+_CNT_KEYS_PER_ASSET = "SELECT asset, count() FROM Keys GROUP BY asset"
+_ADD_KEY = """
+    INSERT INTO Keys (asset, pubkey, wif, address)
+    VALUES (:asset, :pubkey, :wif, :address)
+"""
+
 
 _connection = None  # set in initialize
 
