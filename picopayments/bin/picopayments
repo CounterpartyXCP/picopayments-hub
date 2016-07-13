@@ -14,15 +14,16 @@ from werkzeug.serving import run_simple
 
 if __name__ == "__main__":
 
-    args = ctrl.initialize()
+    args = ctrl.initialize(sys.argv[1:])
 
     # display version
     if "--version" in sys.argv:
         print(__version__)
 
     # display funding address for asset
-    if args["fund_address"] is not None:
-        print(ctrl.get_funding_address(args["fund_address"]))
+    asset = args["fund_address"]  # FIXME validate input
+    if asset is not None:
+        print(ctrl.get_funding_address(asset))
 
     # start server
     else:

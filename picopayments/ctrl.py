@@ -4,7 +4,6 @@
 
 
 import os
-import sys
 import json
 import requests
 from requests.auth import HTTPBasicAuth
@@ -23,7 +22,8 @@ def rpc_call(url, method, params, username=None, password=None):
     payload = {"method": method, "params": params, "jsonrpc": "2.0", "id": 0}
     response = requests.post(url, data=json.dumps(payload), **kwargs).json()
     if "result" not in response:
-        raise Exception("Rpc call failed! {0} -> {1}".format(payload, response))
+        raise Exception(
+            "Rpc call failed! {0} -> {1}".format(payload, response))
     return response["result"]
 
 
@@ -50,8 +50,8 @@ def get_funding_address(asset):
     return key["address"]
 
 
-def initialize():
-    args = cli.parse(sys.argv[1:])  # parse args
+def initialize(args):
+    args = cli.parse(args)  # parse args
     cfg.load(args)  # load configuration
     terms.read()  # make sure terms file exists
     db.initialize()  # create db and migrate if needed

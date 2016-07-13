@@ -4,3 +4,9 @@
 
 
 from .version import __version__  # NOQA
+from . import api  # NOQA
+from . import cfg  # NOQA
+from . import cli  # NOQA
+from . import ctrl  # NOQA
+from . import db  # NOQA
+from . import terms  # NOQA

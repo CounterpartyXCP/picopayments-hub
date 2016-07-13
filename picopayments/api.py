@@ -5,13 +5,13 @@
 
 from werkzeug.wrappers import Request, Response
 from jsonrpc import JSONRPCResponseManager, dispatcher
-from picopayments import cfg
 from picopayments import ctrl
 from picopayments import terms
 
 
 @dispatcher.add_method
 def mpc_hub_terms(assets=None):
+    # FIXME validate input
     all_trems = terms.read()
     if assets:
         for key in all_trems.keys():
@@ -22,18 +22,21 @@ def mpc_hub_terms(assets=None):
 
 @dispatcher.add_method
 def mpc_hub_clients(clients=None, assets=None):
+    # FIXME validate input
     print("mpc_hub_clients")
     return None  # TODO implement
 
 
 @dispatcher.add_method
 def mpc_hub_request(asset, pubkey, spend_secret_hash, url=None):
+    # FIXME validate input
     print("mpc_hub_request")
     return None  # TODO implement
 
 
 @dispatcher.add_method
 def mpc_hub_deposit(channel_handle, deposit_script, unused_revoke_secret_hash):
+    # FIXME validate input
     print("mpc_hub_deposit")
     return None  # TODO implement
 
@@ -41,6 +44,7 @@ def mpc_hub_deposit(channel_handle, deposit_script, unused_revoke_secret_hash):
 @dispatcher.add_method
 def mpc_hub_sync(channel_handle, unused_revoke_secret_hash,
                  send=None, commit=None, revokes=None):
+    # FIXME validate input
     print("mpc_hub_sync")
     return None  # TODO implement
 
