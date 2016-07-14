@@ -8,19 +8,18 @@ from picopayments import db
 class TestDB(unittest.TestCase):
 
     def setUp(self):
-        self.root = tempfile.mkdtemp(prefix="picopayments_")
+        self.root = tempfile.mkdtemp(prefix="picopayments_test_")
         # TODO start mock counterparty service
         ctrl.initialize(["--testnet", "--root={0}".format(self.root)])
 
     def tearDown(self):
         shutil.rmtree(self.root)
 
-    def test_new_connection(self):
-        # FIXME checks tyes and constranits
+    def test_new_connection_unique(self):
         db.new_connection({
             "asset": "asset",
 
-            # Terms
+            # terms
             "setup_ttl": "setup_ttl",
             "deposit_limit": "deposit_limit",
             "deposit_ratio": "deposit_ratio",
@@ -61,6 +60,12 @@ class TestDB(unittest.TestCase):
             "handle": "handle",
             "hub_rpc_url": "hub_rpc_url",
         })
+        # TODO check hub connection added
+        # TODO check send channel added
+        # TODO check recv channel added
+        # TODO check key added
+        # TODO check secret added
+        # TODO check terms added
 
 
 if __name__ == "__main__":

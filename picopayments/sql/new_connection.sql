@@ -1,6 +1,6 @@
 BEGIN TRANSACTION;
 
--- insert current terms if they do not already exist
+-- insert current terms if they do not the latest saved
 INSERT INTO Terms (
     asset, setup_ttl, deposit_limit, deposit_ratio,
     timeout_limit, fee_setup, fee_sync
@@ -72,7 +72,7 @@ INSERT INTO HubConnection(
             deposit_ratio = :deposit_ratio and
             timeout_limit = :timeout_limit and
             fee_setup = :fee_setup and
-            fee_sync = :fee_sync
+            fee_sync = :fee_sync  -- FIXME select newest
     ),
     :hub_rpc_url
 );

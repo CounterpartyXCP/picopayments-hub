@@ -49,9 +49,9 @@ def get_current_terms_id(asset):
     current_terms = terms.read().get(asset)
     if current_terms is None:
         raise Exception("No terms for given asset.")
-    terms_data = copy.deepcopy(current_terms)
-    terms_data["asset"] = asset
-    return db.get_terms_id(terms_data)
+    data = copy.deepcopy(current_terms)
+    data["asset"] = asset
+    return db.get_current_terms_id(data)
 
 
 def get_funding_address(asset):
@@ -64,5 +64,5 @@ def initialize(args):
     args = cli.parse(args)  # parse args
     cfg.load(args)  # load configuration
     terms.read()  # make sure terms file exists
-    db.initialize()  # create db and migrate if needed
+    db.setup()  # setup and create db if needed
     return args

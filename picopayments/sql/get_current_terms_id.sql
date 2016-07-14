@@ -1,6 +1,6 @@
 BEGIN TRANSACTION;
 
--- Insert current terms if they do not already exist.
+-- insert current terms if they do not the latest saved
 INSERT INTO Terms (
     asset, setup_ttl, deposit_limit, deposit_ratio,
     timeout_limit, fee_setup, fee_sync
@@ -19,7 +19,7 @@ WHERE NOT EXISTS(
         fee_sync = :fee_sync -- FIXME just check if newest matches
 );
 
--- Get terms id for cursor output.
+-- get terms id for cursor output
 SELECT id FROM Terms WHERE
     asset = :asset and 
     setup_ttl = :setup_ttl and
