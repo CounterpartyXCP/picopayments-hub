@@ -24,7 +24,7 @@ _ADD_KEY = """
 """
 
 _CURRENT_TERMS_ID = open("picopayments/sql/get_current_terms_id.sql").read()
-_NEW_CONNECTION = open("picopayments/sql/new_connection.sql").read()
+_ADD_HUB_CONNECTION = open("picopayments/sql/add_hub_connection.sql").read()
 
 
 _connection = None  # set in setup
@@ -121,5 +121,5 @@ def get_current_terms_id(terms_data):
     return _all(_CURRENT_TERMS_ID, terms_data)[0]["id"]
 
 
-def new_connection(data):
-    _exec(_NEW_CONNECTION, data)
+def add_hub_connection(data):
+    _exec(_ADD_HUB_CONNECTION, data)

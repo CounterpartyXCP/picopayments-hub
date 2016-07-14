@@ -29,10 +29,11 @@ def mpc_hub_clients(clients=None, assets=None):
 
 
 @dispatcher.add_method
-def mpc_hub_request(asset, pubkey, spend_secret_hash, url=None):
+def mpc_hub_request(asset, pubkey, spend_secret_hash, hub_rpc_url=None):
     # FIXME validate input
-    print("mpc_hub_request")
-    return None  # TODO implement
+    return ctrl.create_hub_connection(
+        asset, pubkey, spend_secret_hash, hub_rpc_url
+    )
 
 
 @dispatcher.add_method

@@ -16,7 +16,7 @@ class TestDB(unittest.TestCase):
         shutil.rmtree(self.root)
 
     def test_new_connection_unique(self):
-        db.new_connection({
+        db.add_hub_connection({
             "asset": "asset",
 
             # terms
@@ -41,20 +41,7 @@ class TestDB(unittest.TestCase):
             "secret_value": "secret_value",
 
             # send micropayment channel
-            "send_deposit_script": "send_deposit_script",
-            "send_cached_deposit_address": "send_cached_deposit_address",
-            "hub_pubkey": "hub_pubkey",
-            "hub_address": "hub_address",
-            "send_cached_expire_time": "send_cached_expire_time",
-            "send_cached_spend_secret_hash": "send_cached_spend_secret_hash",
-
-            # send micropayment channel
-            "recv_deposit_script": "recv_deposit_script",
-            "recv_cached_deposit_address": "recv_cached_deposit_address",
-            "hub_pubkey": "hub_pubkey",
-            "hub_address": "hub_address",
-            "recv_cached_expire_time": "recv_cached_expire_time",
-            "secret_hash": "secret_hash",
+            "send_spend_secret_hash": "send_spend_secret_hash",
 
             # connection
             "handle": "handle",

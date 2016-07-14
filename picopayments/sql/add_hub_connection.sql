@@ -28,24 +28,20 @@ INSERT INTO Secrets (hash, value) VALUES (:secret_hash, :secret_value);
 
 -- insert send micropayment channel
 INSERT INTO MicropaymentChannel (
-    deposit_script, cached_deposit_address, cached_payee_pubkey,
-    cached_payer_pubkey, cached_payee_address, cached_payer_address,
-    cached_expire_time, cached_spend_secret_hash
+    deposit_script, deposit_address, payee_pubkey, payer_pubkey,
+    payee_address, payer_address, expire_time, spend_secret_hash
 ) VALUES (
-    :send_deposit_script, :send_cached_deposit_address,
-    :client_pubkey, :hub_pubkey, :client_address, :hub_address,
-    :send_cached_expire_time, :send_cached_spend_secret_hash
+    NULL, NULL, :client_pubkey, :hub_pubkey, :client_address,
+    :hub_address, NULL, :send_spend_secret_hash
 );
 
 -- insert receive micropayment channel
 INSERT INTO MicropaymentChannel (
-    deposit_script, cached_deposit_address, cached_payee_pubkey,
-    cached_payer_pubkey, cached_payee_address, cached_payer_address,
-    cached_expire_time, cached_spend_secret_hash
+    deposit_script, deposit_address, payee_pubkey, payer_pubkey,
+    payee_address, payer_address, expire_time, spend_secret_hash
 ) VALUES (
-    :recv_deposit_script, :recv_cached_deposit_address,
-    :hub_pubkey, :client_pubkey, :hub_address, :client_address,
-    :recv_cached_expire_time, :secret_hash
+    NULL, NULL, :hub_pubkey, :client_pubkey, :hub_address,
+    :client_address, :recv_expire_time, :secret_hash
 );
 
 -- insert hub connection
@@ -54,14 +50,12 @@ INSERT INTO HubConnection(
 ) VALUES (
     :handle, :asset,
     (
-        -- created send micropayment channel
-        SELECT id FROM MicropaymentChannel WHERE 
-            deposit_script = :recv_deposit_script -- unique
+        -- created send micropayment channel (relies on unique hub_pubkey)
+        SELECT id FROM MicropaymentChannel WHERE payer_pubkey = :hub_pubkey
     ), 
     (
-        -- created receive micropayment channel
-        SELECT id FROM MicropaymentChannel WHERE 
-            deposit_script = :send_deposit_script -- unique
+        -- created receive micropayment channel (relies on unique hub_pubkey)
+        SELECT id FROM MicropaymentChannel WHERE payee_pubkey = :hub_pubkey
     ), 
     (
         -- terms at the time of the request
