@@ -3,6 +3,7 @@
 # License: MIT (see LICENSE file)
 
 
+import copy
 import os
 import json
 import requests
@@ -42,6 +43,15 @@ def create_key(asset):
         "wif": key.wif(),
         "address": key.address(),
     }
+
+
+def get_current_terms_id(asset):
+    current_terms = terms.read().get(asset)
+    if current_terms is None:
+        raise Exception("No terms for given asset.")
+    terms_data = copy.deepcopy(current_terms)
+    terms_data["asset"] = asset
+    return db.get_terms_id(terms_data)
 
 
 def get_funding_address(asset):

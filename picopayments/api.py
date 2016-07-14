@@ -7,6 +7,7 @@ from werkzeug.wrappers import Request, Response
 from jsonrpc import JSONRPCResponseManager, dispatcher
 from picopayments import ctrl
 from picopayments import terms
+# from counterpartylib.lib.micropayments import scripts
 
 
 @dispatcher.add_method

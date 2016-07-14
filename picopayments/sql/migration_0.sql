@@ -43,6 +43,7 @@ CREATE TABLE HubConnection(
     send_channel_id             INTEGER,                            -- may be null during setup
     recv_channel_id             INTEGER,                            -- may be null during setup
     terms_id                    INTEGER NOT NULL,
+    hub_rpc_url                 TEXT,                               -- if other party is a hub
 
     FOREIGN KEY(send_channel_id) REFERENCES MicropaymentChannel(id),
     FOREIGN KEY(recv_channel_id) REFERENCES MicropaymentChannel(id),

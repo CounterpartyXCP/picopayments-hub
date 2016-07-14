@@ -13,16 +13,20 @@ _MIGRATIONS = {
     0: open('picopayments/sql/migration_0.sql').read(),
 }
 
-_GET_USERVERSION = 'PRAGMA user_version'
-_SET_USERVERSION = 'PRAGMA user_version = {0}'
-_GET_ASSET_KEYS = "SELECT * FROM Keys WHERE asset = :asset"
-_GET_ALL_KEYS = "SELECT * FROM Keys"
-_CNT_ASSET_KEYS = "SELECT :asset, count() FROM Keys WHERE asset = :asset"
-_CNT_KEYS_PER_ASSET = "SELECT asset, count() FROM Keys GROUP BY asset"
+_GET_USERVERSION = "PRAGMA user_version;"
+_SET_USERVERSION = "PRAGMA user_version = {0};"
+_GET_ASSET_KEYS = "SELECT * FROM Keys WHERE asset = :asset;"
+_GET_ALL_KEYS = "SELECT * FROM Keys;"
+_CNT_ASSET_KEYS = "SELECT :asset, count() FROM Keys WHERE asset = :asset;"
+_CNT_KEYS_PER_ASSET = "SELECT asset, count() FROM Keys GROUP BY asset;"
+
 _ADD_KEY = """
     INSERT INTO Keys (asset, pubkey, wif, address)
-    VALUES (:asset, :pubkey, :wif, :address)
+        VALUES (:asset, :pubkey, :wif, :address);
 """
+
+_GET_CURRENT_TERMS_ID = open(
+    "picopayments/sql/get_current_terms_id.sql").read()
 
 
 _connection = None  # set in initialize
@@ -32,23 +36,24 @@ def _row_to_dict_factory(cursor, row):
     return {k[0]: row[i] for i, k in enumerate(cursor.getdescription())}
 
 
-def _exec(sql, args=None):
+def _exec(sql, args=None, cursor=None):
     """Execute sql"""
-    cursor = _connection.cursor()
-    return cursor.execute(sql, args)
+    cursor = cursor or _connection.cursor()
+    cursor.execute(sql, args)
+    return cursor
 
 
-def _one(sql, args=None, asdict=True):
+def _one(sql, args=None, asdict=True, cursor=None):
     """Execute sql and fetch one row."""
-    cursor = _connection.cursor()
+    cursor = cursor or _connection.cursor()
     if asdict:
         cursor.setrowtrace(_row_to_dict_factory)
     return cursor.execute(sql, args).fetchone()
 
 
-def _all(sql, args=None, asdict=True):
+def _all(sql, args=None, asdict=True, cursor=None):
     """Execute sql and fetch all rows."""
-    cursor = _connection.cursor()
+    cursor = cursor or _connection.cursor()
     if asdict:
         cursor.setrowtrace(_row_to_dict_factory)
     return cursor.execute(sql, args).fetchall()
@@ -90,3 +95,7 @@ def get_keys(asset=None):
         return _all(_GET_ASSET_KEYS, {"asset": asset})
     else:
         return _all(_GET_ALL_KEYS)
+
+
+def get_terms_id(terms_data):
+    return _one(_GET_CURRENT_TERMS_ID, terms_data)["id"]

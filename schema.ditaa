@@ -6,6 +6,7 @@
 +------| o send_channel_id (fkey, int)          |
 +------| o recv_channel_id (fkey, int)          |
 |   +--| o terms_id (fkey, int)                 |
+|   |  | o hub_rpc_url (url, str)               |
 |   |  | o timestamp (unixtime, int)            |
 |   |  +----------------------------------------+
 |   |

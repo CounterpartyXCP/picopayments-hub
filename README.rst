@@ -75,9 +75,9 @@ Optionally the entries can be limited to a set of provided clients and assets.
     }]
 
 
----------------
-mpc_hub_clients
----------------
+-------------
+mpc_hub_terms
+-------------
 
 Get current terms of the hub.
 
