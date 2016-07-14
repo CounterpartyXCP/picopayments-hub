@@ -16,7 +16,7 @@ WHERE NOT EXISTS(
         deposit_ratio = :deposit_ratio and
         timeout_limit = :timeout_limit and 
         fee_setup = :fee_setup and
-        fee_sync = :fee_sync
+        fee_sync = :fee_sync -- FIXME just check if newest matches
 );
 
 -- Get terms id for cursor output.
@@ -27,6 +27,6 @@ SELECT id FROM Terms WHERE
     deposit_ratio = :deposit_ratio and
     timeout_limit = :timeout_limit and 
     fee_setup = :fee_setup and
-    fee_sync = :fee_sync;
+    fee_sync = :fee_sync; -- FIXME limit to single newest if duplicates
 
 COMMIT;

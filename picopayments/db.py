@@ -22,11 +22,11 @@ _CNT_KEYS_PER_ASSET = "SELECT asset, count() FROM Keys GROUP BY asset;"
 
 _ADD_KEY = """
     INSERT INTO Keys (asset, pubkey, wif, address)
-        VALUES (:asset, :pubkey, :wif, :address);
+    VALUES (:asset, :pubkey, :wif, :address);
 """
 
-_GET_CURRENT_TERMS_ID = open(
-    "picopayments/sql/get_current_terms_id.sql").read()
+_CURRENT_TERMS_ID = open("picopayments/sql/get_current_terms_id.sql").read()
+_NEW_CONNECTION = open("picopayments/sql/new_connection.sql").read()
 
 
 _connection = None  # set in initialize
@@ -98,4 +98,8 @@ def get_keys(asset=None):
 
 
 def get_terms_id(terms_data):
-    return _one(_GET_CURRENT_TERMS_ID, terms_data)["id"]
+    return _one(_CURRENT_TERMS_ID, terms_data)["id"]
+
+
+def new_connection(data):
+    _exec(_NEW_CONNECTION, data)
