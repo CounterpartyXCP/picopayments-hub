@@ -7,7 +7,6 @@ from werkzeug.wrappers import Request, Response
 from jsonrpc import JSONRPCResponseManager, dispatcher
 from picopayments import ctrl
 from picopayments import terms
-# from counterpartylib.lib.micropayments import scripts
 
 
 @dispatcher.add_method
@@ -37,14 +36,14 @@ def mpc_hub_request(asset, pubkey, spend_secret_hash, hub_rpc_url=None):
 
 
 @dispatcher.add_method
-def mpc_hub_deposit(channel_handle, deposit_script, unused_revoke_secret_hash):
+def mpc_hub_deposit(handle, deposit_script, send_unused_revoke_secret_hash):
     # FIXME validate input
-    print("mpc_hub_deposit")
-    return None  # TODO implement
+    return ctrl.complete_connection(handle, deposit_script,
+                                    send_unused_revoke_secret_hash)
 
 
 @dispatcher.add_method
-def mpc_hub_sync(channel_handle, unused_revoke_secret_hash,
+def mpc_hub_sync(handle, send_unused_revoke_secret_hash,
                  send=None, commit=None, revokes=None):
     # FIXME validate input
     print("mpc_hub_sync")

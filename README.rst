@@ -116,7 +116,7 @@ Channel culled if deposit not made fast enough.
     }
 
     Response: {
-        "channel_handle": "hex",
+        "handle": "hex",
         "spend_secret_hash": "hex",
         "pubkey": "hex",
         "channel_terms": {
@@ -143,7 +143,7 @@ Channel culled if client deposit not made fast enough.
 ::
 
     Arguments: {
-        "channel_handle": "hex",
+        "handle": "hex",
         "deposit_script": "hex",
         "unused_revoke_secret_hash": "hex"
     }
@@ -161,7 +161,7 @@ mpc_hub_sync
 ::
 
     Arguments: {
-        "channel_handle": "hex",
+        "handle": "hex",
         "send": [{"pubkey": "hex", "amount": satoshis, "token": "hex"}],
         "commit": { "rawtx": "hex", "script": "hex" },
         "revokes": ["secrets"],

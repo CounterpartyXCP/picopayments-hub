@@ -17,14 +17,18 @@ _GET_ASSET_KEYS = "SELECT * FROM Keys WHERE asset = :asset;"
 _GET_ALL_KEYS = "SELECT * FROM Keys;"
 _CNT_ASSET_KEYS = "SELECT :asset, count() FROM Keys WHERE asset = :asset;"
 _CNT_KEYS_PER_ASSET = "SELECT asset, count() FROM Keys GROUP BY asset;"
+_GET_HUB_CONNECTION = "SELECT * FROM HubConnection where handle = :handle"
+_GET_MICROPAYMENT_CHANNEL = "SELECT * FROM MicropaymentChannel WHERE id = :id"
 
 _ADD_KEY = """
     INSERT INTO Keys (asset, pubkey, wif, address)
     VALUES (:asset, :pubkey, :wif, :address);
 """
 
-_ADD_HUB_CONNECTION = open("picopayments/sql/add_hub_connection.sql").read()
+_sql = lambda file_path: open(file_path).read()
 
+_ADD_HUB_CONNECTION = _sql("picopayments/sql/add_hub_connection.sql")
+_COMPLETE_HUB_CONNECTION = _sql("picopayments/sql/complete_hub_connection.sql")
 
 _connection = None  # set in setup
 
@@ -116,5 +120,17 @@ def get_keys(asset=None):
         return _all(_GET_ALL_KEYS)
 
 
+def get_hub_connection(handle):
+    return _one(_GET_HUB_CONNECTION, args={"handle": handle})
+
+
+def get_micropayment_channel(id):
+    return _one(_GET_MICROPAYMENT_CHANNEL, args={"id": id})
+
+
 def add_hub_connection(data):
     _exec(_ADD_HUB_CONNECTION, data)
+
+
+def complete_hub_connection(data):
+    _exec(_COMPLETE_HUB_CONNECTION, data)

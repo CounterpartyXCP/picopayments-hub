@@ -9,8 +9,13 @@ import json
 import requests
 from requests.auth import HTTPBasicAuth
 from pycoin.key.BIP32Node import BIP32Node
-from pycoin.serialize import b2h
+from pycoin.serialize import b2h, h2b
 from counterpartylib.lib.micropayments import util
+from counterpartylib.lib.micropayments.scripts import (
+    get_deposit_payer_pubkey, get_deposit_payee_pubkey,
+    get_deposit_expire_time, get_deposit_spend_secret_hash,
+    compile_deposit_script
+)
 from . import cli
 from . import cfg
 from . import terms
@@ -46,6 +51,14 @@ def create_key(asset):
     }
 
 
+def create_secret():
+    secret = util.b2h(os.urandom(32))
+    return {
+        "secret_value": secret,
+        "secret_hash": util.hash160hex(secret)
+    }
+
+
 def create_hub_connection(asset, client_pubkey,
                           send_spend_secret_hash, hub_rpc_url):
     netcode = "XTN" if cfg.testnet else "BTC"
@@ -67,10 +80,7 @@ def create_hub_connection(asset, client_pubkey,
                                                  netcode=netcode)
 
     # spend secret for receive channel
-    recv_spend_secret = util.b2h(os.urandom(32))
-    recv_spend_secret_hash = util.hash160hex(recv_spend_secret)
-    data["secret_value"] = recv_spend_secret
-    data["secret_hash"] = recv_spend_secret_hash
+    data.update(create_secret())
 
     # send micropayment channel
     data["send_spend_secret_hash"] = send_spend_secret_hash
@@ -84,8 +94,63 @@ def create_hub_connection(asset, client_pubkey,
     return {
         "channel_handle": channel_handle,
         "pubkey": hub_key["pubkey"],
-        "spend_secret_hash": recv_spend_secret_hash,
+        "spend_secret_hash": data["secret_hash"],
         "channel_terms": terms
+    }
+
+
+def _load_complete_connection(handle, recv_deposit_script,
+                              send_unused_revoke_secret_hash):
+
+    recv_ds_bin = h2b(recv_deposit_script)
+    client_pubkey = get_deposit_payer_pubkey(recv_ds_bin)
+    hub_pubkey = get_deposit_payee_pubkey(recv_ds_bin)
+    expire_time = get_deposit_expire_time(recv_ds_bin)
+    recv_spend_secret_hash = get_deposit_spend_secret_hash(recv_ds_bin)
+
+    hub_conn = db.get_hub_connection(handle)
+    assert(hub_conn is not None)
+
+    send = db.get_micropayment_channel(hub_conn["send_channel_id"])
+    assert(send["payer_pubkey"] == hub_pubkey)
+    assert(send["payee_pubkey"] == client_pubkey)
+    assert(not send["meta_complete"])
+
+    recv = db.get_micropayment_channel(hub_conn["recv_channel_id"])
+    assert(recv["payer_pubkey"] == client_pubkey)
+    assert(recv["payee_pubkey"] == hub_pubkey)
+    assert(not recv["meta_complete"])
+
+    return hub_conn, send, recv, expire_time
+
+
+def complete_connection(handle, recv_deposit_script,
+                        send_unused_revoke_secret_hash):
+
+    hub_conn, send, recv, expire_time = _load_complete_connection(
+        handle, recv_deposit_script, send_unused_revoke_secret_hash
+    )
+
+    send_deposit_script = b2h(compile_deposit_script(
+        send["payer_pubkey"], send["payee_pubkey"],
+        send["spend_secret_hash"], expire_time
+    ))
+
+    data = {
+        "expire_time": expire_time,
+        "recv_deposit_script": recv_deposit_script,
+        "recv_deposit_address": util.hexscript2address(recv_deposit_script),
+        "send_deposit_script": send_deposit_script,
+        "send_deposit_address": util.hexscript2address(send_deposit_script),
+        "send_unused_revoke_secret_hash": send_unused_revoke_secret_hash,
+    }
+
+    data.update(create_secret())  # revoke secret
+
+    db.complete_connection(data)
+    return {
+        "deposit_script": send_deposit_script,
+        "unused_revoke_secret_hash": data["secret_hash"]
     }
 
 
