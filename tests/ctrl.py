@@ -1,7 +1,9 @@
+import os
 import shutil
 import unittest
 import tempfile
 from pycoin.key.validate import is_address_valid
+from counterpartylib.lib.micropayments import util
 from picopayments import ctrl
 
 
@@ -16,19 +18,24 @@ class TestCtrl(unittest.TestCase):
         shutil.rmtree(self.root)
 
     def test_get_funding_address(self):
-        address = ctrl.get_funding_address("XCP")
+        address = ctrl.create_funding_address("XCP")
         self.assertTrue(is_address_valid(address, allowable_netcodes=["XTN"]))
 
-    def test_get_current_terms_id(self):
+    def test_create_hub_connection(self):
         # TODO test raises exception on no terms for asset
 
-        # insert new terms and return id
-        terms_id = ctrl.get_current_terms_id("XCP")
-        self.assertEqual(terms_id, 1)
+        asset = "XCP"
+        key = ctrl.create_key(asset)
+        secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
+        result = ctrl.create_hub_connection(asset, key["pubkey"],
+                                            secret_hash, None)
+        self.assertIsNotNone(result)
 
-        # gets existing terms
-        terms_id = ctrl.get_current_terms_id("XCP")
-        self.assertEqual(terms_id, 1)
+        # TODO test hub pubkey in db
+        # TODO test recv spend secret in db
+        # TODO test send micropayment channel created in db
+        # TODO test recv micropayment channel created in db
+        # TODO test hub connection created in db
 
 
 if __name__ == "__main__":

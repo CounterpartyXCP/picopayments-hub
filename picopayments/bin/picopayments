@@ -23,7 +23,7 @@ if __name__ == "__main__":
     # display funding address for asset
     asset = args["fund_address"]  # FIXME validate input
     if asset is not None:
-        print(ctrl.get_funding_address(asset))
+        print(ctrl.create_funding_address(asset))
 
     # start server
     else:

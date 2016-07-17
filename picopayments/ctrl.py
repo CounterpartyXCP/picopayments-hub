@@ -46,53 +46,57 @@ def create_key(asset):
     }
 
 
-def create_hub_connection(asset, pubkey, spend_secret_hash, hub_rpc_url):
+def create_hub_connection(asset, client_pubkey,
+                          send_spend_secret_hash, hub_rpc_url):
     netcode = "XTN" if cfg.testnet else "BTC"
 
     # current terms and asset
     data = {"asset": asset}
-    data.update(get_current_terms(asset))
+    terms = read_current_terms(asset)
+    data.update(terms)
 
     # new hub key
-    key = create_key(asset)
-    data["hub_wif"] = key["wif"]
-    data["hub_pubkey"] = key["pubkey"]
-    data["hub_address"] = key["address"]
+    hub_key = create_key(asset)
+    data["hub_wif"] = hub_key["wif"]
+    data["hub_pubkey"] = hub_key["pubkey"]
+    data["hub_address"] = hub_key["address"]
 
     # client key
-    data["client_pubkey"] = pubkey
-    data["client_address"] = util.pubkey2address(pubkey, netcode=netcode)
+    data["client_pubkey"] = client_pubkey
+    data["client_address"] = util.pubkey2address(client_pubkey,
+                                                 netcode=netcode)
 
     # spend secret for receive channel
-    secure_random_data = util.b2h(os.urandom(32))
-    data["secret_value"] = secure_random_data
-    data["secret_hash"] = util.hash160hex(secure_random_data)
+    recv_spend_secret = util.b2h(os.urandom(32))
+    recv_spend_secret_hash = util.hash160hex(recv_spend_secret)
+    data["secret_value"] = recv_spend_secret
+    data["secret_hash"] = recv_spend_secret_hash
 
     # send micropayment channel
-    data["send_spend_secret_hash"] = spend_secret_hash
+    data["send_spend_secret_hash"] = send_spend_secret_hash
 
     # connection
-    data["handle"] = util.b2h(os.urandom(32))
+    channel_handle = util.b2h(os.urandom(32))
+    data["handle"] = channel_handle
     data["hub_rpc_url"] = hub_rpc_url
 
     db.add_hub_connection(data)
+    return {
+        "channel_handle": channel_handle,
+        "pubkey": hub_key["pubkey"],
+        "spend_secret_hash": recv_spend_secret_hash,
+        "channel_terms": terms
+    }
 
 
-def get_current_terms(asset):
+def read_current_terms(asset):
     current_terms = terms.read().get(asset)
     if current_terms is None:
-        raise Exception("No terms for given asset.")
+        raise Exception("No terms for given asset: {0}".format(asset))
     return current_terms
 
 
-def get_current_terms_id(asset):
-    current_terms = get_current_terms(asset)
-    data = copy.deepcopy(current_terms)
-    data["asset"] = asset
-    return db.get_current_terms_id(data)
-
-
-def get_funding_address(asset):
+def create_funding_address(asset):
     key = create_key(asset)
     db.add_keys([key])
     return key["address"]

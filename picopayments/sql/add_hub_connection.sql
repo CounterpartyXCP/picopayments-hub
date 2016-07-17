@@ -10,11 +10,11 @@ SELECT
     :timeout_limit, :fee_setup, :fee_sync
 WHERE NOT EXISTS(
     SELECT id FROM Terms WHERE
-        asset = :asset and 
+        asset = :asset and
         setup_ttl = :setup_ttl and
-        deposit_limit = :deposit_limit and 
+        deposit_limit = :deposit_limit and
         deposit_ratio = :deposit_ratio and
-        timeout_limit = :timeout_limit and 
+        timeout_limit = :timeout_limit and
         fee_setup = :fee_setup and
         fee_sync = :fee_sync -- FIXME just check if newest matches
 );
@@ -52,11 +52,11 @@ INSERT INTO HubConnection(
     (
         -- created send micropayment channel (relies on unique hub_pubkey)
         SELECT id FROM MicropaymentChannel WHERE payer_pubkey = :hub_pubkey
-    ), 
+    ),
     (
         -- created receive micropayment channel (relies on unique hub_pubkey)
         SELECT id FROM MicropaymentChannel WHERE payee_pubkey = :hub_pubkey
-    ), 
+    ),
     (
         -- terms at the time of the request
         SELECT id FROM Terms WHERE

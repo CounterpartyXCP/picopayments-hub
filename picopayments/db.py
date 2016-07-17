@@ -23,7 +23,6 @@ _ADD_KEY = """
     VALUES (:asset, :pubkey, :wif, :address);
 """
 
-_CURRENT_TERMS_ID = open("picopayments/sql/get_current_terms_id.sql").read()
 _ADD_HUB_CONNECTION = open("picopayments/sql/add_hub_connection.sql").read()
 
 
@@ -115,10 +114,6 @@ def get_keys(asset=None):
         return _all(_GET_ASSET_KEYS, {"asset": asset})
     else:
         return _all(_GET_ALL_KEYS)
-
-
-def get_current_terms_id(terms_data):
-    return _all(_CURRENT_TERMS_ID, terms_data)[0]["id"]
 
 
 def add_hub_connection(data):
