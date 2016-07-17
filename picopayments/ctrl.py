@@ -86,13 +86,13 @@ def create_hub_connection(asset, client_pubkey,
     data["send_spend_secret_hash"] = send_spend_secret_hash
 
     # connection
-    channel_handle = util.b2h(os.urandom(32))
-    data["handle"] = channel_handle
+    handle = util.b2h(os.urandom(32))
+    data["handle"] = handle
     data["hub_rpc_url"] = hub_rpc_url
 
     db.add_hub_connection(data)
     return {
-        "channel_handle": channel_handle,
+        "handle": handle,
         "pubkey": hub_key["pubkey"],
         "spend_secret_hash": data["secret_hash"],
         "channel_terms": terms
@@ -136,18 +136,25 @@ def complete_connection(handle, recv_deposit_script,
         send["spend_secret_hash"], expire_time
     ))
 
+    netcode = "XTN" if cfg.testnet else "BTC"
     data = {
         "expire_time": expire_time,
+        "recv_channel_id": hub_conn["recv_channel_id"],
         "recv_deposit_script": recv_deposit_script,
-        "recv_deposit_address": util.hexscript2address(recv_deposit_script),
+        "recv_deposit_address": util.script2address(
+            h2b(recv_deposit_script), netcode=netcode
+        ),
+        "send_channel_id": hub_conn["send_channel_id"],
         "send_deposit_script": send_deposit_script,
-        "send_deposit_address": util.hexscript2address(send_deposit_script),
+        "send_deposit_address": util.script2address(
+            h2b(send_deposit_script), netcode=netcode
+        ),
         "send_unused_revoke_secret_hash": send_unused_revoke_secret_hash,
     }
 
     data.update(create_secret())  # revoke secret
 
-    db.complete_connection(data)
+    db.complete_hub_connection(data)
     return {
         "deposit_script": send_deposit_script,
         "unused_revoke_secret_hash": data["secret_hash"]
