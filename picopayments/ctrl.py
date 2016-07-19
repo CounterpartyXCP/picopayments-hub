@@ -3,7 +3,6 @@
 # License: MIT (see LICENSE file)
 
 
-import copy
 import os
 import json
 import requests
@@ -13,8 +12,7 @@ from pycoin.serialize import b2h, h2b
 from counterpartylib.lib.micropayments import util
 from counterpartylib.lib.micropayments.scripts import (
     get_deposit_payer_pubkey, get_deposit_payee_pubkey,
-    get_deposit_expire_time, get_deposit_spend_secret_hash,
-    compile_deposit_script
+    get_deposit_expire_time, compile_deposit_script
 )
 from . import cli
 from . import cfg
@@ -99,14 +97,12 @@ def create_hub_connection(asset, client_pubkey,
     }
 
 
-def _load_complete_connection(handle, recv_deposit_script,
-                              send_unused_revoke_secret_hash):
+def _load_complete_connection(handle, recv_deposit_script):
 
     recv_ds_bin = h2b(recv_deposit_script)
     client_pubkey = get_deposit_payer_pubkey(recv_ds_bin)
     hub_pubkey = get_deposit_payee_pubkey(recv_ds_bin)
     expire_time = get_deposit_expire_time(recv_ds_bin)
-    recv_spend_secret_hash = get_deposit_spend_secret_hash(recv_ds_bin)
 
     hub_conn = db.get_hub_connection(handle)
     assert(hub_conn is not None)
@@ -124,11 +120,10 @@ def _load_complete_connection(handle, recv_deposit_script,
     return hub_conn, send, recv, expire_time
 
 
-def complete_connection(handle, recv_deposit_script,
-                        send_unused_revoke_secret_hash):
+def complete_connection(handle, recv_deposit_script, next_revoke_secret_hash):
 
     hub_conn, send, recv, expire_time = _load_complete_connection(
-        handle, recv_deposit_script, send_unused_revoke_secret_hash
+        handle, recv_deposit_script
     )
 
     send_deposit_script = b2h(compile_deposit_script(
@@ -138,6 +133,7 @@ def complete_connection(handle, recv_deposit_script,
 
     netcode = "XTN" if cfg.testnet else "BTC"
     data = {
+        "handle": handle,
         "expire_time": expire_time,
         "recv_channel_id": hub_conn["recv_channel_id"],
         "recv_deposit_script": recv_deposit_script,
@@ -149,7 +145,7 @@ def complete_connection(handle, recv_deposit_script,
         "send_deposit_address": util.script2address(
             h2b(send_deposit_script), netcode=netcode
         ),
-        "send_unused_revoke_secret_hash": send_unused_revoke_secret_hash,
+        "next_revoke_secret_hash": next_revoke_secret_hash,
     }
 
     data.update(create_secret())  # revoke secret
@@ -157,7 +153,7 @@ def complete_connection(handle, recv_deposit_script,
     db.complete_hub_connection(data)
     return {
         "deposit_script": send_deposit_script,
-        "unused_revoke_secret_hash": data["secret_hash"]
+        "next_revoke_secret_hash": data["secret_hash"]
     }
 
 
@@ -166,6 +162,24 @@ def read_current_terms(asset):
     if current_terms is None:
         raise Exception("No terms for given asset: {0}".format(asset))
     return current_terms
+
+
+def load_recv_channel_state(handle):
+    hub_connection = db.get_hub_connection(handle)
+    recv_channel_id = hub_connection["recv_channel_id"]
+    recv_channel = db.get_micropayment_channel(recv_channel_id)
+
+    state = {}
+    state["asset"] = hub_connection["asset"]
+    state["deposit_script"] = recv_channel["deposit_script"]
+    state["commits_requested"] = db.get_commits_requested(recv_channel_id)
+    state["commits_active"] = db.get_commits_active(recv_channel_id)
+    state["commits_revoked"] = db.get_commits_active(recv_channel_id)
+    return state
+
+
+def save_send_channel_state(handle):
+    pass  # TODO implement
 
 
 def create_funding_address(asset):

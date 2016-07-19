@@ -19,13 +19,25 @@ _CNT_ASSET_KEYS = "SELECT :asset, count() FROM Keys WHERE asset = :asset;"
 _CNT_KEYS_PER_ASSET = "SELECT asset, count() FROM Keys GROUP BY asset;"
 _GET_HUB_CONNECTION = "SELECT * FROM HubConnection where handle = :handle"
 _GET_MICROPAYMENT_CHANNEL = "SELECT * FROM MicropaymentChannel WHERE id = :id"
+_HANDLE_EXISTS = "SELECT EXISTS(SELECT * FROM HubConnection WHERE handle = ?);"
+
+_GET_COMMITS_REQUESTED = """
+    SELECT * FROM CommitRequested WHERE channel_id = :channel_id;
+"""
+
+_GET_COMMITS_ACTIVE = """
+    SELECT * FROM CommitActive WHERE channel_id = :channel_id;
+"""
 
 _ADD_KEY = """
     INSERT INTO Keys (asset, pubkey, wif, address)
     VALUES (:asset, :pubkey, :wif, :address);
 """
 
-_sql = lambda file_path: open(file_path).read()
+
+def _sql(file_path):
+    return open(file_path).read()
+
 
 _ADD_HUB_CONNECTION = _sql("picopayments/sql/add_hub_connection.sql")
 _COMPLETE_HUB_CONNECTION = _sql("picopayments/sql/complete_hub_connection.sql")
@@ -128,9 +140,26 @@ def get_micropayment_channel(id):
     return _one(_GET_MICROPAYMENT_CHANNEL, args={"id": id})
 
 
+def get_commits_requested(channel_id):
+    entries = _all(_GET_COMMITS_REQUESTED, args={"channel_id": channel_id})
+    return [entry["revoke_secret_hash"] for entry in entries]
+
+
+def get_commits_active(channel_id):
+    entries = _all(_GET_COMMITS_ACTIVE, args={"channel_id": channel_id})
+    return [{"rawtx": e["rawtx"], "script": e["script"]} for e in entries]
+
+
 def add_hub_connection(data):
     _exec(_ADD_HUB_CONNECTION, data)
 
 
 def complete_hub_connection(data):
     _exec(_COMPLETE_HUB_CONNECTION, data)
+
+
+def handles_exist(handles):
+    args = [(handle,) for handle in handles]
+    cursor = _connection.cursor()
+    result = cursor.executemany(_HANDLE_EXISTS, args).fetchall()
+    return all([r[0] for r in result])

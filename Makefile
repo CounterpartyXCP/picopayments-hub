@@ -1,5 +1,5 @@
 PY_VERSION := 3
-WHEEL_DIR := /tmp/wheelhouse
+WHEEL_DIR := $(HOME)/tmp/wheelhouse
 PIP := env/bin/pip
 PY := env/bin/python
 PEP8 := env/bin/pep8
@@ -45,6 +45,10 @@ clean:
 virtualenv: clean
 	virtualenv -p /usr/bin/python$(PY_VERSION) env
 	$(PIP) install wheel
+
+
+fetch_wheel: virtualenv
+	$(PIP) wheel --find-links=$(WHEEL_DIR) --wheel-dir=$(WHEEL_DIR) $(PACKAGE)
 
 
 wheels: virtualenv

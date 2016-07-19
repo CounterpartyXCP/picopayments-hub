@@ -10,3 +10,4 @@ from . import cli  # NOQA
 from . import ctrl  # NOQA
 from . import db  # NOQA
 from . import terms  # NOQA
+from . import validate  # NOQA

@@ -7,6 +7,7 @@ from werkzeug.wrappers import Request, Response
 from jsonrpc import JSONRPCResponseManager, dispatcher
 from picopayments import ctrl
 from picopayments import terms
+from picopayments import validate
 
 
 @dispatcher.add_method
@@ -14,7 +15,7 @@ def mpc_hub_terms(assets=None):
     # FIXME validate input
     all_trems = terms.read()
     if assets:
-        for key in all_trems.keys():
+        for key in list(all_trems.keys())[:]:
             if key not in assets:
                 all_trems.pop(key)
     return all_trems
@@ -36,22 +37,30 @@ def mpc_hub_request(asset, pubkey, spend_secret_hash, hub_rpc_url=None):
 
 
 @dispatcher.add_method
-def mpc_hub_deposit(handle, deposit_script, send_unused_revoke_secret_hash):
+def mpc_hub_deposit(handle, deposit_script, next_revoke_secret_hash):
     # FIXME validate input
     return ctrl.complete_connection(handle, deposit_script,
-                                    send_unused_revoke_secret_hash)
+                                    next_revoke_secret_hash)
 
 
 @dispatcher.add_method
-def mpc_hub_sync(handle, send_unused_revoke_secret_hash,
-                 send=None, commit=None, revokes=None):
-    # FIXME validate input
-    print("mpc_hub_sync")
+def mpc_hub_sync(handle, next_revoke_secret_hash,
+                 sends=None, commit=None, revokes=None):
+    validate.sync_input(handle, next_revoke_secret_hash,
+                        sends, commit, revokes)
+
+    # recv_state = ctrl.load_recv_channel_state(handle)
+
+    # TODO add commit to receive channel
+    # TODO process revokes for receive channel
+    # TODO save recv channel
+
+    # TODO add unused secret
+    # TODO process payments for channel
     return None  # TODO implement
 
 
 def _add_counterparty_call(method):
-
     def counterparty_method(**kwargs):
         return ctrl.counterparty_call(method, kwargs)
     dispatcher[method] = counterparty_method

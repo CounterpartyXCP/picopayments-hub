@@ -1,9 +1,12 @@
 six >= 1.10.0
-future >= 0.15.2
 json-rpc >= 1.10.3
 werkzeug >= 0.11.10
-pycoin >= 0.70
 apsw == 3.9.2-r1
-counterparty-lib
-
-pycrypto==2.6.1
+pycrypto >= 2.6.1
+python-dateutil >= 2.5.3
+pytest == 2.9.1
+pytest-cov==2.2.1
+appdirs==1.4.0
+cachetools==1.1.6
+Flask==0.11
+counterparty-lib==9.9.9

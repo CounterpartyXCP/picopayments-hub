@@ -153,6 +153,26 @@ Channel culled if client deposit not made fast enough.
         "unused_revoke_secret_hash": "hex"
     }
 
+--------------
+mpc_hub_status
+--------------
+
+::
+
+    Arguments: {
+        "handle": "hex",
+        "pending": bool,
+    }
+
+    Response: {
+        "sends": [{
+            "handle": "hex",
+            "amount": satoshis,
+            "token": "hex",
+            "pending": bool
+        }],
+        "balance": satoshis
+    }
 
 ------------
 mpc_hub_sync
@@ -162,19 +182,19 @@ mpc_hub_sync
 
     Arguments: {
         "handle": "hex",
-        "send": [{"pubkey": "hex", "amount": satoshis, "token": "hex"}],
+        "sends": [{"handle": "hex", "amount": satoshis, "token": "hex"}],
         "commit": { "rawtx": "hex", "script": "hex" },
         "revokes": ["secrets"],
         "unused_revoke_secret_hash": "hex"
     }
 
     Response: {
-        "receive": [{"pubkey": "hex", "amount": satoshis, "token": "hex"}],
-        "commit": { "rawtx": "hex", "script": "hex" },
+        "receive": [{"handle": "hex", "amount": satoshis, "token": "hex"}],
+        "commit": {"rawtx": "hex", "script": "hex"},
+        "failed": ["token"],
         "revokes": ["hex"],
         "unused_revoke_secret_hash": "hex"
     }
-
 
 =========
 DB Schema

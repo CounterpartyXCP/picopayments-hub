@@ -35,7 +35,6 @@ CREATE TABLE MicropaymentChannel(
     payer_address               TEXT NOT NULL,          -- bitcoin address
     expire_time                 INTEGER,                -- blocks
     spend_secret_hash           TEXT NOT NULL,          -- hex
-    unused_revoke_secret_hash   TEXT DEFAULT NULL,      -- hex (send only)
     meta_complete               BOOLEAN NOT NULL DEFAULT 0
 );
 
@@ -46,6 +45,7 @@ CREATE TABLE HubConnection(
     recv_channel_id             INTEGER NOT NULL,
     terms_id                    INTEGER NOT NULL,
     hub_rpc_url                 TEXT,                   -- client is a hub
+    next_revoke_secret_hash     TEXT DEFAULT NULL,      -- hex (for send)
 
     FOREIGN KEY(send_channel_id) REFERENCES MicropaymentChannel(id),
     FOREIGN KEY(recv_channel_id) REFERENCES MicropaymentChannel(id),
@@ -78,6 +78,15 @@ CREATE TABLE CommitRevoked(
     delay_time                  INTEGER NOT NULL,       -- blocks
 
     FOREIGN KEY(channel_id) REFERENCES MicropaymentChannel(id) 
+);
+
+CREATE TABLE Payment(
+    asset                       TEXT NOT NULL,
+    payer_handle                TEXT NOT NULL,          -- hex
+    payee_handle                TEXT NOT NULL,          -- hex
+    token                       TEXT NOT NULL,          -- hex
+    pending                     BOOLEAN NOT NULL,
+    unixtimestamp               timestamp default (strftime('%s', 'now')) 
 );
 
 COMMIT;

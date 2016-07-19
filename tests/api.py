@@ -19,7 +19,52 @@ class TestCtrl(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.root)
 
-    def test_create_hub_connection(self):
+    def test_mpc_hub_terms(self):
+        # TODO test input validation
+
+        # test gets all
+        terms = api.mpc_hub_terms()
+        self.assertEqual(terms, {
+            "BTC": {
+                "deposit_ratio": 1.0,
+                "fee_setup": 10,
+                "timeout_limit": 0,
+                "fee_sync": 1,
+                "setup_ttl": 2,
+                "deposit_limit": 0
+            },
+            "XCP": {
+                "deposit_ratio": 1.0,
+                "fee_setup": 10,
+                "timeout_limit": 0,
+                "fee_sync": 1,
+                "setup_ttl": 2,
+                "deposit_limit": 0
+            },
+            "A14456548018133352000": {
+                "deposit_ratio": 1.0,
+                "fee_setup": 10,
+                "timeout_limit": 0,
+                "fee_sync": 1,
+                "setup_ttl": 2,
+                "deposit_limit": 0
+            }
+        })
+
+        # test limits to asset
+        terms = api.mpc_hub_terms("XCP")
+        self.assertEqual(terms, {
+            "XCP": {
+                "deposit_ratio": 1.0,
+                "fee_setup": 10,
+                "timeout_limit": 0,
+                "fee_sync": 1,
+                "setup_ttl": 2,
+                "deposit_limit": 0
+            }
+        })
+
+    def test_mpc_hub_request(self):
         # TODO test raises exception on no terms for asset
         # TODO test input validation
 
@@ -36,7 +81,7 @@ class TestCtrl(unittest.TestCase):
         # TODO test recv micropayment channel created in db
         # TODO test hub connection created in db
 
-    def test_complete_hub_connection(self):
+    def test_mpc_hub_deposit(self):
 
         asset = "XCP"
         client_key = ctrl.create_key(asset)
