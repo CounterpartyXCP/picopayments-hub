@@ -1,5 +1,3 @@
-BEGIN TRANSACTION;
-
 -- insert current terms if they do not the latest saved
 INSERT INTO Terms (
     asset, setup_ttl, deposit_limit, deposit_ratio,
@@ -70,5 +68,3 @@ INSERT INTO HubConnection(
     ),
     :hub_rpc_url
 );
-
-COMMIT;

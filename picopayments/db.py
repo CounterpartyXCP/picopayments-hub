@@ -8,102 +8,32 @@ import apsw
 from . import cfg
 
 
+def _sql(name):
+    return open('picopayments/sql/{0}.sql'.format(name)).read()
+
+
 # old version -> migrate sql
 _MIGRATIONS = {
-    0: open('picopayments/sql/migration_0.sql').read(),
+    0: _sql("migration_0"),
 }
-
-_ASSET_KEYS = "SELECT * FROM Keys WHERE asset = :asset;"
-_ALL_KEYS = "SELECT * FROM Keys;"
-_CNT_ASSET_KEYS = "SELECT :asset, count() FROM Keys WHERE asset = :asset;"
-_CNT_KEYS_PER_ASSET = "SELECT asset, count() FROM Keys GROUP BY asset;"
 _HUB_CONNECTION = "SELECT * FROM HubConnection where handle = :handle"
 _MICROPAYMENT_CHANNEL = "SELECT * FROM MicropaymentChannel WHERE id = :id"
 _HANDLE_EXISTS = "SELECT EXISTS(SELECT * FROM HubConnection WHERE handle = ?);"
-
-
-_ADD_REVOKE_SECRET = """
-    INSERT INTO CommitRequested (channel_id, revoke_secret_hash)
-    VALUES (:channel_id, :secret_hash);
-    INSERT INTO Secrets (hash, value) VALUES (:secret_hash, :secret_value);
-"""
-
-_SET_NEXT_REVOKE_SECRET_HASH = """
-    UPDATE HubConnection SET
-        next_revoke_secret_hash = :next_revoke_secret_hash
-    WHERE
-        handle = :handle;
-"""
-
-_UNNOTIFIED_PAYMENTS = """
-    SELECT (id, payer_handle, payee_handle, amount, token) FROM Payment
-    WHERE processed AND NOT(payee_notified) AND payee_handle = :payee_handle;
-"""
-
-_COMMITS_REQUESTED = """
-    SELECT * FROM CommitRequested WHERE channel_id = :channel_id;
-"""
-
-_COMMITS_ACTIVE = """
-    SELECT * FROM CommitActive WHERE channel_id = :channel_id;
-"""
-
-_COMMITS_REVOKED = """
-    SELECT * FROM CommitRevoked WHERE channel_id = :channel_id;
-"""
-
-_ADD_KEY = """
-    INSERT INTO Keys (asset, pubkey, wif, address)
-    VALUES (:asset, :pubkey, :wif, :address);
-"""
-
-_RM_COMMITS = """
-    DELETE FROM CommitRequested WHERE channel_id = :channel_id;
-    DELETE FROM CommitActive WHERE channel_id = :channel_id;
-    DELETE FROM CommitRevoked WHERE channel_id = :channel_id;
-"""
-
-_ADD_COMMIT_REQUESTED = """
-    INSERT INTO CommitRequested (channel_id, revoke_secret_hash)
-    VALUES (:channel_id, :revoke_secret_hash);
-"""
-
-_ADD_COMMIT_ACTIVE = """
-    INSERT INTO CommitActive (
-        channel_id, rawtx, script, commit_address,
-        delay_time, revoke_secret_hash
-    ) VALUES (
-        :channel_id, :rawtx, :script, :commit_address,
-        :delay_time, :revoke_secret_hash
-    );
-"""
-
-_ADD_COMMIT_REVOKED = """
-    INSERT INTO CommitRevoked (
-        channel_id, script, revoke_secret, commit_address, delay_time
-    ) VALUES (
-        :channel_id, :script, :revoke_secret, :commit_address, :delay_time
-    );
-"""
-
-_ADD_PAYMENT = """
-    INSERT INTO Payment(
-        amount, payer_handle, payee_handle, token
-    ) VALUES (
-        :amount, :payer_handle, :payee_handle, :token
-    );
-"""
-
+_UNNOTIFIED_PAYMENTS = _sql("unnotified_payments")
+_COMMITS_REQUESTED = _sql("commits_requested")
+_COMMITS_ACTIVE = _sql("commits_active")
+_COMMITS_REVOKED = _sql("commits_revoked")
+_ADD_HUB_CONNECTION = _sql("add_hub_connection")
+_ADD_REVOKE_SECRET = _sql("add_revoke_secret")
+_ADD_KEY = _sql("add_key")
+_ADD_PAYMENT = _sql("add_payment")
+_ADD_COMMIT_REQUESTED = _sql("add_commit_requested")
+_ADD_COMMIT_ACTIVE = _sql("add_commit_active")
+_ADD_COMMIT_REVOKED = _sql("add_commit_revoked")
+_RM_COMMITS = _sql("rm_commits")
+_COMPLETE_HUB_CHANNELS = _sql("complete_hub_channels")
 _SET_PAYMENT_NOTIFIED = "UPDATE Payment SET payee_notified = 1 WHERE id = :id;"
-
-
-_ADD_HUB_CONNECTION = (
-    open("picopayments/sql/add_hub_connection.sql").read()
-)
-
-_COMPLETE_HUB_CONNECTION = (
-    open("picopayments/sql/complete_hub_connection.sql").read()
-)
+_SET_NEXT_REVOKE_SECRET_HASH = _sql("set_next_revoke_secret_hash")
 
 
 _connection = None  # set in setup
@@ -179,8 +109,8 @@ def setup():
         _exec("PRAGMA user_version = {0};".format(db_version), cursor=cursor)
 
 
-def add_keys(keys):
-    cursor = get_cursor()
+def add_keys(keys, cursor=None):
+    cursor = cursor or get_cursor()
     cursor.execute("BEGIN TRANSACTION")
     cursor.executemany(_ADD_KEY, keys)
     cursor.execute("COMMIT")
@@ -216,11 +146,24 @@ def commits_revoked(channel_id, cursor=None):
 
 
 def add_hub_connection(data, cursor=None):
+    cursor = cursor or get_cursor()
+    cursor.execute("BEGIN TRANSACTION")
     _exec(_ADD_HUB_CONNECTION, data, cursor=cursor)
+    cursor.execute("COMMIT")
 
 
 def complete_hub_connection(data, cursor=None):
-    _exec(_COMPLETE_HUB_CONNECTION, data, cursor=cursor)
+    cursor = cursor or get_cursor()
+    cursor.execute("BEGIN TRANSACTION")
+    _exec(_SET_NEXT_REVOKE_SECRET_HASH, data, cursor=cursor)
+    _exec(_COMPLETE_HUB_CHANNELS, data, cursor=cursor)
+    add_revoke_secret_args = {
+        "secret_hash": data["secret_hash"],
+        "secret_value": data["secret_value"],
+        "channel_id": data["recv_channel_id"],
+    }
+    _exec(_ADD_REVOKE_SECRET, args=add_revoke_secret_args, cursor=cursor)
+    cursor.execute("COMMIT")
 
 
 def handles_exist(handles, cursor=None):
