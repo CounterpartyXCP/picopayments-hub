@@ -1,10 +1,13 @@
 BEGIN TRANSACTION;
 
+-- FIXME use _SET_NEXT_REVOKE_SECRET_HASH
 -- update hub connection
 UPDATE HubConnection SET
     next_revoke_secret_hash = :next_revoke_secret_hash
 WHERE
     handle = :handle;
+
+
 
 -- update send channel
 UPDATE MicropaymentChannel SET 
@@ -23,6 +26,9 @@ UPDATE MicropaymentChannel SET
     meta_complete = 1
 WHERE 
     id = :recv_channel_id;
+
+
+-- FIXME use _ADD_REVOKE_SECRET
 
 -- add revoke secret hash to commits requested (emulate mpc_request_commit)
 INSERT INTO CommitRequested (channel_id, revoke_secret_hash)

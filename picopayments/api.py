@@ -6,6 +6,7 @@
 from werkzeug.wrappers import Request, Response
 from jsonrpc import JSONRPCResponseManager, dispatcher
 from picopayments import ctrl
+from picopayments import db
 from picopayments import terms
 from picopayments import validate
 
@@ -48,16 +49,8 @@ def mpc_hub_sync(handle, next_revoke_secret_hash,
                  sends=None, commit=None, revokes=None):
     validate.sync_input(handle, next_revoke_secret_hash,
                         sends, commit, revokes)
-
-    # recv_state = ctrl.load_recv_channel_state(handle)
-
-    # TODO add commit to receive channel
-    # TODO process revokes for receive channel
-    # TODO save recv channel
-
-    # TODO add unused secret
-    # TODO process payments for channel
-    return None  # TODO implement
+    return ctrl.sync_hub_connection(handle, next_revoke_secret_hash,
+                                    sends, commit, revokes)
 
 
 def _add_counterparty_call(method):

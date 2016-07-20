@@ -145,12 +145,12 @@ Channel culled if client deposit not made fast enough.
     Arguments: {
         "handle": "hex",
         "deposit_script": "hex",
-        "unused_revoke_secret_hash": "hex"
+        "next_revoke_secret_hash": "hex"
     }
 
     Response: {
         "deposit_script": "hex",
-        "unused_revoke_secret_hash": "hex"
+        "next_revoke_secret_hash": "hex"
     }
 
 --------------
@@ -182,18 +182,23 @@ mpc_hub_sync
 
     Arguments: {
         "handle": "hex",
-        "sends": [{"handle": "hex", "amount": satoshis, "token": "hex"}],
+        "sends": [{
+            "payer_handle": "hex", "payee_handle": "hex", 
+            "amount": satoshis, "token": "hex"
+        }],
         "commit": { "rawtx": "hex", "script": "hex" },
         "revokes": ["secrets"],
-        "unused_revoke_secret_hash": "hex"
+        "next_revoke_secret_hash": "hex"
     }
 
     Response: {
-        "receive": [{"handle": "hex", "amount": satoshis, "token": "hex"}],
+        "receive": [{
+            "payer_handle": "hex", "payee_handle": "hex", 
+            "amount": satoshis, "token": "hex"
+        }],
         "commit": {"rawtx": "hex", "script": "hex"},
-        "failed": ["token"],
         "revokes": ["hex"],
-        "unused_revoke_secret_hash": "hex"
+        "next_revoke_secret_hash": "hex"
     }
 
 =========

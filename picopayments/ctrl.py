@@ -4,6 +4,7 @@
 
 
 import os
+import copy
 import json
 import requests
 from requests.auth import HTTPBasicAuth
@@ -104,15 +105,15 @@ def _load_complete_connection(handle, recv_deposit_script):
     hub_pubkey = get_deposit_payee_pubkey(recv_ds_bin)
     expire_time = get_deposit_expire_time(recv_ds_bin)
 
-    hub_conn = db.get_hub_connection(handle)
+    hub_conn = db.hub_connection(handle)
     assert(hub_conn is not None)
 
-    send = db.get_micropayment_channel(hub_conn["send_channel_id"])
+    send = db.micropayment_channel(hub_conn["send_channel_id"])
     assert(send["payer_pubkey"] == hub_pubkey)
     assert(send["payee_pubkey"] == client_pubkey)
     assert(not send["meta_complete"])
 
-    recv = db.get_micropayment_channel(hub_conn["recv_channel_id"])
+    recv = db.micropayment_channel(hub_conn["recv_channel_id"])
     assert(recv["payer_pubkey"] == client_pubkey)
     assert(recv["payee_pubkey"] == hub_pubkey)
     assert(not recv["meta_complete"])
@@ -164,24 +165,6 @@ def read_current_terms(asset):
     return current_terms
 
 
-def load_recv_channel_state(handle):
-    hub_connection = db.get_hub_connection(handle)
-    recv_channel_id = hub_connection["recv_channel_id"]
-    recv_channel = db.get_micropayment_channel(recv_channel_id)
-
-    state = {}
-    state["asset"] = hub_connection["asset"]
-    state["deposit_script"] = recv_channel["deposit_script"]
-    state["commits_requested"] = db.get_commits_requested(recv_channel_id)
-    state["commits_active"] = db.get_commits_active(recv_channel_id)
-    state["commits_revoked"] = db.get_commits_active(recv_channel_id)
-    return state
-
-
-def save_send_channel_state(handle):
-    pass  # TODO implement
-
-
 def create_funding_address(asset):
     key = create_key(asset)
     db.add_keys([key])
@@ -194,3 +177,93 @@ def initialize(args):
     terms.read()  # make sure terms file exists
     db.setup()  # setup and create db if needed
     return args
+
+
+def load_channel_state(channel_id, asset, cursor=None):
+    channel = db.micropayment_channel(channel_id, cursor=cursor)
+    state = {}
+    state["asset"] = asset
+    state["deposit_script"] = channel["deposit_script"]
+    state["commits_requested"] = db.commits_requested(
+        channel_id, cursor=cursor)
+    state["commits_active"] = db.commits_active(channel_id, cursor=cursor)
+    state["commits_revoked"] = db.commits_revoked(channel_id, cursor=cursor)
+    return state
+
+
+def save_channel_state(channel_id, state, cursor=None):
+    # TODO reformat data
+    commits_requested = []
+    commits_active = []
+    commits_revoked = []
+    db.set_channel_state(channel_id, commits_requested, commits_active,
+                         commits_revoked, cursor=cursor)
+
+
+def update_channel_state(state, commit, revokes):
+    if commit:
+        state = counterparty_call("mpc_add_commit", {
+            "state": state,
+            "commit_rawtx": commit["rawtx"],
+            "commit_script": commit["script"]
+        })
+    if revokes:
+        state = counterparty_call("mpc_revoke_all", {
+            "state": state, "secrets": revokes
+        })
+    return state
+
+
+def process_payments(handle):
+    # TODO implement
+    send_commit = None
+    send_revokes = []
+    return send_commit, send_revokes
+
+
+def sync_hub_connection(handle, next_revoke_secret_hash,
+                        sends, commit, revokes):
+
+    cursor = db.get_cursor()
+
+    # load receive channel and update state
+    hub_connection = db.hub_connection(handle, cursor=cursor)
+    asset = hub_connection["asset"]
+    recv_id = hub_connection["recv_channel_id"]
+    recv_state = load_channel_state(recv_id, asset, cursor=cursor)
+    before_recv_state = copy.deepcopy(recv_state)
+    recv_state = update_channel_state(recv_state, commit, revokes)
+
+    # save sync input
+    cursor.execute("BEGIN TRANSACTION;")
+    if before_recv_state != recv_state:
+        save_channel_state(recv_id, recv_state, cursor=cursor)
+    db.set_next_revoke_secret_hash(handle, next_revoke_secret_hash)
+    db.add_payments(sends, cursor=cursor)
+    cursor.execute("COMMIT;")
+
+    # process payments
+    send_commit, send_revokes = process_payments(handle)
+
+    # load payments not received and mark as received
+    receive_payments = db.unnotified_payments(handle)
+
+    cursor.execute("BEGIN TRANSACTION;")
+
+    # mark as received
+    payment_ids = [p.pop("id") for p in receive_payments]
+    db.set_payments_notified(payment_ids, cursor=cursor)
+
+    # create and save next spend secret
+    data = create_secret()
+    db.add_revoke_secret(recv_id, data["secret_hash"],
+                         data["secret_value"], cursor=cursor)
+
+    cursor.execute("COMMIT;")
+
+    return {
+        "receive": receive_payments,
+        "commit": send_commit,
+        "revokes": send_revokes,
+        "next_revoke_secret_hash": data["secret_hash"]
+    }

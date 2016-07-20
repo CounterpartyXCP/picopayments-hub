@@ -81,11 +81,13 @@ CREATE TABLE CommitRevoked(
 );
 
 CREATE TABLE Payment(
-    asset                       TEXT NOT NULL,
+    id                          INTEGER NOT NULL PRIMARY KEY,
+    amount                      INTEGER NOT NULL,       -- satoshis
     payer_handle                TEXT NOT NULL,          -- hex
     payee_handle                TEXT NOT NULL,          -- hex
     token                       TEXT NOT NULL,          -- hex
-    pending                     BOOLEAN NOT NULL,
+    processed                   BOOLEAN NOT NULL DEFAULT 0,
+    payee_notified              BOOLEAN NOT NULL DEFAULT 0,
     unixtimestamp               timestamp default (strftime('%s', 'now')) 
 );
 
