@@ -111,13 +111,13 @@ Channel culled if deposit not made fast enough.
     Arguments: {
         "asset": asset,
         "pubkey": "hex",
-        "spend_secret_hash": "hex"
+        "spend_secret_hash": "hex"  # hub to client channel
         "url": "url" or None
     }
 
     Response: {
         "handle": "hex",
-        "spend_secret_hash": "hex",
+        "spend_secret_hash": "hex",  # client to hub channel
         "pubkey": "hex",
         "channel_terms": {
             "setup_ttl": blocks,  # client deposit must be confirmed within
@@ -145,12 +145,12 @@ Channel culled if client deposit not made fast enough.
     Arguments: {
         "handle": "hex",
         "deposit_script": "hex",
-        "next_revoke_secret_hash": "hex"
+        "next_revoke_secret_hash": "hex"  # hub to client channel
     }
 
     Response: {
         "deposit_script": "hex",
-        "next_revoke_secret_hash": "hex"
+        "next_revoke_secret_hash": "hex"  # client to hub channel
     }
 
 --------------
@@ -183,22 +183,26 @@ mpc_hub_sync
     Arguments: {
         "handle": "hex",
         "sends": [{
-            "payer_handle": "hex", "payee_handle": "hex", 
-            "amount": satoshis, "token": "hex"
+            "payer_handle": "hex", 
+            "payee_handle": "hex", 
+            "amount": satoshis, 
+            "token": "hex"
         }],
-        "commit": { "rawtx": "hex", "script": "hex" },
+        "commit": {"rawtx": "hex", "script": "hex"},
         "revokes": ["secrets"],
-        "next_revoke_secret_hash": "hex"
+        "next_revoke_secret_hash": "hex"  # hub to client channel
     }
 
     Response: {
         "receive": [{
-            "payer_handle": "hex", "payee_handle": "hex", 
-            "amount": satoshis, "token": "hex"
+            "payer_handle": "hex", 
+            "payee_handle": "hex", 
+            "amount": satoshis, 
+            "token": "hex"
         }],
         "commit": {"rawtx": "hex", "script": "hex"},
         "revokes": ["hex"],
-        "next_revoke_secret_hash": "hex"
+        "next_revoke_secret_hash": "hex"  # client to hub channel
     }
 
 =========

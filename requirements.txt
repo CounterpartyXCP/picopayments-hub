@@ -10,3 +10,4 @@ appdirs==1.4.0
 cachetools==1.1.6
 Flask==0.11
 counterparty-lib==9.9.9
+jsonschema>=2.5.1

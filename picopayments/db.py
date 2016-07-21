@@ -20,6 +20,7 @@ _HUB_CONNECTION = "SELECT * FROM HubConnection where handle = :handle"
 _MICROPAYMENT_CHANNEL = "SELECT * FROM MicropaymentChannel WHERE id = :id"
 _HANDLE_EXISTS = "SELECT EXISTS(SELECT * FROM HubConnection WHERE handle = ?);"
 _UNNOTIFIED_PAYMENTS = _sql("unnotified_payments")
+_RECEIVE_CHANNEL = _sql("receive_channel")
 _COMMITS_REQUESTED = _sql("commits_requested")
 _COMMITS_ACTIVE = _sql("commits_active")
 _COMMITS_REVOKED = _sql("commits_revoked")
@@ -211,3 +212,7 @@ def add_revoke_secret(channel_id, secret_hash, secret_value, cursor=None):
         "secret_value": secret_value
     }
     _exec(_ADD_REVOKE_SECRET, args=args, cursor=cursor)
+
+
+def receive_channel(handle, cursor=None):
+    return _one(_RECEIVE_CHANNEL, args={"handle": handle}, cursor=cursor)

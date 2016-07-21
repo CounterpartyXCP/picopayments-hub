@@ -5,15 +5,13 @@
 
 from werkzeug.wrappers import Request, Response
 from jsonrpc import JSONRPCResponseManager, dispatcher
-from picopayments import ctrl
-from picopayments import db
-from picopayments import terms
-from picopayments import validate
+from . import ctrl
+from . import terms
+from . import validate
 
 
 @dispatcher.add_method
 def mpc_hub_terms(assets=None):
-    # FIXME validate input
     all_trems = terms.read()
     if assets:
         for key in list(all_trems.keys())[:]:
@@ -31,7 +29,7 @@ def mpc_hub_clients(clients=None, assets=None):
 
 @dispatcher.add_method
 def mpc_hub_request(asset, pubkey, spend_secret_hash, hub_rpc_url=None):
-    # FIXME validate input
+    validate.request_input(asset, pubkey, spend_secret_hash, hub_rpc_url)
     return ctrl.create_hub_connection(
         asset, pubkey, spend_secret_hash, hub_rpc_url
     )
@@ -39,7 +37,7 @@ def mpc_hub_request(asset, pubkey, spend_secret_hash, hub_rpc_url=None):
 
 @dispatcher.add_method
 def mpc_hub_deposit(handle, deposit_script, next_revoke_secret_hash):
-    # FIXME validate input
+    validate.deposit_input(handle, deposit_script, next_revoke_secret_hash)
     return ctrl.complete_connection(handle, deposit_script,
                                     next_revoke_secret_hash)
 
@@ -59,6 +57,7 @@ def _add_counterparty_call(method):
     dispatcher[method] = counterparty_method
 
 
+_add_counterparty_call("get_unspent_txouts")
 _add_counterparty_call("mpc_make_deposit")
 _add_counterparty_call("mpc_set_deposit")
 _add_counterparty_call("mpc_request_commit")
