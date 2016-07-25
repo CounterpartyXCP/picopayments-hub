@@ -13,7 +13,7 @@ setup(
     scripts=['picopayments/bin/picopayments'],
     description="Decentral micropayment hub for counterparty assets.",
     long_description=open("README.rst").read(),
-    keywords="storj, reference, protocol, DHT",
+    keywords="storj, counterparty, micropayment, hub",
     url='http://storj.io',
     author='Fabian Barkhau',
     author_email='fabian.barkhau@gmail.com',

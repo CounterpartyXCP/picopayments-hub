@@ -1,18 +1,20 @@
        +----------------------------------------+
        | Payment                           cGRE |
        |                                        |
+       | o id (pkey, int)                       |
        | o amount (satoshis, int)               |
    +---| o payer_handle (hex, str)              |
    +---| o payee_handle (hex, str)              |
    |   | o token (hex, str)                     |
    |   | o processed (bool)                     |
    |   | o payee_notified (bool)                |
-   |   | o timestamp (unixtime, int)            |
+   |   | o unixtimestamp (unixtime, int)        |
    |   +----------------------------------------+
    |
    |   +----------------------------------------+
    |   | HubConnection                     cGRE |
    |   |                                        |
+   |   | o id (pkey, int)                       |
    +-->| o handle (hex)                         |
        | o asset (str)                          |
 +------| o send_channel_id (fkey, int)          |
@@ -20,7 +22,7 @@
 |  +---| o terms_id (fkey, int)                 |
 |  |   | o hub_rpc_url (url, str)               |
 |  |   | o next_revoke_secret_hash (hex, str)   |
-|  |   | o timestamp (unixtime, int)            |
+|  |   | o unixtimestamp (unixtime, int)        |
 |  |   +----------------------------------------+
 |  | 
 |  |   +----------------------------------------+
@@ -34,7 +36,7 @@
 |      | o timeout_limit (blocks, int)          |
 |      | o fee_setup (satoshis, int)            |
 |      | o fee_sync (satoshis, int)             |
-|      | o timestamp (unixtime, int)            |
+|      | o unixtimestamp (unixtime, int)        |
 |      +----------------------------------------+
 |
 |      +----------------------------------------+
@@ -50,48 +52,61 @@
 |  |   | o expire_time (blocks, int)            |
 |  |   | o spend_secret_hash (hex, str)         |
 |  |   | o meta_complete (bool)                 |
+|  |   | o unixtimestamp (unixtime, int)        |
 |  |   +----------------------------------------+
 |  |
 |  |   +----------------------------------------+
 |  |   | Keys                              cB44 |
 |  |   |                                        |
+|  |   | o id (pkey, int)                       |
 |  +-->| o pubkey (hex, str)                    |
 |      | o asset (str)                          |
 |      | o wif (wif, str)                       |
 |      | o address (Base58, str)                |
+|      | o unixtimestamp (unixtime, int)        |
 |      +----------------------------------------+
 |
 |      +----------------------------------------+
 |      | CommitRequested                   cGRE |
 |      |                                        |
+|      | o id (pkey, int)                       |
 +------| o channel_id (fkey, int)               |
 |  +---| o revoke_secret_hash (hex, str)        |
+|  |   | o unixtimestamp (unixtime, int)        |
 |  |   +----------------------------------------+
 |  |
 |  |   +----------------------------------------+
 |  |   | Secrets                           cB44 |
 |  |   |                                        |
+|  |   | o id (pkey, int)                       |
 |  +-->| o hash (hex, str)                      |
 |  |   | o value (hex, str)                     |
+|  |   | o unixtimestamp (unixtime, int)        |
 |  |   +----------------------------------------+
 |  |
 |  |   +----------------------------------------+
 |  |   | CommitActive                      cGRE |
 |  |   |                                        |
+|  |   | o id (pkey, int)                       |
 +--|---| o channel_id (fkey, int)               |
 |  |   | o rawtx (hex, str)                     |
 |  |   | o script (hex, str)                    |
 |  |   | o commit_address (Base58, str)         |
 |  |   | o delay_time (blocks, int)             |
 |  +---| o revoke_secret_hash (hex, str)        |
+|      | o payee_notified (bool)                |
+|      | o unixtimestamp (unixtime, int)        |
 |      +----------------------------------------+
 |
 |      +----------------------------------------+
 |      | CommitRevoked                     cGRE |
 |      |                                        |
+|      | o id (pkey, int)                       |
 +------| o channel_id (fkey, int)               |
        | o script (hex, str)                    |
        | o revoke_secret (hex, str)             |
        | o commit_address (Base58, str)         |
        | o delay_time (blocks, int)             |
+       | o payee_notified (bool)                |
+       | o unixtimestamp (unixtime, int)        |
        +----------------------------------------+

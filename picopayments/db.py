@@ -20,6 +20,8 @@ _HUB_CONNECTION = "SELECT * FROM HubConnection where handle = :handle"
 _MICROPAYMENT_CHANNEL = "SELECT * FROM MicropaymentChannel WHERE id = :id"
 _HANDLE_EXISTS = "SELECT EXISTS(SELECT * FROM HubConnection WHERE handle = ?);"
 _UNNOTIFIED_PAYMENTS = _sql("unnotified_payments")
+_UNNOTIFIED_COMMITS = _sql("unnotified_commits")
+_UNNOTIFIED_REVOKES = _sql("unnotified_revokes")
 _RECEIVE_CHANNEL = _sql("receive_channel")
 _COMMITS_REQUESTED = _sql("commits_requested")
 _COMMITS_ACTIVE = _sql("commits_active")
@@ -33,7 +35,9 @@ _ADD_COMMIT_ACTIVE = _sql("add_commit_active")
 _ADD_COMMIT_REVOKED = _sql("add_commit_revoked")
 _RM_COMMITS = _sql("rm_commits")
 _COMPLETE_HUB_CHANNELS = _sql("complete_hub_channels")
-_SET_PAYMENT_NOTIFIED = "UPDATE Payment SET payee_notified = 1 WHERE id = :id;"
+_SET_PAYMENT_NOTIFIED = _sql("set_payment_notified")
+_SET_COMMIT_NOTIFIED = _sql("set_commit_notified")
+_SET_REVOKE_NOTIFIED = _sql("set_revoke_notified")
 _SET_NEXT_REVOKE_SECRET_HASH = _sql("set_next_revoke_secret_hash")
 
 
@@ -203,6 +207,24 @@ def unnotified_payments(handle):
 def set_payments_notified(payment_ids, cursor=None):
     cursor = cursor or get_cursor()
     cursor.executemany(_SET_PAYMENT_NOTIFIED, payment_ids)
+
+
+def unnotified_commits(channel_id):
+    return _all(_UNNOTIFIED_COMMITS, {"channel_id": channel_id})
+
+
+def set_commits_notified(commit_ids, cursor=None):
+    cursor = cursor or get_cursor()
+    cursor.executemany(_SET_COMMIT_NOTIFIED, commit_ids)
+
+
+def unnotified_revokes(channel_id):
+    return _all(_UNNOTIFIED_REVOKES, {"channel_id": channel_id})
+
+
+def set_revokes_notified(revoke_ids, cursor=None):
+    cursor = cursor or get_cursor()
+    cursor.executemany(_SET_REVOKE_NOTIFIED, revoke_ids)
 
 
 def add_revoke_secret(channel_id, secret_hash, secret_value, cursor=None):

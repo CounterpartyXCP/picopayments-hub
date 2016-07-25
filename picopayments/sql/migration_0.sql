@@ -13,6 +13,7 @@ CREATE TABLE Terms(
 );
 
 CREATE TABLE Keys(
+    id                          INTEGER NOT NULL PRIMARY KEY,
     asset                       TEXT NOT NULL,
     pubkey                      TEXT NOT NULL UNIQUE,   -- hex public key
     wif                         TEXT NOT NULL UNIQUE,   -- bitcoin wif
@@ -21,8 +22,10 @@ CREATE TABLE Keys(
 );
 
 CREATE TABLE Secrets(
+    id                          INTEGER NOT NULL PRIMARY KEY,
     hash                        TEXT NOT NULL UNIQUE,   -- hex
-    value                       TEXT NOT NULL UNIQUE    -- hex
+    value                       TEXT NOT NULL UNIQUE,   -- hex
+    unixtimestamp               timestamp default (strftime('%s', 'now')) 
 );
 
 CREATE TABLE MicropaymentChannel(
@@ -35,10 +38,12 @@ CREATE TABLE MicropaymentChannel(
     payer_address               TEXT NOT NULL,          -- bitcoin address
     expire_time                 INTEGER,                -- blocks
     spend_secret_hash           TEXT NOT NULL,          -- hex
-    meta_complete               BOOLEAN NOT NULL DEFAULT 0
+    meta_complete               BOOLEAN NOT NULL DEFAULT 0,
+    unixtimestamp               timestamp default (strftime('%s', 'now')) 
 );
 
 CREATE TABLE HubConnection(
+    id                          INTEGER NOT NULL PRIMARY KEY,
     handle                      TEXT NOT NULL UNIQUE,   -- hex
     asset                       TEXT NOT NULL,
     send_channel_id             INTEGER NOT NULL,
@@ -46,6 +51,7 @@ CREATE TABLE HubConnection(
     terms_id                    INTEGER NOT NULL,
     hub_rpc_url                 TEXT,                   -- client is a hub
     next_revoke_secret_hash     TEXT DEFAULT NULL,      -- hex (for send)
+    unixtimestamp               timestamp default (strftime('%s', 'now')),
 
     FOREIGN KEY(send_channel_id) REFERENCES MicropaymentChannel(id),
     FOREIGN KEY(recv_channel_id) REFERENCES MicropaymentChannel(id),
@@ -53,29 +59,37 @@ CREATE TABLE HubConnection(
 );
 
 CREATE TABLE CommitRequested(
+    id                          INTEGER NOT NULL PRIMARY KEY,
     channel_id                  INTEGER NOT NULL,
     revoke_secret_hash          TEXT NOT NULL,          -- hex
+    unixtimestamp               timestamp default (strftime('%s', 'now')),
 
     FOREIGN KEY(channel_id) REFERENCES MicropaymentChannel(id) 
 );
 
 CREATE TABLE CommitActive(
+    id                          INTEGER NOT NULL PRIMARY KEY,
     channel_id                  INTEGER NOT NULL,
     rawtx                       TEXT NOT NULL UNIQUE,   -- hex
     script                      TEXT NOT NULL UNIQUE,   -- hex
     commit_address              TEXT NOT NULL UNIQUE,   -- bitcoin address
     delay_time                  INTEGER NOT NULL,       -- blocks
     revoke_secret_hash          TEXT NOT NULL,          -- hex
+    payee_notified              BOOLEAN NOT NULL DEFAULT 0,
+    unixtimestamp               timestamp default (strftime('%s', 'now')),
 
     FOREIGN KEY(channel_id) REFERENCES MicropaymentChannel(id) 
 );
 
 CREATE TABLE CommitRevoked(
+    id                          INTEGER NOT NULL PRIMARY KEY,
     channel_id                  INTEGER NOT NULL,
     script                      TEXT NOT NULL UNIQUE,   -- hex
     revoke_secret               TEXT NOT NULL,          -- hex
     commit_address              TEXT NOT NULL UNIQUE,   -- bitcoin address
     delay_time                  INTEGER NOT NULL,       -- blocks
+    payee_notified              BOOLEAN NOT NULL DEFAULT 0,
+    unixtimestamp               timestamp default (strftime('%s', 'now')),
 
     FOREIGN KEY(channel_id) REFERENCES MicropaymentChannel(id) 
 );

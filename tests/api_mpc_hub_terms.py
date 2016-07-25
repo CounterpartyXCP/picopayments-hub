@@ -14,7 +14,7 @@ class TestMpcHubTerms(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.root)
 
-    def test_mpc_hub_terms(self):
+    def test_standard_usage_xcp(self):
         # TODO test input validation
 
         # test gets all

@@ -214,13 +214,6 @@ def update_channel_state(state, commit, revokes):
     return state
 
 
-def process_payments(handle):
-    # TODO implement
-    send_commit = None
-    send_revokes = []
-    return send_commit, send_revokes
-
-
 def sync_hub_connection(handle, next_revoke_secret_hash,
                         sends, commit, revokes):
 
@@ -230,6 +223,7 @@ def sync_hub_connection(handle, next_revoke_secret_hash,
     hub_connection = db.hub_connection(handle, cursor=cursor)
     asset = hub_connection["asset"]
     recv_id = hub_connection["recv_channel_id"]
+    send_id = hub_connection["send_channel_id"]
     recv_state = load_channel_state(recv_id, asset, cursor=cursor)
     before_recv_state = copy.deepcopy(recv_state)
     recv_state = update_channel_state(recv_state, commit, revokes)
@@ -242,17 +236,24 @@ def sync_hub_connection(handle, next_revoke_secret_hash,
     db.add_payments(sends, cursor=cursor)
     cursor.execute("COMMIT;")
 
-    # process payments
-    send_commit, send_revokes = process_payments(handle)
-
-    # load payments not received and mark as received
-    receive_payments = db.unnotified_payments(handle)
+    # load unnotified
+    send_commits = db.unnotified_transfers(handle)
+    send_revokes = db.unnotified_revokes(send_id)
+    receive_payments = db.unnotified_payments(send_id)
 
     cursor.execute("BEGIN TRANSACTION;")
 
-    # mark as received
+    # mark payments as received
     payment_ids = [p.pop("id") for p in receive_payments]
     db.set_payments_notified(payment_ids, cursor=cursor)
+
+    # mark commits as received
+    commit_ids = [p.pop("id") for p in send_commits]
+    db.set_commitss_notified(commit_ids, cursor=cursor)
+
+    # mark revokes as received
+    revoke_ids = [p.pop("id") for p in send_revokes]
+    db.set_revokes_notified(revoke_ids, cursor=cursor)
 
     # create and save next spend secret
     data = create_secret()
@@ -263,7 +264,7 @@ def sync_hub_connection(handle, next_revoke_secret_hash,
 
     return {
         "receive": receive_payments,
-        "commit": send_commit,
-        "revokes": send_revokes,
+        "commits": send_commits,
+        "revokes": [r["revoke_secret"] for r in send_revokes],
         "next_revoke_secret_hash": data["secret_hash"]
     }

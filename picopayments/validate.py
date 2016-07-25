@@ -5,11 +5,11 @@
 
 import re
 import jsonschema
-from picopayments import db
 from counterpartylib.lib.micropayments import validate
 from . import exceptions
 from . import terms
 from . import db
+from . import cfg
 from . import ctrl
 
 
@@ -93,13 +93,16 @@ def deposit_input(handle, deposit_script, next_revoke_secret_hash):
 
 
 def is_recv_commit(handle, commit_rawtx, commit_script):
+    netcode = "XTN" if cfg.testnet else "BTC"
     recv_channel = db.receive_channel(handle)
     deposit_utxos = ctrl.counterparty_call(
         method="get_unspent_txouts",
         params={"address": recv_channel["deposit_address"]}
     )
-    validate.commit_rawtx(deposit_utxos, commit_rawtx, recv_channel["asset"],
-                          deposit_script, commit_script, netcode)
+    validate.commit_rawtx(
+        deposit_utxos, commit_rawtx, recv_channel["asset"],
+        recv_channel["deposit_script"], commit_script, netcode
+    )
 
 
 def sync_input(handle, next_revoke_secret_hash, sends, commit, revokes):
@@ -125,4 +128,4 @@ def sync_input(handle, next_revoke_secret_hash, sends, commit, revokes):
 
     # make sure all handles actually exist
     if not db.handles_exist(handles):
-        raise exception.HandlesNotFound(handles)
+        raise exceptions.HandlesNotFound(handles)

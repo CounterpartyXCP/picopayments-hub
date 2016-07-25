@@ -1,34 +1,26 @@
-import os
 import shutil
 import unittest
 import tempfile
-from pycoin.serialize import b2h
-from counterpartylib.lib.micropayments import util
-from counterpartylib.lib.micropayments.scripts import compile_deposit_script
 from picopayments import ctrl
+# from picopayments import api
+from counterpartylib.lib.micropayments import util
 from picopayments import api
-import jsonschema
+from pycoin.serialize import b2h
+import os
+from counterpartylib.lib.micropayments.scripts import compile_deposit_script
 
 
-DEPOSIT_RESULT_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "deposit_script": {"type": "string"},
-        "next_revoke_secret_hash": {"type": "string"},
-    },
-    "required": ["deposit_script", "next_revoke_secret_hash"],
-    "additionalProperties": False
-}
-
-
-class TestMpcHubDeposit(unittest.TestCase):
+class TestMpcHubTerms(unittest.TestCase):
 
     def setUp(self):
         self.root = tempfile.mkdtemp(prefix="picopayments_test_")
         ctrl.initialize(["--testnet", "--root={0}".format(self.root)])
 
+        # TODO copy test db
+
     def tearDown(self):
-        shutil.rmtree(self.root)
+        # shutil.rmtree(self.root)
+        pass
 
     def test_standard_usage_xcp(self):
 
@@ -53,13 +45,3 @@ class TestMpcHubDeposit(unittest.TestCase):
             handle, client2hub_deposit_script,
             util.hash160hex(util.b2h(os.urandom(32)))
         )
-        self.assertIsNotNone(result)
-        jsonschema.validate(result, DEPOSIT_RESULT_SCHEMA)
-
-        # TODO test send channel updated
-        # TODO test receive channel updated
-        # TODO test secret saved
-
-
-if __name__ == "__main__":
-    unittest.main()
