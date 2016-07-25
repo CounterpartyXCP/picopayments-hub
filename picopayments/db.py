@@ -209,17 +209,16 @@ def set_payments_notified(payment_ids, cursor=None):
     cursor.executemany(_SET_PAYMENT_NOTIFIED, payment_ids)
 
 
-def unnotified_commits(channel_id):
-    return _all(_UNNOTIFIED_COMMITS, {"channel_id": channel_id})
+def unnotified_commit(channel_id, cursor=None):
+    return _one(_UNNOTIFIED_COMMITS, {"channel_id": channel_id}, cursor=cursor)
 
 
-def set_commits_notified(commit_ids, cursor=None):
-    cursor = cursor or get_cursor()
-    cursor.executemany(_SET_COMMIT_NOTIFIED, commit_ids)
+def set_commit_notified(id, cursor=None):
+    _exec(_SET_COMMIT_NOTIFIED, {"id": id}, cursor=cursor)
 
 
-def unnotified_revokes(channel_id):
-    return _all(_UNNOTIFIED_REVOKES, {"channel_id": channel_id})
+def unnotified_revokes(channel_id, cursor=None):
+    return _all(_UNNOTIFIED_REVOKES, {"channel_id": channel_id}, cursor=cursor)
 
 
 def set_revokes_notified(revoke_ids, cursor=None):

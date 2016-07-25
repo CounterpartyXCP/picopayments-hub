@@ -214,6 +214,38 @@ def update_channel_state(state, commit, revokes):
     return state
 
 
+def _save_sync_data(cursor, handle, next_revoke_secret_hash, sends,
+                    before_recv_state, after_recv_state, receive_payments,
+                    send_commit, send_revokes, recv_id, next_revoke_secret):
+
+    cursor.execute("BEGIN TRANSACTION;")
+
+    # save sync input
+    if before_recv_state != after_recv_state:
+        save_channel_state(recv_id, after_recv_state, cursor=cursor)
+    db.set_next_revoke_secret_hash(handle, next_revoke_secret_hash)
+    if sends:
+        db.add_payments(sends, cursor=cursor)
+
+    # mark payments as received
+    payment_ids = [p.pop("id") for p in receive_payments]
+    db.set_payments_notified(payment_ids, cursor=cursor)
+
+    # mark commits as received
+    if send_commit:
+        db.set_commit_notified(send_commit.pop("id"), cursor=cursor)
+
+    # mark revokes as received
+    revoke_ids = [p.pop("id") for p in send_revokes]
+    db.set_revokes_notified(revoke_ids, cursor=cursor)
+
+    # save next spend secret
+    db.add_revoke_secret(recv_id, next_revoke_secret["secret_hash"],
+                         next_revoke_secret["secret_value"], cursor=cursor)
+
+    cursor.execute("COMMIT;")
+
+
 def sync_hub_connection(handle, next_revoke_secret_hash,
                         sends, commit, revokes):
 
@@ -226,45 +258,23 @@ def sync_hub_connection(handle, next_revoke_secret_hash,
     send_id = hub_connection["send_channel_id"]
     recv_state = load_channel_state(recv_id, asset, cursor=cursor)
     before_recv_state = copy.deepcopy(recv_state)
-    recv_state = update_channel_state(recv_state, commit, revokes)
+    after_recv_state = update_channel_state(recv_state, commit, revokes)
 
-    # save sync input
-    cursor.execute("BEGIN TRANSACTION;")
-    if before_recv_state != recv_state:
-        save_channel_state(recv_id, recv_state, cursor=cursor)
-    db.set_next_revoke_secret_hash(handle, next_revoke_secret_hash)
-    db.add_payments(sends, cursor=cursor)
-    cursor.execute("COMMIT;")
+    # create next spend secret
+    next_revoke_secret = create_secret()
 
     # load unnotified
-    send_commits = db.unnotified_transfers(handle)
+    send_commit = db.unnotified_commit(handle)
     send_revokes = db.unnotified_revokes(send_id)
     receive_payments = db.unnotified_payments(send_id)
 
-    cursor.execute("BEGIN TRANSACTION;")
-
-    # mark payments as received
-    payment_ids = [p.pop("id") for p in receive_payments]
-    db.set_payments_notified(payment_ids, cursor=cursor)
-
-    # mark commits as received
-    commit_ids = [p.pop("id") for p in send_commits]
-    db.set_commitss_notified(commit_ids, cursor=cursor)
-
-    # mark revokes as received
-    revoke_ids = [p.pop("id") for p in send_revokes]
-    db.set_revokes_notified(revoke_ids, cursor=cursor)
-
-    # create and save next spend secret
-    data = create_secret()
-    db.add_revoke_secret(recv_id, data["secret_hash"],
-                         data["secret_value"], cursor=cursor)
-
-    cursor.execute("COMMIT;")
+    _save_sync_data(cursor, handle, next_revoke_secret_hash, sends,
+                    before_recv_state, after_recv_state, receive_payments,
+                    send_commit, send_revokes, recv_id, next_revoke_secret)
 
     return {
         "receive": receive_payments,
-        "commits": send_commits,
+        "commits": send_commit,  # FIXME can only be one because of revokes
         "revokes": [r["revoke_secret"] for r in send_revokes],
-        "next_revoke_secret_hash": data["secret_hash"]
+        "next_revoke_secret_hash": next_revoke_secret["secret_hash"]
     }

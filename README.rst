@@ -200,7 +200,7 @@ mpc_hub_sync
             "amount": satoshis, 
             "token": "hex"
         }],
-        "commits": [{"rawtx": "hex", "script": "hex"}],
+        "commit": {"rawtx": "hex", "script": "hex"},
         "revokes": ["hex"],
         "next_revoke_secret_hash": "hex"  # client to hub channel
     }
