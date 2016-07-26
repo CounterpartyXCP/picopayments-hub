@@ -3,7 +3,7 @@ import shutil
 import unittest
 import tempfile
 from counterpartylib.lib.micropayments import util
-from picopayments import ctrl
+from picopayments import control
 from picopayments import api
 
 
@@ -11,14 +11,14 @@ class TestMpcHubRequest(unittest.TestCase):
 
     def setUp(self):
         self.root = tempfile.mkdtemp(prefix="picopayments_test_")
-        ctrl.initialize(["--testnet", "--root={0}".format(self.root)])
+        control.initialize(["--testnet", "--root={0}".format(self.root)])
 
     def tearDown(self):
         shutil.rmtree(self.root)
 
     def test_standard_usage_xcp(self):
         asset = "XCP"
-        client_key = ctrl.create_key(asset)
+        client_key = control.create_key(asset)
         secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
         result = api.mpc_hub_request(asset, client_key["pubkey"],
                                      secret_hash, None)

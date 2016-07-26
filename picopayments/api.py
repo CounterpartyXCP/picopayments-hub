@@ -5,7 +5,7 @@
 
 from werkzeug.wrappers import Request, Response
 from jsonrpc import JSONRPCResponseManager, dispatcher
-from . import ctrl
+from . import control
 from . import terms
 from . import validate
 
@@ -30,7 +30,7 @@ def mpc_hub_clients(clients=None, assets=None):
 @dispatcher.add_method
 def mpc_hub_request(asset, pubkey, spend_secret_hash, hub_rpc_url=None):
     validate.request_input(asset, pubkey, spend_secret_hash, hub_rpc_url)
-    return ctrl.create_hub_connection(
+    return control.create_hub_connection(
         asset, pubkey, spend_secret_hash, hub_rpc_url
     )
 
@@ -38,8 +38,8 @@ def mpc_hub_request(asset, pubkey, spend_secret_hash, hub_rpc_url=None):
 @dispatcher.add_method
 def mpc_hub_deposit(handle, deposit_script, next_revoke_secret_hash):
     validate.deposit_input(handle, deposit_script, next_revoke_secret_hash)
-    return ctrl.complete_connection(handle, deposit_script,
-                                    next_revoke_secret_hash)
+    return control.complete_connection(handle, deposit_script,
+                                       next_revoke_secret_hash)
 
 
 @dispatcher.add_method
@@ -47,13 +47,13 @@ def mpc_hub_sync(handle, next_revoke_secret_hash,
                  sends=None, commit=None, revokes=None):
     validate.sync_input(handle, next_revoke_secret_hash,
                         sends, commit, revokes)
-    return ctrl.sync_hub_connection(handle, next_revoke_secret_hash,
-                                    sends, commit, revokes)
+    return control.sync_hub_connection(handle, next_revoke_secret_hash,
+                                       sends, commit, revokes)
 
 
 def _add_counterparty_call(method):
     def counterparty_method(**kwargs):
-        return ctrl.counterparty_call(method, kwargs)
+        return control.counterparty_call(method, kwargs)
     dispatcher[method] = counterparty_method
 
 

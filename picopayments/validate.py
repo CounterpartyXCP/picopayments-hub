@@ -10,7 +10,7 @@ from . import exceptions
 from . import terms
 from . import db
 from . import cfg
-from . import ctrl
+from . import control
 
 
 URL_REGEX = re.compile(
@@ -95,7 +95,7 @@ def deposit_input(handle, deposit_script, next_revoke_secret_hash):
 def is_recv_commit(handle, commit_rawtx, commit_script):
     netcode = "XTN" if cfg.testnet else "BTC"
     recv_channel = db.receive_channel(handle)
-    deposit_utxos = ctrl.counterparty_call(
+    deposit_utxos = control.counterparty_call(
         method="get_unspent_txouts",
         params={"address": recv_channel["deposit_address"]}
     )

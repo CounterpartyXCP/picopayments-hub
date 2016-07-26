@@ -1,7 +1,7 @@
 import shutil
 import unittest
 import tempfile
-from picopayments import ctrl
+from picopayments import control
 from picopayments import api
 
 
@@ -9,7 +9,7 @@ class TestMpcHubTerms(unittest.TestCase):
 
     def setUp(self):
         self.root = tempfile.mkdtemp(prefix="picopayments_test_")
-        ctrl.initialize(["--testnet", "--root={0}".format(self.root)])
+        control.initialize(["--testnet", "--root={0}".format(self.root)])
 
     def tearDown(self):
         shutil.rmtree(self.root)

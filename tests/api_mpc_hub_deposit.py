@@ -5,7 +5,7 @@ import tempfile
 from pycoin.serialize import b2h
 from counterpartylib.lib.micropayments import util
 from counterpartylib.lib.micropayments.scripts import compile_deposit_script
-from picopayments import ctrl
+from picopayments import control
 from picopayments import api
 import jsonschema
 
@@ -25,7 +25,7 @@ class TestMpcHubDeposit(unittest.TestCase):
 
     def setUp(self):
         self.root = tempfile.mkdtemp(prefix="picopayments_test_")
-        ctrl.initialize(["--testnet", "--root={0}".format(self.root)])
+        control.initialize(["--testnet", "--root={0}".format(self.root)])
 
     def tearDown(self):
         shutil.rmtree(self.root)
@@ -33,7 +33,7 @@ class TestMpcHubDeposit(unittest.TestCase):
     def test_standard_usage_xcp(self):
 
         asset = "XCP"
-        client_key = ctrl.create_key(asset)
+        client_key = control.create_key(asset)
         client_pubkey = client_key["pubkey"]
 
         hub2client_spend_secret = util.b2h(os.urandom(32))
