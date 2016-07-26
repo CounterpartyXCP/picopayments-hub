@@ -3,8 +3,7 @@
 # License: MIT (see LICENSE file)
 
 
-from werkzeug.wrappers import Request, Response
-from jsonrpc import JSONRPCResponseManager, dispatcher
+from jsonrpc import dispatcher
 from . import control
 from . import terms
 from . import validate
@@ -20,11 +19,11 @@ def mpc_hub_terms(assets=None):
     return all_trems
 
 
-@dispatcher.add_method
-def mpc_hub_clients(clients=None, assets=None):
-    # FIXME validate input
-    print("mpc_hub_clients")
-    return None  # TODO implement
+# @dispatcher.add_method
+# def mpc_hub_clients(clients=None, assets=None):
+#     # FIXME validate input
+#     print("mpc_hub_clients")
+#     return None  # TODO implement
 
 
 @dispatcher.add_method
@@ -69,9 +68,3 @@ _add_counterparty_call("mpc_heighest_commit")
 _add_counterparty_call("mpc_transferred_amount")
 _add_counterparty_call("mpc_payouts")
 _add_counterparty_call("mpc_recoverables")
-
-
-@Request.application
-def application(request):
-    response = JSONRPCResponseManager.handle(request.data, dispatcher)
-    return Response(response.json, mimetype='application/json')

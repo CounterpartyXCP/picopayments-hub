@@ -5,16 +5,24 @@
 
 
 import sys
-from picopayments import api
+# from picopayments import api
 from picopayments import cfg
-from picopayments import ctrl
+from picopayments import control
 from picopayments import __version__
 from werkzeug.serving import run_simple
+from werkzeug.wrappers import Request, Response
+from jsonrpc import JSONRPCResponseManager, dispatcher
+
+
+@Request.application
+def application(request):
+    response = JSONRPCResponseManager.handle(request.data, dispatcher)
+    return Response(response.json, mimetype='application/json')
 
 
 if __name__ == "__main__":
 
-    args = ctrl.initialize(sys.argv[1:])
+    args = control.initialize(sys.argv[1:])
 
     # display version
     if "--version" in sys.argv:
@@ -23,8 +31,8 @@ if __name__ == "__main__":
     # display funding address for asset
     asset = args["fund_address"]  # FIXME validate input
     if asset is not None:
-        print(ctrl.create_funding_address(asset))
+        print(control.create_funding_address(asset))
 
     # start server
     else:
-        run_simple(cfg.host, cfg.port, api.application)
+        run_simple(cfg.host, cfg.port, application)

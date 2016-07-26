@@ -9,6 +9,9 @@ from picopayments import api
 from picopayments import exceptions
 
 
+URL = "http://127.0.0.1:14000/api/"
+
+
 REQUEST_RESULT_SCHEMA = {
     "type": "object",
     "properties": {
@@ -25,8 +28,13 @@ REQUEST_RESULT_SCHEMA = {
 class TestMpcHubRequest(unittest.TestCase):
 
     def setUp(self):
-        self.root = tempfile.mkdtemp(prefix="picopayments_test_")
-        control.initialize(["--testnet", "--root={0}".format(self.root)])
+        self.root = os.path.join(
+            tempfile.mkdtemp(prefix="picopayments_test_"), "subdir"
+        )
+        control.initialize([
+            "--testnet", "--root={0}".format(self.root),
+            "--cp_url={0}".format(URL)
+        ])
 
     def tearDown(self):
         shutil.rmtree(self.root)

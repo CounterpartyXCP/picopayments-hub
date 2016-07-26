@@ -38,6 +38,6 @@ def load(args):
     globals()["port"] = args["port"]
 
     # counterpartylib api
-    globals()["cp_url"] = args["cp_url"]
-    globals()["cp_username"] = args["cp_username"]
-    globals()["cp_password"] = args["cp_password"]
+    globals()["counterparty_url"] = args["cp_url"]
+    globals()["counterparty_username"] = args["cp_username"]
+    globals()["counterparty_password"] = args["cp_password"]

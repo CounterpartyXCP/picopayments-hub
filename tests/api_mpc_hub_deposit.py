@@ -11,6 +11,9 @@ from picopayments import exceptions
 import jsonschema
 
 
+URL = "http://127.0.0.1:14000/api/"
+
+
 DEPOSIT_RESULT_SCHEMA = {
     "type": "object",
     "properties": {
@@ -26,7 +29,10 @@ class TestMpcHubDeposit(unittest.TestCase):
 
     def setUp(self):
         self.root = tempfile.mkdtemp(prefix="picopayments_test_")
-        control.initialize(["--testnet", "--root={0}".format(self.root)])
+        control.initialize([
+            "--testnet", "--root={0}".format(self.root),
+            "--cp_url={0}".format(URL)
+        ])
 
     def tearDown(self):
         shutil.rmtree(self.root)

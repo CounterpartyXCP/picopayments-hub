@@ -5,11 +5,17 @@ from picopayments import control
 from picopayments import api
 
 
+URL = "http://127.0.0.1:14000/api/"
+
+
 class TestMpcHubTerms(unittest.TestCase):
 
     def setUp(self):
         self.root = tempfile.mkdtemp(prefix="picopayments_test_")
-        control.initialize(["--testnet", "--root={0}".format(self.root)])
+        control.initialize([
+            "--testnet", "--root={0}".format(self.root),
+            "--cp_url={0}".format(URL)
+        ])
 
     def tearDown(self):
         shutil.rmtree(self.root)

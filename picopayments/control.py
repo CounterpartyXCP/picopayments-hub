@@ -19,6 +19,7 @@ from . import cli
 from . import cfg
 from . import terms
 from . import db
+from . import exceptions
 
 
 def rpc_call(url, method, params, username=None, password=None):
@@ -28,8 +29,7 @@ def rpc_call(url, method, params, username=None, password=None):
     payload = {"method": method, "params": params, "jsonrpc": "2.0", "id": 0}
     response = requests.post(url, data=json.dumps(payload), **kwargs).json()
     if "result" not in response:
-        raise Exception(
-            "Rpc call failed! {0} -> {1}".format(payload, response))
+        raise exceptions.RpcCallFailed(payload, response)
     return response["result"]
 
 
@@ -185,7 +185,8 @@ def load_channel_state(channel_id, asset, cursor=None):
     state["asset"] = asset
     state["deposit_script"] = channel["deposit_script"]
     state["commits_requested"] = db.commits_requested(
-        channel_id, cursor=cursor)
+        channel_id, cursor=cursor
+    )
     state["commits_active"] = db.commits_active(channel_id, cursor=cursor)
     state["commits_revoked"] = db.commits_revoked(channel_id, cursor=cursor)
     return state

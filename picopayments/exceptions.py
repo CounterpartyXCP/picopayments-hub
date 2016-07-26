@@ -36,3 +36,10 @@ class HandlesNotFound(Exception):
     def __init__(self, handles):
         msg = "One or more unknown handles: {0}"
         super(HandlesNotFound, self).__init__(msg.format(repr(handles)))
+
+
+class RpcCallFailed(Exception):
+
+    def __init__(self, payload, response):
+        msg = "Rpc call failed! {0} -> {1}".format(payload, response)
+        super(RpcCallFailed, self).__init__(msg)
