@@ -89,7 +89,7 @@ def deposit_input(handle, deposit_script, next_revoke_secret_hash):
     validate.deposit_script(deposit_script, expected_payee_pubkey,
                             expected_spend_secret_hash)
     if recv_channel["meta_complete"]:
-        raise exceptions.DepositAlreadyGiven
+        raise exceptions.DepositAlreadyGiven(handle)
 
 
 def is_recv_commit(handle, commit_rawtx, commit_script):
