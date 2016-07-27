@@ -54,17 +54,23 @@ def _add_counterparty_call(method):
     def counterparty_method(**kwargs):
         return control.counterparty_call(method, kwargs)
     dispatcher[method] = counterparty_method
+    return counterparty_method
 
 
-_add_counterparty_call("get_unspent_txouts")
-_add_counterparty_call("mpc_make_deposit")
-_add_counterparty_call("mpc_set_deposit")
-_add_counterparty_call("mpc_request_commit")
-_add_counterparty_call("mpc_create_commit")
-_add_counterparty_call("mpc_add_commit")
-_add_counterparty_call("mpc_revoke_secret_hashes_above")
-_add_counterparty_call("mpc_revoke_all")
-_add_counterparty_call("mpc_heighest_commit")
-_add_counterparty_call("mpc_transferred_amount")
-_add_counterparty_call("mpc_payouts")
-_add_counterparty_call("mpc_recoverables")
+create_send = _add_counterparty_call("create_send")
+getrawtransaction = _add_counterparty_call("getrawtransaction")
+sendrawtransaction = _add_counterparty_call("sendrawtransaction")
+get_unspent_txouts = _add_counterparty_call("get_unspent_txouts")
+mpc_make_deposit = _add_counterparty_call("mpc_make_deposit")
+mpc_set_deposit = _add_counterparty_call("mpc_set_deposit")
+mpc_request_commit = _add_counterparty_call("mpc_request_commit")
+mpc_create_commit = _add_counterparty_call("mpc_create_commit")
+mpc_add_commit = _add_counterparty_call("mpc_add_commit")
+mpc_revoke_secret_hashes_above = _add_counterparty_call(
+    "mpc_revoke_secret_hashes_above"
+)
+mpc_revoke_all = _add_counterparty_call("mpc_revoke_all")
+mpc_heighest_commit = _add_counterparty_call("mpc_heighest_commit")
+mpc_transferred_amount = _add_counterparty_call("mpc_transferred_amount")
+mpc_payouts = _add_counterparty_call("mpc_payouts")
+mpc_recoverables = _add_counterparty_call("mpc_recoverables")

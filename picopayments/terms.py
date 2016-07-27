@@ -71,11 +71,6 @@ def read():
 
     # create terms and return default value
     if not os.path.exists(terms_path):
-
-        # ensure root path exists
-        if not os.path.exists(os.path.dirname(terms_path)):
-            os.makedirs(os.path.dirname(terms_path))
-
         default_terms = DEFAULT_TESTNET if cfg.testnet else DEFAULT_MAINNET
         with open(terms_path, 'w') as outfile:
             json.dump(default_terms, outfile, indent=2)

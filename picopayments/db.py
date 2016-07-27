@@ -80,10 +80,6 @@ def setup():
     db_file = cfg.testnet_database if cfg.testnet else cfg.mainnet_database
     db_path = os.path.join(cfg.root, db_file)
 
-    # ensure root path exists
-    if not os.path.exists(os.path.dirname(db_path)):
-        os.makedirs(os.path.dirname(db_path))
-
     # get connection
     connection = apsw.Connection(db_path)
 

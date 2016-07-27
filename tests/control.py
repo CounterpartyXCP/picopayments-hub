@@ -32,6 +32,11 @@ class TestCtrl(unittest.TestCase):
             control.counterparty_call(method="nonexistant", params={})
         self.assertRaises(exceptions.RpcCallFailed, func)
 
+    def test_validate_read_unknown_asset(self):
+
+        def func():
+            control.read_current_terms("deadbeef")
+        self.assertRaises(exceptions.AssetNotInTerms, func)
 
 if __name__ == "__main__":
     unittest.main()

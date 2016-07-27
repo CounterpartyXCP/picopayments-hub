@@ -161,7 +161,7 @@ def complete_connection(handle, recv_deposit_script, next_revoke_secret_hash):
 def read_current_terms(asset):
     current_terms = terms.read().get(asset)
     if current_terms is None:
-        raise Exception("No terms for given asset: {0}".format(asset))
+        raise exceptions.AssetNotInTerms(asset)
     return current_terms
 
 
@@ -174,6 +174,11 @@ def create_funding_address(asset):
 def initialize(args):
     args = cli.parse(args)  # parse args
     cfg.load(args)  # load configuration
+
+    # ensure root path exists
+    if not os.path.exists(cfg.root):
+        os.makedirs(cfg.root)
+
     terms.read()  # make sure terms file exists
     db.setup()  # setup and create db if needed
     return args

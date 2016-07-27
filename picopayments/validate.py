@@ -120,7 +120,7 @@ def sync_input(handle, next_revoke_secret_hash, sends, commit, revokes):
             handles += [send["payer_handle"], send["payee_handle"]]
 
     if commit:
-        jsonschema.validate(sends, COMMIT_SCHEMA)
+        jsonschema.validate(commit, COMMIT_SCHEMA)
         is_recv_commit(handle, commit["rawtx"], commit["script"])
 
     if revokes:

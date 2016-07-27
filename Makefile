@@ -82,6 +82,7 @@ test: setup
 	$(AUTOPEP8) --in-place --aggressive --aggressive --recursive tests
 	$(COVERAGE) run --source="picopayments" setup.py test
 	$(COVERAGE) report --fail-under=70
+	$(COVERAGE) html
 
 
 publish: test
