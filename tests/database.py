@@ -4,7 +4,7 @@ import shutil
 import tempfile
 from pycoin.serialize import b2h
 from picopayments import control
-from picopayments import db
+from picopayments import database as db
 
 
 class TestDB(unittest.TestCase):

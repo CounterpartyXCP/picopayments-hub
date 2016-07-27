@@ -16,9 +16,9 @@ from counterpartylib.lib.micropayments.scripts import (
     get_deposit_expire_time, compile_deposit_script
 )
 from . import cli
-from . import cfg
+from . import config
 from . import terms
-from . import db
+from . import database as db
 from . import exceptions
 
 
@@ -34,12 +34,12 @@ def rpc_call(url, method, params, username=None, password=None):
 
 
 def counterparty_call(method, params):
-    return rpc_call(cfg.counterparty_url, method, params,
-                    cfg.counterparty_username, cfg.counterparty_password)
+    return rpc_call(config.counterparty_url, method, params,
+                    config.counterparty_username, config.counterparty_password)
 
 
 def create_key(asset):
-    netcode = "XTN" if cfg.testnet else "BTC"
+    netcode = "XTN" if config.testnet else "BTC"
     secure_random_data = os.urandom(32)
     key = BIP32Node.from_master_secret(secure_random_data, netcode=netcode)
     return {
@@ -60,7 +60,7 @@ def create_secret():
 
 def create_hub_connection(asset, client_pubkey,
                           send_spend_secret_hash, hub_rpc_url):
-    netcode = "XTN" if cfg.testnet else "BTC"
+    netcode = "XTN" if config.testnet else "BTC"
 
     # current terms and asset
     data = {"asset": asset}
@@ -132,7 +132,7 @@ def complete_connection(handle, recv_deposit_script, next_revoke_secret_hash):
         send["spend_secret_hash"], expire_time
     ))
 
-    netcode = "XTN" if cfg.testnet else "BTC"
+    netcode = "XTN" if config.testnet else "BTC"
     data = {
         "handle": handle,
         "expire_time": expire_time,
@@ -173,11 +173,11 @@ def create_funding_address(asset):
 
 def initialize(args):
     args = cli.parse(args)  # parse args
-    cfg.load(args)  # load configuration
+    config.load(args)  # load configuration
 
     # ensure root path exists
-    if not os.path.exists(cfg.root):
-        os.makedirs(cfg.root)
+    if not os.path.exists(config.root):
+        os.makedirs(config.root)
 
     terms.read()  # make sure terms file exists
     db.setup()  # setup and create db if needed

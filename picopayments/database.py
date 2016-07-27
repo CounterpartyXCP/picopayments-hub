@@ -5,7 +5,7 @@
 
 import os
 import apsw
-from . import cfg
+from . import config
 
 
 def _sql(name):
@@ -77,8 +77,7 @@ def _all(sql, args=None, asdict=True, cursor=None):
 def setup():
 
     # get db path
-    db_file = cfg.testnet_database if cfg.testnet else cfg.mainnet_database
-    db_path = os.path.join(cfg.root, db_file)
+    db_path = os.path.join(config.root, config.database)
 
     # get connection
     connection = apsw.Connection(db_path)

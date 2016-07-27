@@ -5,9 +5,9 @@
 
 from .version import __version__  # NOQA
 from . import api  # NOQA
-from . import cfg  # NOQA
+from . import config  # NOQA
 from . import cli  # NOQA
 from . import control  # NOQA
-from . import db  # NOQA
+from . import database  # NOQA
 from . import terms  # NOQA
 from . import validate  # NOQA

@@ -6,7 +6,7 @@
 import copy
 import os
 import json
-from . import cfg
+from . import config
 
 
 DEFAULT_MAINNET = {
@@ -66,12 +66,11 @@ DEFAULT_TESTNET = {
 
 
 def read():
-    terms_file = cfg.testnet_terms if cfg.testnet else cfg.mainnet_terms
-    terms_path = os.path.join(cfg.root, terms_file)
+    terms_path = os.path.join(config.root, config.terms)
 
     # create terms and return default value
     if not os.path.exists(terms_path):
-        default_terms = DEFAULT_TESTNET if cfg.testnet else DEFAULT_MAINNET
+        default_terms = DEFAULT_TESTNET if config.testnet else DEFAULT_MAINNET
         with open(terms_path, 'w') as outfile:
             json.dump(default_terms, outfile, indent=2)
         terms_data = copy.deepcopy(default_terms)
