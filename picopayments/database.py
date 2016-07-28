@@ -294,35 +294,40 @@ def _fmt_active(channel_id, unnotified_commit, commits_active):
     return active
 
 
-def _fmt_revoked(channel_id, unnotified_commit, commits_revoked):
+def _fmt_revoked(channel_id, unnotified_revokes,
+                 unnotified_commit, commits_revoked):
+
+    unnotified_revokes = unnotified_revokes or []
+    unnotified_secrets = [cr["revoke_secret"] for cr in unnotified_revokes]
     revoked = []
     for commit_revoked in commits_revoked:
         script = commit_revoked["script"]
         revoke_secret = commit_revoked["revoke_secret"]
-
+        if unnotified_commit and unnotified_commit["script"] == script:
+            continue  # drop revoke as client was not notified of commit
+        payee_notified = 0 if revoke_secret in unnotified_secrets else 1
         data = {
             "channel_id": channel_id,
             "script": script,
             "revoke_secret": revoke_secret,
-            "payee_notified": 0  # FIXME set correctly
+            "payee_notified": payee_notified
         }
         data.update(_script_data(script))
         revoked.append(data)
     return revoked
 
 
-def save_channel_state(channel_id, state, unnotified_commit=None, cursor=None):
+def save_channel_state(channel_id, state, previous_unnotified_revokes=None,
+                       unnotified_commit=None, cursor=None):
     cursor = cursor or get_cursor()
 
-    # TODO reformat data
     commits_requested = _fmt_requested(channel_id, state["commits_requested"])
     commits_active = _fmt_active(channel_id, unnotified_commit,
                                  state["commits_active"])
-    commits_revoked = _fmt_revoked(channel_id, unnotified_commit,
-                                   state["commits_revoked"])
+    commits_revoked = _fmt_revoked(channel_id, previous_unnotified_revokes,
+                                   unnotified_commit, state["commits_revoked"])
 
     cursor.execute(_RM_COMMITS, {"channel_id": channel_id})
     cursor.executemany(_ADD_COMMIT_REQUESTED, commits_requested)
-    print("Commits active:", commits_active)
     cursor.executemany(_ADD_COMMIT_ACTIVE, commits_active)
     cursor.executemany(_ADD_COMMIT_REVOKED, commits_revoked)
