@@ -39,9 +39,9 @@ def counterparty_call(method, params):
 
 
 def create_key(asset):
-    netcode = "XTN" if config.testnet else "BTC"
     secure_random_data = os.urandom(32)
-    key = BIP32Node.from_master_secret(secure_random_data, netcode=netcode)
+    key = BIP32Node.from_master_secret(secure_random_data,
+                                       netcode=config.netcode)
     return {
         "asset": asset,
         "pubkey": b2h(key.sec()),
@@ -60,7 +60,6 @@ def create_secret():
 
 def create_hub_connection(asset, client_pubkey,
                           send_spend_secret_hash, hub_rpc_url):
-    netcode = "XTN" if config.testnet else "BTC"
 
     # current terms and asset
     data = {"asset": asset}
@@ -76,7 +75,7 @@ def create_hub_connection(asset, client_pubkey,
     # client key
     data["client_pubkey"] = client_pubkey
     data["client_address"] = util.pubkey2address(client_pubkey,
-                                                 netcode=netcode)
+                                                 netcode=config.netcode)
 
     # spend secret for receive channel
     data.update(create_secret())
@@ -88,6 +87,8 @@ def create_hub_connection(asset, client_pubkey,
     handle = util.b2h(os.urandom(32))
     data["handle"] = handle
     data["hub_rpc_url"] = hub_rpc_url
+
+    # FIXME add sync fee payment
 
     db.add_hub_connection(data)
     return {
@@ -132,19 +133,18 @@ def complete_connection(handle, recv_deposit_script, next_revoke_secret_hash):
         send["spend_secret_hash"], expire_time
     ))
 
-    netcode = "XTN" if config.testnet else "BTC"
     data = {
         "handle": handle,
         "expire_time": expire_time,
         "recv_channel_id": hub_conn["recv_channel_id"],
         "recv_deposit_script": recv_deposit_script,
         "recv_deposit_address": util.script2address(
-            h2b(recv_deposit_script), netcode=netcode
+            h2b(recv_deposit_script), netcode=config.netcode
         ),
         "send_channel_id": hub_conn["send_channel_id"],
         "send_deposit_script": send_deposit_script,
         "send_deposit_address": util.script2address(
-            h2b(send_deposit_script), netcode=netcode
+            h2b(send_deposit_script), netcode=config.netcode
         ),
         "next_revoke_secret_hash": next_revoke_secret_hash,
     }
@@ -184,28 +184,6 @@ def initialize(args):
     return args
 
 
-def load_channel_state(channel_id, asset, cursor=None):
-    channel = db.micropayment_channel(channel_id, cursor=cursor)
-    state = {}
-    state["asset"] = asset
-    state["deposit_script"] = channel["deposit_script"]
-    state["commits_requested"] = db.commits_requested(
-        channel_id, cursor=cursor
-    )
-    state["commits_active"] = db.commits_active(channel_id, cursor=cursor)
-    state["commits_revoked"] = db.commits_revoked(channel_id, cursor=cursor)
-    return state
-
-
-def save_channel_state(channel_id, state, cursor=None):
-    # TODO reformat data
-    commits_requested = []
-    commits_active = []
-    commits_revoked = []
-    db.set_channel_state(channel_id, commits_requested, commits_active,
-                         commits_revoked, cursor=cursor)
-
-
 def update_channel_state(state, commit, revokes):
     if commit:
         state = counterparty_call("mpc_add_commit", {
@@ -222,26 +200,30 @@ def update_channel_state(state, commit, revokes):
 
 def _save_sync_data(cursor, handle, next_revoke_secret_hash, sends,
                     before_recv_state, after_recv_state, receive_payments,
-                    send_commit, send_revokes, recv_id, next_revoke_secret):
+                    send_commit_id, send_revokes, recv_id, next_revoke_secret):
 
     cursor.execute("BEGIN TRANSACTION;")
 
-    # save sync input
+    # save send state
     if before_recv_state != after_recv_state:
-        save_channel_state(recv_id, after_recv_state, cursor=cursor)
+        db.save_channel_state(recv_id, after_recv_state, cursor=cursor)
+
+    # set next revoke secret hash from client
     db.set_next_revoke_secret_hash(handle, next_revoke_secret_hash)
+
+    # save submitted payments
     if sends:
         db.add_payments(sends, cursor=cursor)
 
-    # mark payments as received
+    # mark sent payments as received
     payment_ids = [p.pop("id") for p in receive_payments]
     db.set_payments_notified(payment_ids, cursor=cursor)
 
-    # mark commits as received
-    if send_commit:
-        db.set_commit_notified(send_commit.pop("id"), cursor=cursor)
+    # mark sent commit as received
+    if send_commit_id:
+        db.set_commit_notified(send_commit_id, cursor=cursor)
 
-    # mark revokes as received
+    # mark sent revokes as received
     revoke_ids = [p.pop("id") for p in send_revokes]
     db.set_revokes_notified(revoke_ids, cursor=cursor)
 
@@ -257,14 +239,25 @@ def sync_hub_connection(handle, next_revoke_secret_hash,
 
     cursor = db.get_cursor()
 
-    # load receive channel and update state
+    # load receive channel
     hub_connection = db.hub_connection(handle, cursor=cursor)
+    connection_terms = db.connection_terms(hub_connection["terms_id"])
     asset = hub_connection["asset"]
     recv_id = hub_connection["recv_channel_id"]
     send_id = hub_connection["send_channel_id"]
-    recv_state = load_channel_state(recv_id, asset, cursor=cursor)
+    recv_state = db.load_channel_state(recv_id, asset, cursor=cursor)
+
+    # update receive channel state
     before_recv_state = copy.deepcopy(recv_state)
     after_recv_state = update_channel_state(recv_state, commit, revokes)
+
+    # add sync fee payment
+    sends.append({
+        "payer_handle": handle,
+        "payee_handle": None,  # to hub
+        "amount": connection_terms["fee_sync"],
+        "token": "sync_fee"
+    })
 
     # create next spend secret
     next_revoke_secret = create_secret()
@@ -274,13 +267,56 @@ def sync_hub_connection(handle, next_revoke_secret_hash,
     send_revokes = db.unnotified_revokes(send_id)
     receive_payments = db.unnotified_payments(send_id)
 
+    # save sync data
+    send_commit_id = send_commit.pop("id") if send_commit else None
     _save_sync_data(cursor, handle, next_revoke_secret_hash, sends,
                     before_recv_state, after_recv_state, receive_payments,
-                    send_commit, send_revokes, recv_id, next_revoke_secret)
+                    send_commit_id, send_revokes, recv_id, next_revoke_secret)
 
     return {
         "receive": receive_payments,
-        "commits": send_commit,  # FIXME can only be one because of revokes
+        "commit": send_commit,
         "revokes": [r["revoke_secret"] for r in send_revokes],
         "next_revoke_secret_hash": next_revoke_secret["secret_hash"]
     }
+
+
+def load_channel_data(handle, cursor):
+    connection = db.hub_connection(handle, cursor=cursor)
+    send_state = db.load_channel_state(
+        connection["send_channel_id"],
+        connection["asset"],
+        cursor=cursor
+    )
+    recv_state = db.load_channel_state(
+        connection["recv_channel_id"],
+        connection["asset"],
+        cursor=cursor
+    )
+    unnotified_commit = db.unnotified_commit(handle)
+    return {
+        "connection": connection,
+        "send_state": send_state,
+        "recv_state": recv_state,
+        "unnotified_commit": unnotified_commit
+    }
+
+
+def process_payment(cursor, unprocessed):
+
+    # load payer
+    payer_handle = unprocessed["payer_handle"]
+    if payer_handle:
+        payer_data = load_channel_data(payer_handle, cursor)
+
+    # load payee
+    payee_handle = unprocessed["payee_handle"]
+    if payee_handle:
+        payee_data = load_channel_data(payee_handle, cursor)
+
+
+def process_payments():
+    cursor = db.get_cursor()
+    for unprocessed in db.unprocessed_payments(cursor=cursor):
+        with db.lock:
+            process_payment(cursor, unprocessed)

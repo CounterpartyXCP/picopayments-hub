@@ -118,14 +118,15 @@ def sync_input(handle, next_revoke_secret_hash, sends, commit, revokes):
             validate.is_hex(send["payer_handle"])
             validate.is_quantity(send["amount"])
             handles += [send["payer_handle"], send["payee_handle"]]
-
-    if commit:
-        jsonschema.validate(commit, COMMIT_SCHEMA)
-        is_recv_commit(handle, commit["rawtx"], commit["script"])
-
-    if revokes:
-        jsonschema.validate(sends, REVOKES_SCHEMA)
+            # FIXME validate assets match on both ends
 
     # make sure all handles actually exist
     if not db.handles_exist(handles):
         raise exceptions.HandlesNotFound(handles)
+
+    if revokes:
+        jsonschema.validate(sends, REVOKES_SCHEMA)
+
+    if commit:
+        jsonschema.validate(commit, COMMIT_SCHEMA)
+        is_recv_commit(handle, commit["rawtx"], commit["script"])

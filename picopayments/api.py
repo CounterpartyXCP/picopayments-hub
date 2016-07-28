@@ -7,6 +7,7 @@ from jsonrpc import dispatcher
 from . import control
 from . import terms
 from . import validate
+from . import database as db
 
 
 @dispatcher.add_method
@@ -29,16 +30,18 @@ def mpc_hub_terms(assets=None):
 @dispatcher.add_method
 def mpc_hub_request(asset, pubkey, spend_secret_hash, hub_rpc_url=None):
     validate.request_input(asset, pubkey, spend_secret_hash, hub_rpc_url)
-    return control.create_hub_connection(
-        asset, pubkey, spend_secret_hash, hub_rpc_url
-    )
+    with db.lock:
+        return control.create_hub_connection(
+            asset, pubkey, spend_secret_hash, hub_rpc_url
+        )
 
 
 @dispatcher.add_method
 def mpc_hub_deposit(handle, deposit_script, next_revoke_secret_hash):
     validate.deposit_input(handle, deposit_script, next_revoke_secret_hash)
-    return control.complete_connection(handle, deposit_script,
-                                       next_revoke_secret_hash)
+    with db.lock:
+        return control.complete_connection(handle, deposit_script,
+                                           next_revoke_secret_hash)
 
 
 @dispatcher.add_method
@@ -46,8 +49,9 @@ def mpc_hub_sync(handle, next_revoke_secret_hash,
                  sends=None, commit=None, revokes=None):
     validate.sync_input(handle, next_revoke_secret_hash,
                         sends, commit, revokes)
-    return control.sync_hub_connection(handle, next_revoke_secret_hash,
-                                       sends, commit, revokes)
+    with db.lock:
+        return control.sync_hub_connection(handle, next_revoke_secret_hash,
+                                           sends, commit, revokes)
 
 
 def _add_counterparty_call(method):

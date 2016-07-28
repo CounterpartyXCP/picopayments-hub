@@ -97,8 +97,8 @@ CREATE TABLE CommitRevoked(
 CREATE TABLE Payment(
     id                          INTEGER NOT NULL PRIMARY KEY,
     amount                      INTEGER NOT NULL,       -- satoshis
-    payer_handle                TEXT NOT NULL,          -- hex
-    payee_handle                TEXT NOT NULL,          -- hex
+    payer_handle                TEXT,                   -- hex (NULL -> hub)
+    payee_handle                TEXT,                   -- hex (NULL -> hub)
     token                       TEXT NOT NULL,          -- hex
     processed                   BOOLEAN NOT NULL DEFAULT 0,
     payee_notified              BOOLEAN NOT NULL DEFAULT 0,

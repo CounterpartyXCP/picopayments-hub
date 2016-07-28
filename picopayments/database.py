@@ -5,6 +5,9 @@
 
 import os
 import apsw
+from threading import RLock
+from counterpartylib.lib.micropayments import util
+from counterpartylib.lib.micropayments import scripts
 from . import config
 
 
@@ -19,6 +22,8 @@ _MIGRATIONS = {
 _HUB_CONNECTION = "SELECT * FROM HubConnection where handle = :handle"
 _MICROPAYMENT_CHANNEL = "SELECT * FROM MicropaymentChannel WHERE id = :id"
 _HANDLE_EXISTS = "SELECT EXISTS(SELECT * FROM HubConnection WHERE handle = ?);"
+_CONNECTION_TERMS = "SELECT * FROM Terms WHERE id = :id;"
+_UNPROCESSED_PAYMENTS = "SELECT * FROM Payment WHERE NOT(processed);"
 _UNNOTIFIED_PAYMENTS = _sql("unnotified_payments")
 _UNNOTIFIED_COMMITS = _sql("unnotified_commits")
 _UNNOTIFIED_REVOKES = _sql("unnotified_revokes")
@@ -41,6 +46,7 @@ _SET_REVOKE_NOTIFIED = _sql("set_revoke_notified")
 _SET_NEXT_REVOKE_SECRET_HASH = _sql("set_next_revoke_secret_hash")
 
 
+lock = RLock()
 _connection = None  # set in setup
 
 
@@ -175,8 +181,7 @@ def handles_exist(handles, cursor=None):
 
 def set_next_revoke_secret_hash(handle, next_revoke_secret_hash, cursor=None):
     args = {
-        "handle": handle,
-        "next_revoke_secret_hash": next_revoke_secret_hash
+        "handle": handle, "next_revoke_secret_hash": next_revoke_secret_hash
     }
     _exec(_SET_NEXT_REVOKE_SECRET_HASH, args, cursor=cursor)
 
@@ -184,15 +189,6 @@ def set_next_revoke_secret_hash(handle, next_revoke_secret_hash, cursor=None):
 def add_payments(payments, cursor=None):
     cursor = cursor or get_cursor()
     cursor.executemany(_ADD_PAYMENT, payments)
-
-
-def set_channel_state(channel_id, commits_requested, commits_active,
-                      commits_revoked, cursor=None):
-    cursor = cursor or get_cursor()
-    cursor.execute(_RM_COMMITS, {"channel_id": channel_id})
-    cursor.executemany(_ADD_COMMIT_REQUESTED, commits_requested)
-    cursor.executemany(_ADD_COMMIT_ACTIVE, commits_requested)
-    cursor.executemany(_ADD_COMMIT_REVOKED, commits_requested)
 
 
 def unnotified_payments(handle):
@@ -232,3 +228,101 @@ def add_revoke_secret(channel_id, secret_hash, secret_value, cursor=None):
 
 def receive_channel(handle, cursor=None):
     return _one(_RECEIVE_CHANNEL, args={"handle": handle}, cursor=cursor)
+
+
+def unprocessed_payments(cursor=None):
+    return _all(_UNPROCESSED_PAYMENTS, cursor=cursor)
+
+
+def connection_terms(terms_id, cursor=None):
+    return _one(_CONNECTION_TERMS, args={"id": terms_id}, cursor=cursor)
+
+
+def load_channel_state(channel_id, asset, cursor=None):
+    channel = micropayment_channel(channel_id, cursor=cursor)
+    state = {}
+    state["asset"] = asset
+    state["deposit_script"] = channel["deposit_script"]
+    state["commits_requested"] = commits_requested(
+        channel_id, cursor=cursor
+    )
+    state["commits_active"] = commits_active(channel_id, cursor=cursor)
+    state["commits_revoked"] = commits_revoked(channel_id, cursor=cursor)
+    return state
+
+
+def _fmt_requested(channel_id, revoke_secret_hashes):
+    requested = []
+    for revoke_secret_hash in revoke_secret_hashes:
+        requested.append({
+            "channel_id": channel_id,
+            "revoke_secret_hash": revoke_secret_hash
+        })
+    return requested
+
+
+def _script_data(script):
+    delay_time = scripts.get_commit_delay_time(util.h2b(script))
+    secret_hash = scripts.get_commit_revoke_secret_hash(util.h2b(script))
+    commit_address = util.script2address(util.h2b(script),
+                                         netcode=config.netcode)
+    return {
+        "commit_address": commit_address,
+        "delay_time": delay_time,
+        "revoke_secret_hash": secret_hash,
+    }
+
+
+def _fmt_active(channel_id, unnotified_commit, commits_active):
+    active = []
+    for commit_active in commits_active:
+        script = commit_active["script"]
+        rawtx = commit_active["rawtx"]
+
+        payee_notified = 1
+        if unnotified_commit and unnotified_commit["script"] == script:
+            payee_notified = 0
+
+        data = {
+            "channel_id": channel_id,
+            "script": script,
+            "rawtx": rawtx,
+            "payee_notified": payee_notified
+        }
+        data.update(_script_data(script))
+        active.append(data)
+    return active
+
+
+def _fmt_revoked(channel_id, unnotified_commit, commits_revoked):
+    revoked = []
+    for commit_revoked in commits_revoked:
+        script = commit_revoked["script"]
+        revoke_secret = commit_revoked["revoke_secret"]
+
+        data = {
+            "channel_id": channel_id,
+            "script": script,
+            "revoke_secret": revoke_secret,
+            "payee_notified": 0  # FIXME set correctly
+        }
+        data.update(_script_data(script))
+        revoked.append(data)
+    return revoked
+
+
+def save_channel_state(channel_id, state, unnotified_commit=None, cursor=None):
+    cursor = cursor or get_cursor()
+
+    # TODO reformat data
+    commits_requested = _fmt_requested(channel_id, state["commits_requested"])
+    commits_active = _fmt_active(channel_id, unnotified_commit,
+                                 state["commits_active"])
+    commits_revoked = _fmt_revoked(channel_id, unnotified_commit,
+                                   state["commits_revoked"])
+
+    cursor.execute(_RM_COMMITS, {"channel_id": channel_id})
+    cursor.executemany(_ADD_COMMIT_REQUESTED, commits_requested)
+    print("Commits active:", commits_active)
+    cursor.executemany(_ADD_COMMIT_ACTIVE, commits_active)
+    cursor.executemany(_ADD_COMMIT_REVOKED, commits_revoked)

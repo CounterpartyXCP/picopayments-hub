@@ -4,6 +4,7 @@
 
 
 testnet = None  # loaded from args
+netcode = None  # loaded from args
 
 
 # paths and files
@@ -24,21 +25,24 @@ counterparty_password = None  # loaded from args
 
 
 def load(args):
-    globals()["testnet"] = args["testnet"]
+    globals().update({
 
-    # paths and files
-    globals()["root"] = args["root"]
+        "testnet": args["testnet"],
+        "netcode": "XTN" if args["testnet"] else "BTC",
 
-    # server
-    globals()["host"] = args["host"]
-    globals()["port"] = args["port"]
+        # paths and files
+        "root": args["root"],
 
-    # counterpartylib api
-    globals()["counterparty_url"] = args["cp_url"]
-    globals()["counterparty_username"] = args["cp_username"]
-    globals()["counterparty_password"] = args["cp_password"]
+        # server
+        "host": args["host"],
+        "port": args["port"],
 
-    # set paths
-    globals()["database"] = "testnet.db" if args["testnet"] else "mainnet.db"
-    globals()["terms"] = "testnet.terms" if args[
-        "testnet"] else "mainnet.terms"
+        # counterpartylib api
+        "counterparty_url": args["cp_url"],
+        "counterparty_username": args["cp_username"],
+        "counterparty_password": args["cp_password"],
+
+        # set paths
+        "database": "testnet.db" if args["testnet"] else "mainnet.db",
+        "terms": "testnet.terms" if args["testnet"] else "mainnet.terms",
+    })

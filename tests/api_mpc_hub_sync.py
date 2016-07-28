@@ -31,6 +31,8 @@ class TestMpcHubSync(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.root)
 
+    # FIXME test fails if request made, deposit not made then sync
+
     def test_poll_updates_xcp(self):
         with open("tests/fixtures/sync/client.json") as fp:
             connection = json.load(fp)
