@@ -4,7 +4,6 @@
 
 
 import os
-import copy
 import json
 import requests
 from requests.auth import HTTPBasicAuth
@@ -184,36 +183,37 @@ def initialize(args):
     return args
 
 
-def update_channel_state(state, commit, revokes):
-    if commit:
+def update_channel_state(channel_id, asset, commit=None,
+                         revokes=None, cursor=None):
+
+    state = db.load_channel_state(channel_id, asset, cursor=cursor)
+    unnotified_revokes = db.unnotified_revokes(channel_id, cursor=None)
+    unnotified_commit = db.unnotified_commit(channel_id, cursor=cursor)
+    if commit is not None:
         state = counterparty_call("mpc_add_commit", {
             "state": state,
             "commit_rawtx": commit["rawtx"],
             "commit_script": commit["script"]
         })
-    if revokes:
+    if revokes is not None:
         state = counterparty_call("mpc_revoke_all", {
             "state": state, "secrets": revokes
         })
+    db.save_channel_state(
+        channel_id, state, unnotified_commit=unnotified_commit,
+        unnotified_revokes=unnotified_revokes, cursor=cursor
+    )
     return state
 
 
-def _save_sync_data(cursor, handle, next_revoke_secret_hash, sends,
-                    before_recv_state, after_recv_state, receive_payments,
-                    send_commit_id, send_revokes, recv_id, next_revoke_secret):
+def _save_sync_data(cursor, handle, next_revoke_secret_hash,
+                    receive_payments, send_commit_id, send_revokes,
+                    recv_id, next_revoke_secret):
 
     cursor.execute("BEGIN TRANSACTION;")
 
-    # save send state
-    if before_recv_state != after_recv_state:
-        db.save_channel_state(recv_id, after_recv_state, cursor=cursor)
-
     # set next revoke secret hash from client
     db.set_next_revoke_secret_hash(handle, next_revoke_secret_hash)
-
-    # save submitted payments
-    if sends:
-        db.add_payments(sends, cursor=cursor)
 
     # mark sent payments as received
     payment_ids = [p.pop("id") for p in receive_payments]
@@ -245,19 +245,22 @@ def sync_hub_connection(handle, next_revoke_secret_hash,
     asset = hub_connection["asset"]
     recv_id = hub_connection["recv_channel_id"]
     send_id = hub_connection["send_channel_id"]
-    recv_state = db.load_channel_state(recv_id, asset, cursor=cursor)
 
-    # update receive channel state
-    before_recv_state = copy.deepcopy(recv_state)
-    after_recv_state = update_channel_state(recv_state, commit, revokes)
+    # update channels state
+    update_channel_state(recv_id, asset, commit=commit, cursor=cursor)
+    update_channel_state(send_id, asset, revokes=revokes, cursor=cursor)
 
     # add sync fee payment
-    sends.append({
+    sends.insert(0, {
         "payer_handle": handle,
         "payee_handle": None,  # to hub
         "amount": connection_terms["fee_sync"],
         "token": "sync_fee"
     })
+
+    # process payments
+    for send in sends:
+        process_payment(cursor, send)
 
     # create next spend secret
     next_revoke_secret = create_secret()
@@ -269,9 +272,9 @@ def sync_hub_connection(handle, next_revoke_secret_hash,
 
     # save sync data
     send_commit_id = send_commit.pop("id") if send_commit else None
-    _save_sync_data(cursor, handle, next_revoke_secret_hash, sends,
-                    before_recv_state, after_recv_state, receive_payments,
-                    send_commit_id, send_revokes, recv_id, next_revoke_secret)
+    _save_sync_data(cursor, handle, next_revoke_secret_hash,
+                    receive_payments, send_commit_id, send_revokes,
+                    recv_id, next_revoke_secret)
 
     return {
         "receive": receive_payments,
@@ -283,40 +286,79 @@ def sync_hub_connection(handle, next_revoke_secret_hash,
 
 def load_channel_data(handle, cursor):
     connection = db.hub_connection(handle, cursor=cursor)
-    send_state = db.load_channel_state(
-        connection["send_channel_id"],
-        connection["asset"],
-        cursor=cursor
+    send_state = db.load_channel_state(connection["send_channel_id"],
+                                       connection["asset"], cursor=cursor)
+    send_deposit_address = util.script2address(
+        util.h2b(send_state["deposit_script"]), netcode=config.netcode
     )
-    recv_state = db.load_channel_state(
-        connection["recv_channel_id"],
-        connection["asset"],
-        cursor=cursor
+    recv_state = db.load_channel_state(connection["recv_channel_id"],
+                                       connection["asset"], cursor=cursor)
+    recv_deposit_address = util.script2address(
+        util.h2b(send_state["deposit_script"]), netcode=config.netcode
     )
-    unnotified_commit = db.unnotified_commit(handle)
+    send_transferred = counterparty_call("mpc_transferred_amount", {
+        "state": send_state
+    })
+    send_deposit_amount = counterparty_call("get_balances", {"filters": [
+        {'field': 'address', 'op': '==', 'value': send_deposit_address},
+        {'field': 'asset', 'op': '==', 'value': connection["asset"]},
+    ]})[0]["quantity"]
+    recv_transferred = counterparty_call("mpc_transferred_amount", {
+        "state": recv_state
+    })
+    recv_deposit_amount = counterparty_call("get_balances", {"filters": [
+        {'field': 'address', 'op': '==', 'value': recv_deposit_address},
+        {'field': 'asset', 'op': '==', 'value': connection["asset"]},
+    ]})[0]["quantity"]
+    unnotified_commit = db.unnotified_commit(handle, cursor=cursor)
+    send_payments_sum = db.send_payments_sum(handle, cursor=cursor)
+    recv_payments_sum = db.recv_payments_sum(handle, cursor=cursor)
+    transferred_amount = recv_transferred - send_transferred
+    payments_sum = send_payments_sum - recv_payments_sum
+
+    # sendable (what this channel can send to another)
+    sendable_amount = transferred_amount - payments_sum
+
+    # receivable (what this channel can receive from another)
+    receivable_potential = send_deposit_amount + recv_transferred
+    receivable_owed = (abs(payments_sum) if payments_sum < 0 else 0)
+    receivable_amount = receivable_potential - receivable_owed
     return {
         "connection": connection,
         "send_state": send_state,
+        "send_transferred_amount": send_transferred,
+        "send_payments_sum": send_payments_sum,
+        "send_deposit_amount": send_deposit_amount,
         "recv_state": recv_state,
-        "unnotified_commit": unnotified_commit
+        "recv_transferred_amount": recv_transferred,
+        "recv_payments_sum": recv_payments_sum,
+        "recv_deposit_amount": recv_deposit_amount,
+        "transferred_amount": transferred_amount,
+        "payments_sum": payments_sum,
+        "unnotified_commit": unnotified_commit,
+        "sendable_amount": sendable_amount,
+        "receivable_amount": receivable_amount,
     }
 
 
-def process_payment(cursor, unprocessed):
+def process_payment(cursor, payment):
 
     # load payer
-    payer_handle = unprocessed["payer_handle"]
-    if payer_handle:
-        payer_data = load_channel_data(payer_handle, cursor)
+    payer_handle = payment["payer_handle"]
+    payer = load_channel_data(payer_handle, cursor)
+
+    # check payer has enough funds or can revoke sends until enough available
+    if payment["amount"] > payer["sendable_amount"]:
+        raise exceptions.PaymentExceedsSpendable(
+            payment["amount"], payer["sendable_amount"], payment["token"]
+        )
 
     # load payee
-    payee_handle = unprocessed["payee_handle"]
+    payee_handle = payment["payee_handle"]
     if payee_handle:
-        payee_data = load_channel_data(payee_handle, cursor)
+        payee = load_channel_data(payee_handle, cursor)
+        payee = payee
 
+        # TODO adjust payee channel
 
-def process_payments():
-    cursor = db.get_cursor()
-    for unprocessed in db.unprocessed_payments(cursor=cursor):
-        with db.lock:
-            process_payment(cursor, unprocessed)
+    db.add_payment(payment, cursor=cursor)

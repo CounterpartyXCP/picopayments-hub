@@ -23,11 +23,12 @@ _HUB_CONNECTION = "SELECT * FROM HubConnection where handle = :handle"
 _MICROPAYMENT_CHANNEL = "SELECT * FROM MicropaymentChannel WHERE id = :id"
 _HANDLE_EXISTS = "SELECT EXISTS(SELECT * FROM HubConnection WHERE handle = ?);"
 _CONNECTION_TERMS = "SELECT * FROM Terms WHERE id = :id;"
-_UNPROCESSED_PAYMENTS = "SELECT * FROM Payment WHERE NOT(processed);"
 _UNNOTIFIED_PAYMENTS = _sql("unnotified_payments")
 _UNNOTIFIED_COMMITS = _sql("unnotified_commits")
 _UNNOTIFIED_REVOKES = _sql("unnotified_revokes")
 _RECEIVE_CHANNEL = _sql("receive_channel")
+_SEND_PAYMENTS_SUM = _sql("send_payments_sum")
+_RECV_PAYMENTS_SUM = _sql("recv_payments_sum")
 _COMMITS_REQUESTED = _sql("commits_requested")
 _COMMITS_ACTIVE = _sql("commits_active")
 _COMMITS_REVOKED = _sql("commits_revoked")
@@ -230,10 +231,6 @@ def receive_channel(handle, cursor=None):
     return _one(_RECEIVE_CHANNEL, args={"handle": handle}, cursor=cursor)
 
 
-def unprocessed_payments(cursor=None):
-    return _all(_UNPROCESSED_PAYMENTS, cursor=cursor)
-
-
 def connection_terms(terms_id, cursor=None):
     return _one(_CONNECTION_TERMS, args={"id": terms_id}, cursor=cursor)
 
@@ -294,8 +291,8 @@ def _fmt_active(channel_id, unnotified_commit, commits_active):
     return active
 
 
-def _fmt_revoked(channel_id, unnotified_revokes,
-                 unnotified_commit, commits_revoked):
+def _fmt_revoked(channel_id, commits_revoked,
+                 unnotified_commit=None, unnotified_revokes=None):
 
     unnotified_revokes = unnotified_revokes or []
     unnotified_secrets = [cr["revoke_secret"] for cr in unnotified_revokes]
@@ -317,17 +314,42 @@ def _fmt_revoked(channel_id, unnotified_revokes,
     return revoked
 
 
-def save_channel_state(channel_id, state, previous_unnotified_revokes=None,
-                       unnotified_commit=None, cursor=None):
+def save_channel_state(channel_id, state, unnotified_commit=None,
+                       unnotified_revokes=None, cursor=None):
     cursor = cursor or get_cursor()
 
+    # reformat state data
     commits_requested = _fmt_requested(channel_id, state["commits_requested"])
     commits_active = _fmt_active(channel_id, unnotified_commit,
                                  state["commits_active"])
-    commits_revoked = _fmt_revoked(channel_id, previous_unnotified_revokes,
-                                   unnotified_commit, state["commits_revoked"])
+    commits_revoked = _fmt_revoked(
+        channel_id, state["commits_revoked"],
+        unnotified_commit=unnotified_commit,
+        unnotified_revokes=unnotified_revokes
+    )
 
+    # save state to db
+    cursor.execute("BEGIN TRANSACTION;")
     cursor.execute(_RM_COMMITS, {"channel_id": channel_id})
     cursor.executemany(_ADD_COMMIT_REQUESTED, commits_requested)
     cursor.executemany(_ADD_COMMIT_ACTIVE, commits_active)
     cursor.executemany(_ADD_COMMIT_REVOKED, commits_revoked)
+    cursor.execute("COMMIT;")
+
+
+def send_payments_sum(handle, cursor=None):
+    result = _one(_SEND_PAYMENTS_SUM, args={"handle": handle}, cursor=cursor)
+    if result:
+        return result["sum"]
+    return 0
+
+
+def recv_payments_sum(handle, cursor=None):
+    result = _one(_RECV_PAYMENTS_SUM, args={"handle": handle}, cursor=cursor)
+    if result:
+        return result["sum"]
+    return 0
+
+
+def add_payment(payment, cursor=None):
+    _exec(_ADD_PAYMENT, args=payment, cursor=cursor)

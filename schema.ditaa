@@ -6,7 +6,6 @@
    +---| o payer_handle (hex, str)              |
    +---| o payee_handle (hex, str)              |
    |   | o token (hex, str)                     |
-   |   | o processed (bool)                     |
    |   | o payee_notified (bool)                |
    |   | o unixtimestamp (unixtime, int)        |
    |   +----------------------------------------+
