@@ -4,6 +4,7 @@ import shutil
 import tempfile
 from pycoin.serialize import b2h
 from picopayments import control
+from picopayments import cli
 from picopayments import database as db
 
 
@@ -12,7 +13,10 @@ class TestDB(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.mkdtemp(prefix="picopayments_test_")
         # TODO start mock counterparty service
-        control.initialize(["--testnet", "--root={0}".format(self.root)])
+        control.initialize(cli.parse([
+            "--testnet",
+            "--root={0}".format(self.root)
+        ]))
 
     def tearDown(self):
         shutil.rmtree(self.root)

@@ -29,6 +29,7 @@ Installation / Setup
 
   TODO setup bitcoind full node
   TODO setup counterparty lib on localhost
+  apt-get install python-cffi python3-cffi python-dev python3-dev libffi-dev
   pip install picopayments
 
 

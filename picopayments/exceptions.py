@@ -48,7 +48,16 @@ class RpcCallFailed(Exception):
 class PaymentExceedsSpendable(Exception):
 
     def __init__(self, amount, spendable, token):
-        msg = "Payment amount exceeds spendable! {0}: {1} > {2}".format(
+        msg = "Payment amount exceeds payer spendable! {0}: {1} > {2}".format(
             token, amount, spendable
         )
         super(PaymentExceedsSpendable, self).__init__(msg)
+
+
+class PaymentExceedsReceivable(Exception):
+
+    def __init__(self, amount, spendable, token):
+        msg = "Payment amount exceeds payee receivable! {0}: {1} > {2}".format(
+            token, amount, spendable
+        )
+        super(PaymentExceedsReceivable, self).__init__(msg)

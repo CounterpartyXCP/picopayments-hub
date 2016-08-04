@@ -1,30 +1,47 @@
 import shutil
+import time
 import unittest
 import tempfile
-from picopayments import control
-from picopayments import api
+from picopayments.main import main
+from multiprocessing import Process
+from picopayments.control import rpc_call
 
 
-URL = "http://127.0.0.1:14000/api/"
+HOST = "127.0.0.1"
+PORT = "15000"
+URL = "https://127.0.0.1:15000/api/"
+CP_URL = "http://127.0.0.1:14000/api/"
 
 
 class TestMpcHubTerms(unittest.TestCase):
 
     def setUp(self):
         self.root = tempfile.mkdtemp(prefix="picopayments_test_")
-        control.initialize([
-            "--testnet", "--root={0}".format(self.root),
-            "--cp_url={0}".format(URL)
-        ])
+        self.server = Process(target=main, args=([
+            "--testnet",
+            "--root={0}".format(self.root),
+            "--host={0}".format(HOST),
+            "--port={0}".format(PORT),
+            "--cp_url={0}".format(CP_URL)
+        ],))
+        self.server.start()
+        time.sleep(5)  # wait until server started
 
     def tearDown(self):
+        self.server.terminate()
+        self.server.join()
         shutil.rmtree(self.root)
 
     def test_standard_usage_xcp(self):
         # TODO test input validation
 
         # test gets all
-        terms = api.mpc_hub_terms()
+        terms = rpc_call(
+            url=URL,
+            method="mpc_hub_terms",
+            params={},
+            verify=False
+        )
         self.assertEqual(terms, {
             "BTC": {
                 "deposit_ratio": 1.0,
@@ -53,7 +70,14 @@ class TestMpcHubTerms(unittest.TestCase):
         })
 
         # test limits to asset
-        terms = api.mpc_hub_terms("XCP")
+        terms = rpc_call(
+            url=URL,
+            method="mpc_hub_terms",
+            params={
+                "assets": ["XCP"]
+            },
+            verify=False
+        )
         self.assertEqual(terms, {
             "XCP": {
                 "deposit_ratio": 1.0,
@@ -64,3 +88,7 @@ class TestMpcHubTerms(unittest.TestCase):
                 "deposit_limit": 0
             }
         })
+
+
+if __name__ == "__main__":
+    unittest.main()

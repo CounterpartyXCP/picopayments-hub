@@ -14,33 +14,40 @@ from counterpartylib.lib.micropayments.scripts import (
     get_deposit_payer_pubkey, get_deposit_payee_pubkey,
     get_deposit_expire_time, compile_deposit_script
 )
-from . import cli
 from . import config
 from . import terms
 from . import database as db
 from . import exceptions
 
 
-def rpc_call(url, method, params, username=None, password=None):
-    kwargs = {"headers": {'content-type': 'application/json'}}
+def rpc_call(url, method, params, username=None, password=None, verify=True):
+    payload = {"method": method, "params": params, "jsonrpc": "2.0", "id": 0}
+
+    kwargs = {
+        "url": url,
+        "headers": {'content-type': 'application/json'},
+        "data": json.dumps(payload),
+        "verify": verify,
+    }
     if username and password:
         kwargs["auth"] = HTTPBasicAuth(username, password)
-    payload = {"method": method, "params": params, "jsonrpc": "2.0", "id": 0}
-    response = requests.post(url, data=json.dumps(payload), **kwargs).json()
+    response = requests.post(**kwargs).json()
     if "result" not in response:
         raise exceptions.RpcCallFailed(payload, response)
     return response["result"]
 
 
 def counterparty_call(method, params):
-    return rpc_call(config.counterparty_url, method, params,
-                    config.counterparty_username, config.counterparty_password)
+    return rpc_call(
+        config.counterparty_url, method, params,
+        username=config.counterparty_username,
+        password=config.counterparty_password
+    )
 
 
-def create_key(asset):
+def create_key(asset, netcode="BTC"):
     secure_random_data = os.urandom(32)
-    key = BIP32Node.from_master_secret(secure_random_data,
-                                       netcode=config.netcode)
+    key = BIP32Node.from_master_secret(secure_random_data, netcode=netcode)
     return {
         "asset": asset,
         "pubkey": b2h(key.sec()),
@@ -66,7 +73,7 @@ def create_hub_connection(asset, client_pubkey,
     data.update(terms)
 
     # new hub key
-    hub_key = create_key(asset)
+    hub_key = create_key(asset, netcode=config.netcode)
     data["hub_wif"] = hub_key["wif"]
     data["hub_pubkey"] = hub_key["pubkey"]
     data["hub_address"] = hub_key["address"]
@@ -165,13 +172,12 @@ def read_current_terms(asset):
 
 
 def create_funding_address(asset):
-    key = create_key(asset)
+    key = create_key(asset, netcode=config.netcode)
     db.add_keys([key])
     return key["address"]
 
 
 def initialize(args):
-    args = cli.parse(args)  # parse args
     config.load(args)  # load configuration
 
     # ensure root path exists
@@ -180,7 +186,6 @@ def initialize(args):
 
     terms.read()  # make sure terms file exists
     db.setup()  # setup and create db if needed
-    return args
 
 
 def update_channel_state(channel_id, asset, commit=None,
@@ -356,9 +361,20 @@ def process_payment(cursor, payment):
     # load payee
     payee_handle = payment["payee_handle"]
     if payee_handle:
+
         payee = load_channel_data(payee_handle, cursor)
-        payee = payee
+        if payment["amount"] > payee["receivable_amount"]:
+            raise exceptions.PaymentExceedsReceivable(
+                payment["amount"], payee["receivable_amount"], payment["token"]
+            )
+
+        cursor.execute("BEGIN TRANSACTION;")
 
         # TODO adjust payee channel
 
+    # fee payment
+    else:
+        cursor.execute("BEGIN TRANSACTION;")
+
     db.add_payment(payment, cursor=cursor)
+    cursor.execute("COMMIT;")

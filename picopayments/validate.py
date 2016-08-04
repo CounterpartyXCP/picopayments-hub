@@ -130,3 +130,5 @@ def sync_input(handle, next_revoke_secret_hash, sends, commit, revokes):
     if commit:
         jsonschema.validate(commit, COMMIT_SCHEMA)
         is_recv_commit(handle, commit["rawtx"], commit["script"])
+
+    # FIXME validate channels not expired

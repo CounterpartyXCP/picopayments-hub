@@ -3,6 +3,7 @@ import unittest
 import tempfile
 from pycoin.key.validate import is_address_valid
 from picopayments import control
+from picopayments import cli
 from picopayments import exceptions
 
 
@@ -14,10 +15,11 @@ class TestCtrl(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.mkdtemp(prefix="picopayments_test_")
         # TODO start mock counterparty service
-        control.initialize([
-            "--testnet", "--root={0}".format(self.root),
+        control.initialize(cli.parse([
+            "--testnet",
+            "--root={0}".format(self.root),
             "--cp_url={0}".format(URL)
-        ])
+        ]))
 
     def tearDown(self):
         shutil.rmtree(self.root)
