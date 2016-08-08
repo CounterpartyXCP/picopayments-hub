@@ -9,7 +9,7 @@ from picopayments import control
 from picopayments import exceptions
 from picopayments.main import main
 from multiprocessing import Process
-from picopayments.control import rpc_call
+from picopayments import rpc
 
 
 HOST = "127.0.0.1"
@@ -56,15 +56,16 @@ class TestMpcHubRequest(unittest.TestCase):
         asset = "XCP"
         client_key = control.create_key(asset)
         secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
-        result = rpc_call(
+        result = rpc.call(
             url=URL,
             method="mpc_hub_request",
             params={
                 "asset": asset,
-                "pubkey": client_key["pubkey"],
+                "wif": client_key["wif"],
                 "spend_secret_hash": secret_hash,
             },
-            verify=False
+            verify=False,
+            jsonauth=True
         )
         self.assertIsNotNone(result)
         jsonschema.validate(result, REQUEST_RESULT_SCHEMA)
@@ -75,15 +76,16 @@ class TestMpcHubRequest(unittest.TestCase):
             asset = "BADASSET"
             client_key = control.create_key(asset)
             secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
-            rpc_call(
+            rpc.call(
                 url=URL,
                 method="mpc_hub_request",
                 params={
                     "asset": asset,
-                    "pubkey": client_key["pubkey"],
+                    "wif": client_key["wif"],
                     "spend_secret_hash": secret_hash,
                 },
-                verify=False
+                verify=False,
+                jsonauth=True
             )
 
         self.assertRaises(Exception, func)
@@ -95,17 +97,22 @@ class TestMpcHubRequest(unittest.TestCase):
             asset = "XCP"
             client_key = control.create_key(asset)
             secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
-            rpc_call(
+            rpc.call(
                 url=URL,
                 method="mpc_hub_request",
                 params={
                     "asset": asset,
-                    "pubkey": client_key["pubkey"],
+                    "wif": client_key["wif"],
                     "spend_secret_hash": secret_hash,
                     "hub_rpc_url": "?? invalid url ??",
                 },
-                verify=False
+                verify=False,
+                jsonauth=True
             )
 
         self.assertRaises(Exception, func)
         # self.assertRaises(exceptions.InvalidUrl, func)
+
+
+if __name__ == "__main__":
+    unittest.main()

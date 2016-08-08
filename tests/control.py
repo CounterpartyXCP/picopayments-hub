@@ -4,6 +4,7 @@ import tempfile
 from pycoin.key.validate import is_address_valid
 from picopayments import control
 from picopayments import cli
+from picopayments import rpc
 from picopayments import exceptions
 
 
@@ -31,7 +32,7 @@ class TestCtrl(unittest.TestCase):
     def test_failed_rpc_call(self):
 
         def func():
-            control.counterparty_call(method="nonexistant", params={})
+            rpc.counterparty_call(method="nonexistant", params={})
         self.assertRaises(exceptions.RpcCallFailed, func)
 
     def test_validate_read_unknown_asset(self):

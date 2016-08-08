@@ -11,7 +11,7 @@ from picopayments import exceptions
 import jsonschema
 from picopayments.main import main
 from multiprocessing import Process
-from picopayments.control import rpc_call
+from picopayments import rpc
 
 
 HOST = "127.0.0.1"
@@ -59,15 +59,16 @@ class TestMpcHubDeposit(unittest.TestCase):
         hub2client_spend_secret = util.b2h(os.urandom(32))
         hub2client_spend_secret_hash = util.hash160hex(hub2client_spend_secret)
 
-        result = rpc_call(
+        result = rpc.call(
             url=URL,
             method="mpc_hub_request",
             params={
                 "asset": asset,
-                "pubkey": client_pubkey,
+                "wif": client_key["wif"],
                 "spend_secret_hash": hub2client_spend_secret_hash
             },
-            verify=False
+            verify=False,
+            jsonauth=True
         )
         handle = result["handle"]
         hub_pubkey = result["pubkey"]
@@ -78,15 +79,17 @@ class TestMpcHubDeposit(unittest.TestCase):
         ))
 
         next_revoke_secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
-        result = rpc_call(
+        result = rpc.call(
             url=URL,
             method="mpc_hub_deposit",
             params={
                 "handle": handle,
+                "wif": client_key["wif"],
                 "deposit_script": client2hub_deposit_script,
                 "next_revoke_secret_hash": next_revoke_secret_hash
             },
-            verify=False
+            verify=False,
+            jsonauth=True
         )
         self.assertIsNotNone(result)
         jsonschema.validate(result, DEPOSIT_RESULT_SCHEMA)
@@ -104,15 +107,16 @@ class TestMpcHubDeposit(unittest.TestCase):
                 hub2client_spend_secret
             )
 
-            result = rpc_call(
+            result = rpc.call(
                 url=URL,
                 method="mpc_hub_request",
                 params={
                     "asset": asset,
-                    "pubkey": client_pubkey,
+                    "wif": client_key["wif"],
                     "spend_secret_hash": hub2client_spend_secret_hash
                 },
-                verify=False
+                verify=False,
+                jsonauth=True
             )
             handle = result["handle"]
             hub_pubkey = result["pubkey"]
@@ -124,29 +128,33 @@ class TestMpcHubDeposit(unittest.TestCase):
 
             # submit deposit
             next_revoke_secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
-            result = rpc_call(
+            result = rpc.call(
                 url=URL,
                 method="mpc_hub_deposit",
                 params={
                     "handle": handle,
+                    "wif": client_key["wif"],
                     "deposit_script": client2hub_deposit_script,
                     "next_revoke_secret_hash": next_revoke_secret_hash
                 },
-                verify=False
+                verify=False,
+                jsonauth=True
             )
             self.assertIsNotNone(result)
 
             # resubmit deposit
             next_revoke_secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
-            result = rpc_call(
+            result = rpc.call(
                 url=URL,
                 method="mpc_hub_deposit",
                 params={
                     "handle": handle,
+                    "wif": client_key["wif"],
                     "deposit_script": client2hub_deposit_script,
                     "next_revoke_secret_hash": next_revoke_secret_hash
                 },
-                verify=False
+                verify=False,
+                jsonauth=True
             )
 
         self.assertRaises(Exception, func)
@@ -156,17 +164,21 @@ class TestMpcHubDeposit(unittest.TestCase):
 
         def func():
 
+            asset = "XCP"
+            client_key = control.create_key(asset, netcode="XTN")
             next_revoke_secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
             client2hub_deposit_script = util.b2h(os.urandom(32)),
-            rpc_call(
+            rpc.call(
                 url=URL,
                 method="mpc_hub_deposit",
                 params={
                     "handle": "deadbeef",
+                    "wif": client_key["wif"],
                     "deposit_script": client2hub_deposit_script,
                     "next_revoke_secret_hash": next_revoke_secret_hash
                 },
-                verify=False
+                verify=False,
+                jsonauth=True
             )
 
         self.assertRaises(Exception, func)

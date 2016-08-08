@@ -23,6 +23,8 @@ _HUB_CONNECTION = "SELECT * FROM HubConnection where handle = :handle"
 _MICROPAYMENT_CHANNEL = "SELECT * FROM MicropaymentChannel WHERE id = :id"
 _HANDLE_EXISTS = "SELECT EXISTS(SELECT * FROM HubConnection WHERE handle = ?);"
 _CONNECTION_TERMS = "SELECT * FROM Terms WHERE id = :id;"
+_KEY = "SELECT * FROM Keys WHERE pubkey = :pubkey;"
+_CHANNEL_PAYER_KEY = _sql("channel_payer_key")
 _UNNOTIFIED_PAYMENTS = _sql("unnotified_payments")
 _UNNOTIFIED_COMMITS = _sql("unnotified_commits")
 _UNNOTIFIED_REVOKES = _sql("unnotified_revokes")
@@ -353,3 +355,13 @@ def recv_payments_sum(handle, cursor=None):
 
 def add_payment(payment, cursor=None):
     _exec(_ADD_PAYMENT, args=payment, cursor=cursor)
+
+
+def key(pubkey, cursor=None):
+    return _one(_KEY, args={"pubkey": pubkey}, cursor=cursor)
+
+
+def channel_payer_key(channel_id, cursor=None):
+    return _one(
+        _CHANNEL_PAYER_KEY, args={"channel_id": channel_id}, cursor=cursor
+    )

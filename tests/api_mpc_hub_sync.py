@@ -6,12 +6,11 @@ import unittest
 import tempfile
 import jsonschema
 from picopayments import control
-from picopayments.api import getrawtransaction
 from picopayments import exceptions
 from counterpartylib.lib.micropayments import scripts
 from picopayments.main import main
 from multiprocessing import Process
-from picopayments.control import rpc_call
+from picopayments import rpc
 
 
 HOST = "127.0.0.1"
@@ -21,7 +20,7 @@ CP_URL = "http://127.0.0.1:14000/api/"
 
 
 def get_tx_func(txid):
-    return rpc_call(
+    return rpc.call(
         url=URL,
         method="getrawtransaction",
         params={"tx_hash": txid},
@@ -75,9 +74,11 @@ class TestMpcHubSync(unittest.TestCase):
         def func():
             with open("tests/fixtures/sync/client.json") as fp:
                 connection = json.load(fp)
+            asset = "XCP"
+            client_key = control.create_key(asset, netcode="XTN")
             secret = control.create_secret()
             connection["hub2client_revoke_secrets"].append(secret)
-            rpc_call(
+            rpc.call(
                 url=URL,
                 method="mpc_hub_sync",
                 params={
@@ -88,11 +89,13 @@ class TestMpcHubSync(unittest.TestCase):
                         "amount": 1337,
                         "token": "deadbeef"
                     }],
+                    "wif": client_key["wif"],
                     "commit": None,
                     "revokes": None,
                     "next_revoke_secret_hash": secret["secret_hash"]
                 },
-                verify=False
+                verify=False,
+                jsonauth=True
             )
 
         self.assertRaises(Exception, func)
@@ -103,9 +106,11 @@ class TestMpcHubSync(unittest.TestCase):
         def func():
             with open("tests/fixtures/sync/client.json") as fp:
                 connection = json.load(fp)
+            asset = "XCP"
+            client_key = control.create_key(asset, netcode="XTN")
             secret = control.create_secret()
             connection["hub2client_revoke_secrets"].append(secret)
-            rpc_call(
+            rpc.call(
                 url=URL,
                 method="mpc_hub_sync",
                 params={
@@ -116,11 +121,13 @@ class TestMpcHubSync(unittest.TestCase):
                         "amount": 1337,
                         "token": "deadbeef"
                     }],
+                    "wif": client_key["wif"],
                     "commit": None,
                     "revokes": "invalidformat",
                     "next_revoke_secret_hash": secret["secret_hash"]
                 },
-                verify=False
+                verify=False,
+                jsonauth=True
             )
 
         self.assertRaises(Exception, func)
@@ -131,9 +138,11 @@ class TestMpcHubSync(unittest.TestCase):
         def func():
             with open("tests/fixtures/sync/client.json") as fp:
                 connection = json.load(fp)
+            asset = "XCP"
+            client_key = control.create_key(asset, netcode="XTN")
             secret = control.create_secret()
             connection["hub2client_revoke_secrets"].append(secret)
-            rpc_call(
+            rpc.call(
                 url=URL,
                 method="mpc_hub_sync",
                 params={
@@ -144,11 +153,13 @@ class TestMpcHubSync(unittest.TestCase):
                         "amount": 1337,
                         "token": "deadbeef"
                     }],
+                    "wif": client_key["wif"],
                     "commit": "invalidformat",
                     "revokes": None,
                     "next_revoke_secret_hash": secret["secret_hash"]
                 },
-                verify=False
+                verify=False,
+                jsonauth=True
             )
 
         self.assertRaises(Exception, func)
@@ -163,7 +174,7 @@ class TestMpcHubSync(unittest.TestCase):
         # create commit
         send_state, recv_state = connection_initial_states(connection)
         revoke_secret_hash = connection["client2hub_revoke_secret_hash"]
-        result = rpc_call(
+        result = rpc.call(
             url=URL,
             method="mpc_create_commit",
             params={
@@ -184,12 +195,15 @@ class TestMpcHubSync(unittest.TestCase):
             result["tosign"]["deposit_script"],
         )
 
+        asset = "XCP"
+        client_key = control.create_key(asset, netcode="XTN")
+
         # gen next revoke secret
         next_secret = control.create_secret()
         connection["hub2client_revoke_secrets"].append(next_secret)
 
         # sync send payment to self
-        result = rpc_call(
+        result = rpc.call(
             url=URL,
             method="mpc_hub_sync",
             params={
@@ -200,10 +214,12 @@ class TestMpcHubSync(unittest.TestCase):
                     "amount": send_amount,
                     "token": "deadbeef"
                 }],
+                "wif": client_key["wif"],
                 "commit": {"rawtx": rawtx, "script": script},
                 "revokes": None,
                 "next_revoke_secret_hash": next_secret["secret_hash"]
             },
-            verify=False
+            verify=False,
+            jsonauth=True
         )
         self.assertIsNotNone(result)

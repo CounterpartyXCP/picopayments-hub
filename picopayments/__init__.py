@@ -6,6 +6,8 @@
 from .version import __version__  # NOQA
 from . import api  # NOQA
 from . import config  # NOQA
+from . import auth  # NOQA
+from . import rpc  # NOQA
 from . import cli  # NOQA
 from . import control  # NOQA
 from . import database  # NOQA

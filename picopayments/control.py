@@ -16,33 +16,9 @@ from counterpartylib.lib.micropayments.scripts import (
 )
 from . import config
 from . import terms
+from . import rpc
 from . import database as db
 from . import exceptions
-
-
-def rpc_call(url, method, params, username=None, password=None, verify=True):
-    payload = {"method": method, "params": params, "jsonrpc": "2.0", "id": 0}
-
-    kwargs = {
-        "url": url,
-        "headers": {'content-type': 'application/json'},
-        "data": json.dumps(payload),
-        "verify": verify,
-    }
-    if username and password:
-        kwargs["auth"] = HTTPBasicAuth(username, password)
-    response = requests.post(**kwargs).json()
-    if "result" not in response:
-        raise exceptions.RpcCallFailed(payload, response)
-    return response["result"]
-
-
-def counterparty_call(method, params):
-    return rpc_call(
-        config.counterparty_url, method, params,
-        username=config.counterparty_username,
-        password=config.counterparty_password
-    )
 
 
 def create_key(asset, netcode="BTC"):
@@ -94,12 +70,10 @@ def create_hub_connection(asset, client_pubkey,
     data["handle"] = handle
     data["hub_rpc_url"] = hub_rpc_url
 
-    # FIXME add sync fee payment
-
     db.add_hub_connection(data)
     return {
         "handle": handle,
-        "pubkey": hub_key["pubkey"],
+        "wif": hub_key["wif"],
         "spend_secret_hash": data["secret_hash"],
         "channel_terms": terms
     }
@@ -125,12 +99,14 @@ def _load_complete_connection(handle, recv_deposit_script):
     assert(recv["payee_pubkey"] == hub_pubkey)
     assert(not recv["meta_complete"])
 
-    return hub_conn, send, recv, expire_time
+    hub_key = db.key(hub_pubkey)
+
+    return hub_conn, send, recv, expire_time, hub_key
 
 
 def complete_connection(handle, recv_deposit_script, next_revoke_secret_hash):
 
-    hub_conn, send, recv, expire_time = _load_complete_connection(
+    hub_conn, send, recv, expire_time, hub_key = _load_complete_connection(
         handle, recv_deposit_script
     )
 
@@ -159,6 +135,7 @@ def complete_connection(handle, recv_deposit_script, next_revoke_secret_hash):
 
     db.complete_hub_connection(data)
     return {
+        "wif": hub_key["wif"],
         "deposit_script": send_deposit_script,
         "next_revoke_secret_hash": data["secret_hash"]
     }
@@ -195,13 +172,13 @@ def update_channel_state(channel_id, asset, commit=None,
     unnotified_revokes = db.unnotified_revokes(channel_id, cursor=None)
     unnotified_commit = db.unnotified_commit(channel_id, cursor=cursor)
     if commit is not None:
-        state = counterparty_call("mpc_add_commit", {
+        state = rpc.counterparty_call("mpc_add_commit", {
             "state": state,
             "commit_rawtx": commit["rawtx"],
             "commit_script": commit["script"]
         })
     if revokes is not None:
-        state = counterparty_call("mpc_revoke_all", {
+        state = rpc.counterparty_call("mpc_revoke_all", {
             "state": state, "secrets": revokes
         })
     db.save_channel_state(
@@ -281,7 +258,9 @@ def sync_hub_connection(handle, next_revoke_secret_hash,
                     receive_payments, send_commit_id, send_revokes,
                     recv_id, next_revoke_secret)
 
+    hub_key = db.channel_payer_key(send_id)
     return {
+        "wif": hub_key["wif"],
         "receive": receive_payments,
         "commit": send_commit,
         "revokes": [r["revoke_secret"] for r in send_revokes],
@@ -301,17 +280,17 @@ def load_channel_data(handle, cursor):
     recv_deposit_address = util.script2address(
         util.h2b(send_state["deposit_script"]), netcode=config.netcode
     )
-    send_transferred = counterparty_call("mpc_transferred_amount", {
+    send_transferred = rpc.counterparty_call("mpc_transferred_amount", {
         "state": send_state
     })
-    send_deposit_amount = counterparty_call("get_balances", {"filters": [
+    send_deposit_amount = rpc.counterparty_call("get_balances", {"filters": [
         {'field': 'address', 'op': '==', 'value': send_deposit_address},
         {'field': 'asset', 'op': '==', 'value': connection["asset"]},
     ]})[0]["quantity"]
-    recv_transferred = counterparty_call("mpc_transferred_amount", {
+    recv_transferred = rpc.counterparty_call("mpc_transferred_amount", {
         "state": recv_state
     })
-    recv_deposit_amount = counterparty_call("get_balances", {"filters": [
+    recv_deposit_amount = rpc.counterparty_call("get_balances", {"filters": [
         {'field': 'address', 'op': '==', 'value': recv_deposit_address},
         {'field': 'asset', 'op': '==', 'value': connection["asset"]},
     ]})[0]["quantity"]

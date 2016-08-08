@@ -4,7 +4,7 @@ import unittest
 import tempfile
 from picopayments.main import main
 from multiprocessing import Process
-from picopayments.control import rpc_call
+from picopayments import rpc
 
 
 HOST = "127.0.0.1"
@@ -36,7 +36,7 @@ class TestMpcHubTerms(unittest.TestCase):
         # TODO test input validation
 
         # test gets all
-        terms = rpc_call(
+        terms = rpc.call(
             url=URL,
             method="mpc_hub_terms",
             params={},
@@ -70,7 +70,7 @@ class TestMpcHubTerms(unittest.TestCase):
         })
 
         # test limits to asset
-        terms = rpc_call(
+        terms = rpc.call(
             url=URL,
             method="mpc_hub_terms",
             params={
