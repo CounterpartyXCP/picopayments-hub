@@ -1,6 +1,7 @@
 six >= 1.10.0
 json-rpc >= 1.10.3
 werkzeug >= 0.11.10
+pycoin == 0.70
 apsw == 3.9.2-r1
 pycrypto >= 2.6.1
 python-dateutil >= 2.5.3

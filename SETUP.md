@@ -3,7 +3,13 @@
 Tested with Ubuntu 16.04.1 x64
 
 
-## 1. Setup local bitcoin full node
+## 1. Install dependencies
+
+    sudo apt-get install python-virtualenv gcc python3-dev
+    sudo apt-get install python-cffi python3-cffi libffi-dev python3-openssl libssl-dev
+
+
+## 2. Setup local bitcoin full node
 
 Setup bitcoin full node with addrindex patch
 
@@ -28,13 +34,10 @@ Setup bitcoin full node with addrindex patch
     bitcoin-0.12.1/bin/bitcoin-cli --rpcuser=bitcoinrpcuser --rpcpassword=bitcoinrpcpass --rpcport=18332 getinfo
 
 
-## 2. Setup local counterparty node
+## 3. Setup local counterparty node
 
 Setup counterparty node with patched micropayments support.
 Best use a screen as the node does not run as a daemon.
-
-    # install dependencies
-    sudo apt-get install python-virtualenv gcc python3-dev
 
     # setup virtualenv
     mkdir counterparty
@@ -54,7 +57,7 @@ Best use a screen as the node does not run as a daemon.
     counterparty-server --testnet --backend-port=18332 --backend-user=bitcoinrpcuser --backend-password=bitcoinrpcpass start
 
 
-## 3. Setup picopayments hub
+## 4. Setup picopayments hub
 
 Setup picopayments node with patched micropayments support.
 Best use a screen as the node does not run as a daemon.

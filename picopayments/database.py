@@ -4,7 +4,9 @@
 
 
 import os
+import sys
 import apsw
+import pkg_resources
 from threading import RLock
 from counterpartylib.lib.micropayments import util
 from counterpartylib.lib.micropayments import scripts
@@ -12,7 +14,9 @@ from . import config
 
 
 def _sql(name):
-    return open('picopayments/sql/{0}.sql'.format(name)).read()
+    sql_path = os.path.join("sql", "{0}.sql".format(name))
+    sql = pkg_resources.resource_stream("picopayments", sql_path).read()
+    return sql.decode("utf-8")
 
 
 # old version -> migrate sql
