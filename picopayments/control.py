@@ -4,9 +4,6 @@
 
 
 import os
-import json
-import requests
-from requests.auth import HTTPBasicAuth
 from pycoin.key.BIP32Node import BIP32Node
 from pycoin.serialize import b2h, h2b
 from counterpartylib.lib.micropayments import util
@@ -148,10 +145,13 @@ def read_current_terms(asset):
     return current_terms
 
 
-def create_funding_address(asset):
-    key = create_key(asset, netcode=config.netcode)
-    db.add_keys([key])
-    return key["address"]
+def create_funding_addresses(assets):
+    addresses = {}
+    for asset in assets:
+        key = create_key(asset, netcode=config.netcode)
+        db.add_keys([key])
+        addresses[asset] = key["address"]
+    return addresses
 
 
 def initialize(args):

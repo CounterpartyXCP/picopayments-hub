@@ -3,9 +3,11 @@
 # License: MIT (see LICENSE file)
 
 
+import json
 from picopayments import config
 from picopayments import cli
 from picopayments import control
+from picopayments import terms
 from picopayments import __version__
 from werkzeug.serving import run_simple
 from werkzeug.wrappers import Request, Response
@@ -20,25 +22,33 @@ def application(request):
 
 def main(args):
 
-    # display version
+    # show version
     if "--version" in args:
         print(__version__)
+        return
 
     # parse args and initialize
     parsed_args = cli.parse(args)
     control.initialize(parsed_args)
 
-    # display funding address for asset
-    asset = parsed_args["fund_address"]  # FIXME validate input
-    if asset is not None:
-        print(control.create_funding_address(asset))
+    # show configured terms
+    if parsed_args["terms"]:
+        print("Terms file saved at {0}".format(terms.path()))
+        print(json.dumps(terms.read(), indent=2, sort_keys=True))
+        return
+
+    # show funding address for assets
+    if parsed_args["funding"]:
+        assets = terms.read().keys()
+        addresses = control.create_funding_addresses(assets)
+        print(json.dumps(addresses, indent=2, sort_keys=True))
+        return
 
     # start server
-    else:
-        # FIXME optionally pass cert for ssl
-        run_simple(
-            config.host, config.port,
-            application,
-            processes=1,         # ensure db integrety, avoid race conditions
-            ssl_context='adhoc'  # automatically create ssl context
-        )
+    # FIXME optionally pass cert for ssl
+    run_simple(
+        config.host, config.port,
+        application,
+        processes=1,         # ensure db integrety, avoid race conditions
+        ssl_context='adhoc'  # automatically create ssl context
+    )

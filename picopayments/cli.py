@@ -22,16 +22,21 @@ def parse(args):
         help="Use bitcoin testnet instead of mainnet."
     )
 
-    # display version
+    # show version
     parser.add_argument(
         '--version', action='store_true',
-        help="Display version number."
+        help="Show version number."
     )
 
-    # display deposit address
+    # show deposit address
     parser.add_argument(
-        '--fund_address', default=None, metavar="ASSET",
-        help="Display address, used to fund the given asset."
+        '--funding', action='store_true',
+        help="Show address, used to fund the given asset."
+    )
+
+    # show hub terms
+    parser.add_argument(
+        '--terms', action='store_true', help="Show hub terms."
     )
 
     # root file path

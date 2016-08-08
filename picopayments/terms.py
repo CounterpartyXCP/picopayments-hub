@@ -65,19 +65,23 @@ DEFAULT_TESTNET = {
 }
 
 
+def path():
+    return os.path.join(config.root, config.terms)
+
+
 def read():
-    terms_path = os.path.join(config.root, config.terms)
+    _terms_path = path()
 
     # create terms and return default value
-    if not os.path.exists(terms_path):
+    if not os.path.exists(_terms_path):
         default_terms = DEFAULT_TESTNET if config.testnet else DEFAULT_MAINNET
-        with open(terms_path, 'w') as outfile:
+        with open(_terms_path, 'w') as outfile:
             json.dump(default_terms, outfile, indent=2)
         terms_data = copy.deepcopy(default_terms)
 
     # read terms
     else:
-        with open(terms_path, 'r') as infile:
+        with open(_terms_path, 'r') as infile:
             terms_data = json.load(infile)
 
     # FIXME validate terms data
