@@ -18,20 +18,18 @@ def parse(args):
 
     # network to use
     parser.add_argument(
-        '--testnet', action='store_true',
-        help="Use bitcoin testnet instead of mainnet."
+        '--testnet', action='store_true', help="Use bitcoin testnet."
     )
 
     # show version
     parser.add_argument(
-        '--version', action='store_true',
-        help="Show version number."
+        '--version', action='store_true', help="Show version number."
     )
 
     # show deposit address
     parser.add_argument(
         '--funding', action='store_true',
-        help="Show address, used to fund the given asset."
+        help="Show addresses, used to fund the given assets."
     )
 
     # show hub terms
@@ -44,6 +42,16 @@ def parse(args):
     parser.add_argument(
         '--root', default=default, metavar="PATH",
         help="Location of application files: {0}".format(default)
+    )
+
+    # ssl
+    parser.add_argument(
+        '--ssl_cert_file', default=None, metavar="PATH",
+        help="Path to ssl certificate file."
+    )
+    parser.add_argument(
+        '--ssl_pkey_file', default=None, metavar="PATH",
+        help="Path to ssl private key file."
     )
 
     # server

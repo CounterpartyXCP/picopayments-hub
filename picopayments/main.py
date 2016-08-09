@@ -44,11 +44,19 @@ def main(args):
         print(json.dumps(addresses, indent=2, sort_keys=True))
         return
 
+    # setup ssl
+    if parsed_args["ssl_cert_file"] and parsed_args["ssl_pkey_file"]:
+        ssl_context = (
+            parsed_args["ssl_cert_file"],
+            parsed_args["ssl_pkey_file"]
+        )
+    else:
+        ssl_context = 'adhoc'  # automatically create ssl context
+
     # start server
-    # FIXME optionally pass cert for ssl
     run_simple(
         config.host, config.port,
         application,
-        processes=1,         # ensure db integrety, avoid race conditions
-        ssl_context='adhoc'  # automatically create ssl context
+        processes=1,  # ensure db integrety, avoid race conditions
+        ssl_context=ssl_context
     )

@@ -59,7 +59,7 @@ DEFAULT_TESTNET = {
         "deposit_limit": 0,  # satoshis,
         "deposit_ratio": 1.0,  # float,
         "timeout_limit": 0,  # blocks,
-        "fee_setup": 10,  # satoshis,
+        "fee_setup": 10,  # satoshis,  # FIXME remove setup fee
         "fee_sync": 1,  # satoshis
     },
 }

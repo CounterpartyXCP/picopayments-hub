@@ -61,3 +61,21 @@ class PaymentExceedsReceivable(Exception):
             token, amount, spendable
         )
         super(PaymentExceedsReceivable, self).__init__(msg)
+
+
+class AuthPubkeyMissmatch(Exception):
+
+    def __init__(self, expected, found):
+        msg = "Given pubkey {0} does not match signing pubkey {1}!".format(
+            found, expected
+        )
+        super(AuthPubkeyMissmatch, self).__init__(msg)
+
+
+class InvalidSignature(Exception):
+
+    def __init__(self, pubkey, signature, data):
+        msg = "Invalid signature for pubkey {0}, signature {1}, data {2}"
+        super(InvalidSignature, self).__init__(
+            msg.format(pubkey, signature, data)
+        )

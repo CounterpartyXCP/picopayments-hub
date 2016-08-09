@@ -8,6 +8,7 @@ import json
 import pyelliptic
 from pycoin.serialize import b2h, h2b
 from counterpartylib.lib.micropayments import util
+from . import exceptions
 
 
 def sign(wif, data):
@@ -23,15 +24,16 @@ def sign(wif, data):
 def verify(pubkey, signature, data):
     uncompressed_sec = util.decode_pubkey(pubkey)
     ecc = pyelliptic.ECC(curve="secp256k1", pubkey=uncompressed_sec)
-    assert(ecc.verify(h2b(signature), data))  # FIXME custom exception
+    if not ecc.verify(h2b(signature), data):
+        raise exceptions.InvalidSignature(pubkey, signature, data)
 
 
 def sign_json(json_data, wif):
 
     # add pubkey to json data if needed
     pubkey = util.wif2pubkey(wif)
-    if "pubkey" in json_data:
-        assert(json_data["pubkey"] == pubkey)  # FIXME custom exception
+    if "pubkey" in json_data and not json_data["pubkey"] == pubkey:
+        raise exceptions.AuthPubkeyMissmatch(pubkey, json_data["pubkey"])
     else:
         json_data["pubkey"] = pubkey
 
