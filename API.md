@@ -50,6 +50,7 @@ Channel culled if deposit not made fast enough.
     Arguments: {
         "asset": asset,
         "pubkey": "hex",
+        "signature": "hex",
         "spend_secret_hash": "hex"  # hub to client channel
         "url": "url" or None
     }
@@ -58,6 +59,7 @@ Channel culled if deposit not made fast enough.
         "handle": "hex",
         "spend_secret_hash": "hex",  # client to hub channel
         "pubkey": "hex",
+        "signature": "hex",
         "channel_terms": {
             "setup_ttl": blocks,  # client deposit must be confirmed within
             "deposit_limit": satoshis,  # max server will invest in channel
@@ -79,11 +81,15 @@ Channel culled if client deposit not made fast enough.
 
     Arguments: {
         "handle": "hex",
+        "pubkey": "hex",
+        "signature": "hex",
         "deposit_script": "hex",
         "next_revoke_secret_hash": "hex"  # hub to client channel
     }
 
     Response: {
+        "pubkey": "hex",
+        "signature": "hex",
         "deposit_script": "hex",
         "next_revoke_secret_hash": "hex"  # client to hub channel
     }
@@ -111,6 +117,8 @@ Channel culled if client deposit not made fast enough.
 
     Arguments: {
         "handle": "hex",
+        "pubkey": "hex",
+        "signature": "hex",
         "sends": [{
             "payer_handle": "hex", 
             "payee_handle": "hex", 
@@ -123,6 +131,8 @@ Channel culled if client deposit not made fast enough.
     }
 
     Response: {
+        "pubkey": "hex",
+        "signature": "hex",
         "receive": [{
             "payer_handle": "hex", 
             "payee_handle": "hex", 

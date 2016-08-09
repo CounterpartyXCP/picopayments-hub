@@ -64,11 +64,10 @@ class TestMpcHubRequest(unittest.TestCase):
             method="mpc_hub_request",
             params={
                 "asset": asset,
-                "wif": client_key["wif"],
                 "spend_secret_hash": secret_hash,
             },
-            verify=False,
-            jsonauth=True
+            verify_ssl_cert=False,  # only needed for encryption
+            authentication_wif=client_key["wif"]
         )
         self.assertIsNotNone(result)
         jsonschema.validate(result, REQUEST_RESULT_SCHEMA)
@@ -84,11 +83,10 @@ class TestMpcHubRequest(unittest.TestCase):
                 method="mpc_hub_request",
                 params={
                     "asset": asset,
-                    "wif": client_key["wif"],
                     "spend_secret_hash": secret_hash,
                 },
-                verify=False,
-                jsonauth=True
+                verify_ssl_cert=False,  # only needed for encryption
+                authentication_wif=client_key["wif"]
             )
 
         self.assertRaises(Exception, func)
@@ -105,12 +103,11 @@ class TestMpcHubRequest(unittest.TestCase):
                 method="mpc_hub_request",
                 params={
                     "asset": asset,
-                    "wif": client_key["wif"],
                     "spend_secret_hash": secret_hash,
                     "hub_rpc_url": "?? invalid url ??",
                 },
-                verify=False,
-                jsonauth=True
+                verify_ssl_cert=False,  # only needed for encryption
+                authentication_wif=client_key["wif"]
             )
 
         self.assertRaises(Exception, func)

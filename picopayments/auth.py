@@ -3,8 +3,8 @@
 # License: MIT (see LICENSE file)
 
 
-import json
 import copy
+import json
 import pyelliptic
 from pycoin.serialize import b2h, h2b
 from counterpartylib.lib.micropayments import util
@@ -26,21 +26,27 @@ def verify(pubkey, signature, data):
     assert(ecc.verify(h2b(signature), data))  # FIXME custom exception
 
 
-def sign_json(json_data):
-    wif = json_data.pop("wif")
+def sign_json(json_data, wif):
+
+    # add pubkey to json data if needed
     pubkey = util.wif2pubkey(wif)
-    json_data["pubkey"] = pubkey
+    if "pubkey" in json_data:
+        assert(json_data["pubkey"] == pubkey)  # FIXME custom exception
+    else:
+        json_data["pubkey"] = pubkey
+
+    # sign serialized data (keys must be ordered!)
     data = json.dumps(json_data, sort_keys=True)
     signature = sign(wif, data)
+
+    # add signature to json data
     json_data["signature"] = signature
-    assert("wif" not in json_data)  # FIXME custom exception
+
     return json_data
 
 
 def verify_json(json_data):
     json_data = copy.deepcopy(json_data)
-    if "pubkey" not in json_data:
-        print("PUBKEY:", json_data)
     pubkey = json_data["pubkey"]
     signature = json_data.pop("signature")
     data = json.dumps(json_data, sort_keys=True)

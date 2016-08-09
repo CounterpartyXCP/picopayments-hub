@@ -68,12 +68,14 @@ def create_hub_connection(asset, client_pubkey,
     data["hub_rpc_url"] = hub_rpc_url
 
     db.add_hub_connection(data)
-    return {
-        "handle": handle,
-        "wif": hub_key["wif"],
-        "spend_secret_hash": data["secret_hash"],
-        "channel_terms": terms
-    }
+    return (
+        {
+            "handle": handle,
+            "spend_secret_hash": data["secret_hash"],
+            "channel_terms": terms
+        },
+        hub_key["wif"]
+    )
 
 
 def _load_complete_connection(handle, recv_deposit_script):
@@ -131,11 +133,13 @@ def complete_connection(handle, recv_deposit_script, next_revoke_secret_hash):
     data.update(create_secret())  # revoke secret
 
     db.complete_hub_connection(data)
-    return {
-        "wif": hub_key["wif"],
-        "deposit_script": send_deposit_script,
-        "next_revoke_secret_hash": data["secret_hash"]
-    }
+    return (
+        {
+            "deposit_script": send_deposit_script,
+            "next_revoke_secret_hash": data["secret_hash"]
+        },
+        hub_key["wif"]
+    )
 
 
 def read_current_terms(asset):
@@ -259,13 +263,15 @@ def sync_hub_connection(handle, next_revoke_secret_hash,
                     recv_id, next_revoke_secret)
 
     hub_key = db.channel_payer_key(send_id)
-    return {
-        "wif": hub_key["wif"],
-        "receive": receive_payments,
-        "commit": send_commit,
-        "revokes": [r["revoke_secret"] for r in send_revokes],
-        "next_revoke_secret_hash": next_revoke_secret["secret_hash"]
-    }
+    return (
+        {
+            "receive": receive_payments,
+            "commit": send_commit,
+            "revokes": [r["revoke_secret"] for r in send_revokes],
+            "next_revoke_secret_hash": next_revoke_secret["secret_hash"]
+        },
+        hub_key["wif"]
+    )
 
 
 def load_channel_data(handle, cursor):

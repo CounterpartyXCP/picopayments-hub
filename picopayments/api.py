@@ -39,33 +39,37 @@ def mpc_hub_request(**kwargs):
             kwargs["spend_secret_hash"],
             kwargs.get("hub_rpc_url")
         )
-        return auth.sign_json(control.create_hub_connection(
+        result, authwif = control.create_hub_connection(
             kwargs["asset"],
             kwargs["pubkey"],
             kwargs["spend_secret_hash"],
             kwargs.get("hub_rpc_url")
-        ))
+        )
+        return auth.sign_json(result, authwif)
 
 
 @dispatcher.add_method
 def mpc_hub_deposit(**kwargs):
     with db.lock:
+        # FIXME validate signing pubkey matches channel client pubkey
         auth.verify_json(kwargs)
         validate.deposit_input(
             kwargs["handle"],
             kwargs["deposit_script"],
             kwargs["next_revoke_secret_hash"]
         )
-        return auth.sign_json(control.complete_connection(
+        result, authwif = control.complete_connection(
             kwargs["handle"],
             kwargs["deposit_script"],
             kwargs["next_revoke_secret_hash"]
-        ))
+        )
+        return auth.sign_json(result, authwif)
 
 
 @dispatcher.add_method
 def mpc_hub_sync(**kwargs):
     with db.lock:
+        # FIXME validate signing pubkey matches channel client pubkey
         auth.verify_json(kwargs)
         validate.sync_input(
             kwargs["handle"],
@@ -74,13 +78,14 @@ def mpc_hub_sync(**kwargs):
             kwargs.get("commit"),
             kwargs.get("revokes")
         )
-        return auth.sign_json(control.sync_hub_connection(
+        result, authwif = control.sync_hub_connection(
             kwargs["handle"],
             kwargs["next_revoke_secret_hash"],
             kwargs.get("sends"),
             kwargs.get("commit"),
             kwargs.get("revokes")
-        ))
+        )
+        return auth.sign_json(result, authwif)
 
 
 def _add_counterparty_call(method):

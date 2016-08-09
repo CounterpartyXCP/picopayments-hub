@@ -1,5 +1,4 @@
 import unittest
-import pyelliptic
 from counterpartylib.lib.micropayments import util
 from picopayments import auth
 
@@ -16,9 +15,7 @@ class TestAuth(unittest.TestCase):
         auth.verify(pubkey, signature, data)
 
     def test_sign_verify_json(self):
-        json_data = {"wif": util.random_wif(), "foo": "bar"}
-        signed_json_data = auth.sign_json(json_data)
-        self.assertNotIn("wif", signed_json_data)
+        signed_json_data = auth.sign_json({"foo": "bar"}, util.random_wif())
         auth.verify_json(signed_json_data)
 
     # TODO test errors / bad auth

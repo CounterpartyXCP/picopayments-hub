@@ -40,7 +40,7 @@ class TestMpcHubTerms(unittest.TestCase):
             url=URL,
             method="mpc_hub_terms",
             params={},
-            verify=False
+            verify_ssl_cert=False  # only needed for encryption
         )
         self.assertEqual(terms, {
             "BTC": {
@@ -76,7 +76,7 @@ class TestMpcHubTerms(unittest.TestCase):
             params={
                 "assets": ["XCP"]
             },
-            verify=False
+            verify_ssl_cert=False  # only needed for encryption
         )
         self.assertEqual(terms, {
             "XCP": {

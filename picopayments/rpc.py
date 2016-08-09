@@ -12,10 +12,10 @@ from . import exceptions
 
 
 def call(url, method, params, username=None, password=None,
-         verify=True, jsonauth=False):
+         verify_ssl_cert=True, authentication_wif=None):
 
-    if jsonauth:
-        params = auth.sign_json(params)
+    if authentication_wif:
+        params = auth.sign_json(params, authentication_wif)
 
     payload = {"method": method, "params": params, "jsonrpc": "2.0", "id": 0}
 
@@ -23,7 +23,7 @@ def call(url, method, params, username=None, password=None,
         "url": url,
         "headers": {'content-type': 'application/json'},
         "data": json.dumps(payload),
-        "verify": verify,
+        "verify": verify_ssl_cert,
     }
     if username and password:
         kwargs["auth"] = HTTPBasicAuth(username, password)
@@ -32,7 +32,7 @@ def call(url, method, params, username=None, password=None,
         raise exceptions.RpcCallFailed(payload, response)
 
     result = response["result"]
-    if jsonauth:
+    if authentication_wif:
         auth.verify_json(result)
 
     return result

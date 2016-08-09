@@ -24,7 +24,7 @@ def get_tx_func(txid):
         url=URL,
         method="getrawtransaction",
         params={"tx_hash": txid},
-        verify=False
+        verify_ssl_cert=False  # only needed for encryption
     )
 
 
@@ -89,13 +89,12 @@ class TestMpcHubSync(unittest.TestCase):
                         "amount": 1337,
                         "token": "deadbeef"
                     }],
-                    "wif": client_key["wif"],
                     "commit": None,
                     "revokes": None,
                     "next_revoke_secret_hash": secret["secret_hash"]
                 },
-                verify=False,
-                jsonauth=True
+                verify_ssl_cert=False,  # only needed for encryption
+                authentication_wif=client_key["wif"]
             )
 
         self.assertRaises(Exception, func)
@@ -121,13 +120,12 @@ class TestMpcHubSync(unittest.TestCase):
                         "amount": 1337,
                         "token": "deadbeef"
                     }],
-                    "wif": client_key["wif"],
                     "commit": None,
                     "revokes": "invalidformat",
                     "next_revoke_secret_hash": secret["secret_hash"]
                 },
-                verify=False,
-                jsonauth=True
+                verify_ssl_cert=False,  # only needed for encryption
+                authentication_wif=client_key["wif"]
             )
 
         self.assertRaises(Exception, func)
@@ -153,13 +151,12 @@ class TestMpcHubSync(unittest.TestCase):
                         "amount": 1337,
                         "token": "deadbeef"
                     }],
-                    "wif": client_key["wif"],
                     "commit": "invalidformat",
                     "revokes": None,
                     "next_revoke_secret_hash": secret["secret_hash"]
                 },
-                verify=False,
-                jsonauth=True
+                verify_ssl_cert=False,  # only needed for encryption
+                authentication_wif=client_key["wif"]
             )
 
         self.assertRaises(Exception, func)
@@ -183,7 +180,7 @@ class TestMpcHubSync(unittest.TestCase):
                 "revoke_secret_hash": revoke_secret_hash,
                 "delay_time": 2
             },
-            verify=False
+            verify_ssl_cert=False  # only needed for encryption
         )
         script = result["commit_script"]
 
@@ -214,13 +211,12 @@ class TestMpcHubSync(unittest.TestCase):
                     "amount": send_amount,
                     "token": "deadbeef"
                 }],
-                "wif": client_key["wif"],
                 "commit": {"rawtx": rawtx, "script": script},
                 "revokes": None,
                 "next_revoke_secret_hash": next_secret["secret_hash"]
             },
-            verify=False,
-            jsonauth=True
+            verify_ssl_cert=False,  # only needed for encryption
+            authentication_wif=client_key["wif"]
         )
         self.assertIsNotNone(result)
 
