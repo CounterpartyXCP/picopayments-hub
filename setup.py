@@ -2,19 +2,10 @@
 # coding: utf-8
 
 
-import re
 from setuptools import setup, find_packages
-from os import listdir
-from os.path import isfile, join
 
 
 exec(open('picopayments/version.py').read())  # load __version__
-
-
-SQL_FILES = [
-    "picopayments/sql/{0}".format(f) for f in listdir("picopayments/sql")
-    if isfile(join("picopayments/sql", f)) and re.match(".*\.sql$", f)
-]
 
 
 setup(
@@ -30,7 +21,8 @@ setup(
     version=__version__,  # NOQA
     test_suite="tests",
     dependency_links=[],
-    data_files=SQL_FILES,
+    package_data={'picopayments': ['sql/*.sql']},
+    include_package_data=True,
     install_requires=open("requirements.txt").readlines(),
     tests_require=open("test_requirements.txt").readlines(),
     packages=find_packages(),
