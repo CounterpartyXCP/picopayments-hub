@@ -81,10 +81,10 @@ Best use a screen as the node does not run as a daemon.
     # show funding addresses (use to fund the picopayments hub)
     picopayments --testnet --funding
 
-    # Start picopayment node (with generated self signed cert)
+    # Start picopayment node (use generated self signed cert)
     picopayments --testnet --host=0.0.0.0 --cp_url=http://127.0.0.1:14000/api/
 
-    # Start picopayment node (provide existing ssl cert)
+    # Start picopayment node (provide existing cert)
     picopayments --testnet --host=0.0.0.0 --cp_url=http://127.0.0.1:14000/api/ --ssl_cert_file=path/to.cert --ssl_pkey_file=path/to.key
 
 

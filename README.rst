@@ -33,11 +33,11 @@ Testnet:
 Node setup
 ==========
 
-To setup your own picopayments hub follow the setup guide `Setup guide <SETUP.md>`_.
+To setup your own picopayments hub follow the setup guide `Setup guide <docs/setup.md>`_.
 
 =========
 API Calls
 =========
 
-See the `API documentation <API.md>`_ if you wish to create apps that interact with picopayment hubs.
+See the `API documentation <docs/api.md>`_ if you wish to create apps that interact with picopayment hubs.
 

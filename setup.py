@@ -24,7 +24,7 @@ setup(
     package_data={'picopayments': ['sql/*.sql']},
     include_package_data=True,
     install_requires=open("requirements.txt").readlines(),
-    tests_require=open("test_requirements.txt").readlines(),
+    tests_require=open("requirements_tests.txt").readlines(),
     packages=find_packages(),
     classifiers=[
         # "Development Status :: 1 - Planning",

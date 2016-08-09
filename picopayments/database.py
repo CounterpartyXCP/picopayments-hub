@@ -366,6 +366,4 @@ def key(pubkey, cursor=None):
 
 
 def channel_payer_key(channel_id, cursor=None):
-    return _one(
-        _CHANNEL_PAYER_KEY, args={"id": channel_id}, cursor=cursor
-    )
+    return _one(_CHANNEL_PAYER_KEY, args={"id": channel_id}, cursor=cursor)

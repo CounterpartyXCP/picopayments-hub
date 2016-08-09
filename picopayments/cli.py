@@ -44,7 +44,7 @@ def parse(args):
         help="Location of application files: {0}".format(default)
     )
 
-    # ssl
+    # ssl cert and key
     parser.add_argument(
         '--ssl_cert_file', default=None, metavar="PATH",
         help="Path to ssl certificate file."

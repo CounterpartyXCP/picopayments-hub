@@ -64,8 +64,8 @@ wheel: setup
 
 setup: virtualenv
 	$(PIP) install $(WHEEL_INSTALL_ARGS) -r requirements.txt
-	$(PIP) install $(WHEEL_INSTALL_ARGS) -r test_requirements.txt
-	$(PIP) install $(WHEEL_INSTALL_ARGS) -r develop_requirements.txt
+	$(PIP) install $(WHEEL_INSTALL_ARGS) -r requirements_tests.txt
+	$(PIP) install $(WHEEL_INSTALL_ARGS) -r requirements_develop.txt
 
 
 install: setup
