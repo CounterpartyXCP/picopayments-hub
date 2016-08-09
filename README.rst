@@ -21,6 +21,23 @@ PicoPayments
 Decentral micropayment hub for counterparty assets.
 
 
-TODO link to setup guide
-TODO link to api calls
-TODO link to schema
+==========
+Known hubs
+==========
+
+Testnet:
+
+ * https://139.59.214.74:15000/api/
+
+==========
+Node setup
+==========
+
+To setup your own picopayments hub follow the setup guide `Setup guide <SETUP.md>`_.
+
+=========
+API Calls
+=========
+
+See the `API documentation <API.md>`_ if you wish to create apps that interact with picopayment hubs.
+

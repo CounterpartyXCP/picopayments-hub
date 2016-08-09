@@ -1,6 +1,6 @@
 # PicoPayments setup
 
-Tested with Ubuntu 16.04.1 x64
+Tested with Ubuntu 16.04.1 x64. 
 
 
 ## 1. Install dependencies
@@ -82,4 +82,11 @@ Best use a screen as the node does not run as a daemon.
     picopayments --testnet --funding
 
     # Start picopayments node
-    picopayments --testnet --cp_url=http://127.0.0.1:14000/api/
+    picopayments --testnet --host=0.0.0.0 --cp_url=http://127.0.0.1:14000/api/
+
+
+## 5. Verify picopayment hub is working.
+
+Run from differnt network to ensure the hub is reachable from the internet.
+
+    curl -X POST https://your.hub.url.or.ip:15000/api/ -H 'Content-Type: application/json; charset=UTF-8' -H 'Accept: application/json, text/javascript' -k --data-binary '{ "jsonrpc": "2.0", "id": 0, "method": "mpc_hub_terms" }'

@@ -51,7 +51,7 @@ def parse(args):
         '--host', default="localhost", metavar="PORT",
         help="Server host: {0}".format("localhost")
     )
-    default = 5000 if testnet else 15000
+    default = 15000 if testnet else 5000
     parser.add_argument(
         '--port', type=int, default=default, metavar="PORT",
         help="Server port: {0}".format(default)
