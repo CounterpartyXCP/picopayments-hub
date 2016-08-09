@@ -25,9 +25,14 @@ class TestCtrl(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.root)
 
-    def test_get_funding_address(self):
-        address = control.create_funding_address("XCP")
-        self.assertTrue(is_address_valid(address, allowable_netcodes=["XTN"]))
+    def test_get_funding_addresses(self):
+        assets = ["XCP"]
+        result = control.create_funding_addresses(assets)
+        assert(assets == list(result.keys()))
+        self.assertTrue(all([
+            is_address_valid(a, allowable_netcodes=["XTN"])
+            for a in result.values()
+        ]))
 
     def test_failed_rpc_call(self):
 

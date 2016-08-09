@@ -25,8 +25,12 @@ DEPOSIT_RESULT_SCHEMA = {
     "properties": {
         "deposit_script": {"type": "string"},
         "next_revoke_secret_hash": {"type": "string"},
+        "signature": {"type": "string"},
+        "pubkey": {"type": "string"},
     },
-    "required": ["deposit_script", "next_revoke_secret_hash"],
+    "required": [
+        "deposit_script", "next_revoke_secret_hash", "signature", "pubkey"
+    ],
     "additionalProperties": False
 }
 

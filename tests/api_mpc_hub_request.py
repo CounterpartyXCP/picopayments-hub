@@ -23,10 +23,13 @@ REQUEST_RESULT_SCHEMA = {
     "properties": {
         "channel_terms": {"type": "object"},  # TODO validate terms format
         "pubkey": {"type": "string"},
+        "signature": {"type": "string"},
         "spend_secret_hash": {"type": "string"},
         "handle": {"type": "string"},
     },
-    "required": ["channel_terms", "pubkey", "spend_secret_hash", "handle"],
+    "required": [
+        "signature", "channel_terms", "pubkey", "spend_secret_hash", "handle"
+    ],
     "additionalProperties": False
 }
 

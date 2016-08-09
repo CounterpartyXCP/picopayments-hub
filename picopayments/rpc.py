@@ -11,14 +11,6 @@ from . import auth
 from . import exceptions
 
 
-def authenticated_method(method):
-    def wrapper_func(**kwargs):
-        assert(auth.verify_json(kwargs))  # FIXME custom exception
-        result = method(**kwargs)
-        return auth.sign_json(result)
-    return wrapper_func
-
-
 def call(url, method, params, username=None, password=None,
          verify=True, jsonauth=False):
 
@@ -41,7 +33,7 @@ def call(url, method, params, username=None, password=None,
 
     result = response["result"]
     if jsonauth:
-        assert(auth.verify_json(result))  # FIXME custom exception
+        auth.verify_json(result)
 
     return result
 

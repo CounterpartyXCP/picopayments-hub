@@ -23,7 +23,7 @@ def sign(wif, data):
 def verify(pubkey, signature, data):
     uncompressed_sec = util.decode_pubkey(pubkey)
     ecc = pyelliptic.ECC(curve="secp256k1", pubkey=uncompressed_sec)
-    return ecc.verify(h2b(signature), data)
+    assert(ecc.verify(h2b(signature), data))  # FIXME custom exception
 
 
 def sign_json(json_data):
@@ -33,7 +33,7 @@ def sign_json(json_data):
     data = json.dumps(json_data, sort_keys=True)
     signature = sign(wif, data)
     json_data["signature"] = signature
-    assert("wif" not in json_data)
+    assert("wif" not in json_data)  # FIXME custom exception
     return json_data
 
 
@@ -44,4 +44,4 @@ def verify_json(json_data):
     pubkey = json_data["pubkey"]
     signature = json_data.pop("signature")
     data = json.dumps(json_data, sort_keys=True)
-    return verify(pubkey, signature, data)
+    verify(pubkey, signature, data)

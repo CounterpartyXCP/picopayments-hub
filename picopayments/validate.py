@@ -125,7 +125,7 @@ def sync_input(handle, next_revoke_secret_hash, sends, commit, revokes):
         raise exceptions.HandlesNotFound(handles)
 
     if revokes:
-        jsonschema.validate(sends, REVOKES_SCHEMA)
+        jsonschema.validate(revokes, REVOKES_SCHEMA)
 
     if commit:
         jsonschema.validate(commit, COMMIT_SCHEMA)

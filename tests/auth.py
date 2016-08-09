@@ -13,16 +13,15 @@ class TestAuth(unittest.TestCase):
         signature = auth.sign(wif, data)
 
         pubkey = util.wif2pubkey(wif)
-        result = auth.verify(pubkey, signature, data)
-
-        self.assertTrue(result)
+        auth.verify(pubkey, signature, data)
 
     def test_sign_verify_json(self):
         json_data = {"wif": util.random_wif(), "foo": "bar"}
         signed_json_data = auth.sign_json(json_data)
         self.assertNotIn("wif", signed_json_data)
-        result = auth.verify_json(signed_json_data)
-        self.assertTrue(result)
+        auth.verify_json(signed_json_data)
+
+    # TODO test errors / bad auth
 
 
 if __name__ == "__main__":

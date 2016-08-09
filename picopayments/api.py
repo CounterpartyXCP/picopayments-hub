@@ -7,6 +7,7 @@ from jsonrpc import dispatcher
 from . import control
 from . import terms
 from . import rpc
+from . import auth
 from . import validate
 from . import database as db
 
@@ -28,36 +29,58 @@ def mpc_hub_terms(assets=None):
 #     return None  # TODO implement
 
 
-@rpc.authenticated_method
 @dispatcher.add_method
-def mpc_hub_request(asset, pubkey, spend_secret_hash,
-                    hub_rpc_url=None, signature=None):
-    validate.request_input(asset, pubkey, spend_secret_hash, hub_rpc_url)
+def mpc_hub_request(**kwargs):
     with db.lock:
-        return control.create_hub_connection(
-            asset, pubkey, spend_secret_hash, hub_rpc_url
+        auth.verify_json(kwargs)
+        validate.request_input(
+            kwargs["asset"],
+            kwargs["pubkey"],
+            kwargs["spend_secret_hash"],
+            kwargs.get("hub_rpc_url")
         )
+        return auth.sign_json(control.create_hub_connection(
+            kwargs["asset"],
+            kwargs["pubkey"],
+            kwargs["spend_secret_hash"],
+            kwargs.get("hub_rpc_url")
+        ))
 
 
-@rpc.authenticated_method
 @dispatcher.add_method
-def mpc_hub_deposit(handle, deposit_script, next_revoke_secret_hash,
-                    pubkey=None, signature=None):
-    validate.deposit_input(handle, deposit_script, next_revoke_secret_hash)
+def mpc_hub_deposit(**kwargs):
     with db.lock:
-        return control.complete_connection(handle, deposit_script,
-                                           next_revoke_secret_hash)
+        auth.verify_json(kwargs)
+        validate.deposit_input(
+            kwargs["handle"],
+            kwargs["deposit_script"],
+            kwargs["next_revoke_secret_hash"]
+        )
+        return auth.sign_json(control.complete_connection(
+            kwargs["handle"],
+            kwargs["deposit_script"],
+            kwargs["next_revoke_secret_hash"]
+        ))
 
 
-@rpc.authenticated_method
 @dispatcher.add_method
-def mpc_hub_sync(handle, next_revoke_secret_hash, sends=None, commit=None,
-                 revokes=None, pubkey=None, signature=None):
-    validate.sync_input(handle, next_revoke_secret_hash,
-                        sends, commit, revokes)
+def mpc_hub_sync(**kwargs):
     with db.lock:
-        return control.sync_hub_connection(handle, next_revoke_secret_hash,
-                                           sends, commit, revokes)
+        auth.verify_json(kwargs)
+        validate.sync_input(
+            kwargs["handle"],
+            kwargs["next_revoke_secret_hash"],
+            kwargs.get("sends"),
+            kwargs.get("commit"),
+            kwargs.get("revokes")
+        )
+        return auth.sign_json(control.sync_hub_connection(
+            kwargs["handle"],
+            kwargs["next_revoke_secret_hash"],
+            kwargs.get("sends"),
+            kwargs.get("commit"),
+            kwargs.get("revokes")
+        ))
 
 
 def _add_counterparty_call(method):
