@@ -6,11 +6,11 @@
 import re
 import jsonschema
 from counterpartylib.lib.micropayments import validate
-from . import exceptions
-from . import terms
-from . import database as db
-from . import config
+from . import err
+from . import db
+from . import cfg
 from . import rpc
+from . import ctrl
 
 
 URL_REGEX = re.compile(
@@ -63,7 +63,7 @@ REVOKES_SCHEMA = {
 
 def is_url(url):
     if not URL_REGEX.match(url):
-        raise exceptions.InvalidUrl(url)
+        raise err.InvalidUrl(url)
 
 
 def request_input(asset, pubkey, spend_secret_hash, hub_rpc_url):
@@ -73,9 +73,9 @@ def request_input(asset, pubkey, spend_secret_hash, hub_rpc_url):
         is_url(hub_rpc_url)
 
     # asset must be in terms
-    all_terms = terms.read()
+    all_terms = ctrl.terms()
     if asset not in all_terms:
-        raise exceptions.AssetNotInTerms(asset)
+        raise err.AssetNotInTerms(asset)
 
 
 def deposit_input(handle, deposit_script, next_revoke_secret_hash):
@@ -83,17 +83,17 @@ def deposit_input(handle, deposit_script, next_revoke_secret_hash):
     validate.hash160(next_revoke_secret_hash)
     recv_channel = db.receive_channel(handle)
     if not recv_channel:
-        raise exceptions.HandleNotFound(handle)
+        raise err.HandleNotFound(handle)
     expected_payee_pubkey = recv_channel["payee_pubkey"]
     expected_spend_secret_hash = recv_channel["spend_secret_hash"]
     validate.deposit_script(deposit_script, expected_payee_pubkey,
                             expected_spend_secret_hash)
     if recv_channel["meta_complete"]:
-        raise exceptions.DepositAlreadyGiven(handle)
+        raise err.DepositAlreadyGiven(handle)
 
 
 def is_recv_commit(handle, commit_rawtx, commit_script):
-    netcode = "XTN" if config.testnet else "BTC"
+    netcode = "XTN" if cfg.testnet else "BTC"
     recv_channel = db.receive_channel(handle)
     deposit_utxos = rpc.counterparty_call(
         method="get_unspent_txouts",
@@ -122,7 +122,7 @@ def sync_input(handle, next_revoke_secret_hash, sends, commit, revokes):
 
     # make sure all handles actually exist
     if not db.handles_exist(handles):
-        raise exceptions.HandlesNotFound(handles)
+        raise err.HandlesNotFound(handles)
 
     if revokes:
         jsonschema.validate(revokes, REVOKES_SCHEMA)

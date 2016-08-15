@@ -5,13 +5,14 @@ import tempfile
 import jsonschema
 from picopayments import api
 from picopayments import auth
-from picopayments import control
+from picopayments import ctrl
 from picopayments import cli
-from picopayments import exceptions
+from picopayments import err
 from counterpartylib.lib.micropayments import util
 
 
-CP_URL = "http://139.59.214.74:14000/api/"
+CP_URL = "http://127.0.0.1:14000/api/"
+# CP_URL = "http://139.59.214.74:14000/api/"
 
 
 REQUEST_RESULT_SCHEMA = {
@@ -36,7 +37,7 @@ class TestMpcHubRequest(unittest.TestCase):
         self.tempdir = tempfile.mkdtemp(prefix="picopayments_test_")
         basedir = os.path.join(self.tempdir, "basedir")
         shutil.copytree("tests/fixtures", basedir)
-        control.initialize(cli.parse([
+        ctrl.initialize(cli.parse([
             "--testnet",
             "--basedir={0}".format(basedir),
             "--cp_url={0}".format(CP_URL)
@@ -47,7 +48,7 @@ class TestMpcHubRequest(unittest.TestCase):
 
     def test_standard_usage_xcp(self):
         asset = "XCP"
-        client_key = control.create_key(asset)
+        client_key = ctrl.create_key(asset)
         secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
         params = {"asset": asset, "spend_secret_hash": secret_hash}
         params = auth.sign_json(params, client_key["wif"])
@@ -60,19 +61,19 @@ class TestMpcHubRequest(unittest.TestCase):
 
         def func():
             asset = "BADASSET"
-            client_key = control.create_key(asset)
+            client_key = ctrl.create_key(asset)
             secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
             params = {"asset": asset, "spend_secret_hash": secret_hash}
             params = auth.sign_json(params, client_key["wif"])
             api.mpc_hub_request(**params)
 
-        self.assertRaises(exceptions.AssetNotInTerms, func)
+        self.assertRaises(err.AssetNotInTerms, func)
 
     def test_validate_url(self):
 
         def func():
             asset = "XCP"
-            client_key = control.create_key(asset)
+            client_key = ctrl.create_key(asset)
             secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
             params = {
                 "asset": asset,
@@ -82,7 +83,7 @@ class TestMpcHubRequest(unittest.TestCase):
             params = auth.sign_json(params, client_key["wif"])
             api.mpc_hub_request(**params)
 
-        self.assertRaises(exceptions.InvalidUrl, func)
+        self.assertRaises(err.InvalidUrl, func)
 
 
 if __name__ == "__main__":

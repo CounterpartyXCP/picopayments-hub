@@ -4,12 +4,7 @@
 
 
 import json
-import traceback
-from . import cli
-from . import control
-from . import terms
-from . import config
-from . import __version__
+import picopayments
 from werkzeug.serving import run_simple
 from werkzeug.wrappers import Request, Response
 from jsonrpc import JSONRPCResponseManager, dispatcher
@@ -25,23 +20,23 @@ def main(args):
 
     # show version
     if "--version" in args:
-        print(__version__)
+        print(picopayments.__version__)
         return
 
     # parse args and initialize
-    parsed = cli.parse(args)
-    control.initialize(parsed)
+    parsed = picopayments.cli.parse(args)
+    picopayments.ctrl.initialize(parsed)
 
     # show configured terms
     if parsed["terms"]:
-        print("Terms file saved at {0}".format(terms.path()))
-        print(json.dumps(terms.read(), indent=2, sort_keys=True))
+        print("Terms file saved at {0}".format(picopayments.ctrl.terms_path()))
+        print(json.dumps(picopayments.ctrl.terms(), indent=2, sort_keys=True))
         return
 
     # show funding address for assets
     if parsed["funding"]:
-        assets = terms.read().keys()
-        addresses = control.create_funding_addresses(assets)
+        assets = picopayments.ctrl.terms().keys()
+        addresses = picopayments.ctrl.create_funding_addresses(assets)
         print(json.dumps(addresses, indent=2, sort_keys=True))
         return
 
@@ -52,7 +47,7 @@ def main(args):
 
     # start server
     run_simple(
-        config.host, config.port,
+        picopayments.cfg.host, picopayments.cfg.port,
         application,
         processes=1,  # ensure db integrety, avoid race conditions
         ssl_context=ssl_context

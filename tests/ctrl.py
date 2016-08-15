@@ -2,20 +2,21 @@ import shutil
 import unittest
 import tempfile
 from pycoin.key.validate import is_address_valid
-from picopayments import control
+from picopayments import ctrl
 from picopayments import cli
 from picopayments import rpc
-from picopayments import exceptions
+from picopayments import err
 
 
-CP_URL = "http://139.59.214.74:14000/api/"
+CP_URL = "http://127.0.0.1:14000/api/"
+# CP_URL = "http://139.59.214.74:14000/api/"
 
 
 class TestCtrl(unittest.TestCase):
 
     def setUp(self):
         self.basedir = tempfile.mkdtemp(prefix="picopayments_test_")
-        control.initialize(cli.parse([
+        ctrl.initialize(cli.parse([
             "--testnet",
             "--basedir={0}".format(self.basedir),
             "--cp_url={0}".format(CP_URL)
@@ -26,7 +27,7 @@ class TestCtrl(unittest.TestCase):
 
     def test_get_funding_addresses(self):
         assets = ["XCP"]
-        result = control.create_funding_addresses(assets)
+        result = ctrl.create_funding_addresses(assets)
         assert(assets == list(result.keys()))
         self.assertTrue(all([
             is_address_valid(a, allowable_netcodes=["XTN"])
@@ -37,13 +38,13 @@ class TestCtrl(unittest.TestCase):
 
         def func():
             rpc.counterparty_call(method="nonexistant", params={})
-        self.assertRaises(exceptions.RpcCallFailed, func)
+        self.assertRaises(err.RpcCallFailed, func)
 
     def test_validate_read_unknown_asset(self):
 
         def func():
-            control.read_current_terms("deadbeef")
-        self.assertRaises(exceptions.AssetNotInTerms, func)
+            ctrl.read_current_terms("deadbeef")
+        self.assertRaises(err.AssetNotInTerms, func)
 
 
 if __name__ == "__main__":

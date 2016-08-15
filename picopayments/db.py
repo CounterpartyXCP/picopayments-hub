@@ -9,7 +9,7 @@ import pkg_resources
 from threading import RLock
 from counterpartylib.lib.micropayments import util
 from counterpartylib.lib.micropayments import scripts
-from . import config
+from . import cfg
 
 
 def _sql(name):
@@ -89,7 +89,7 @@ def _all(sql, args=None, asdict=True, cursor=None):
 def setup():
 
     # get db path
-    db_path = os.path.join(config.basedir, config.database)
+    db_path = os.path.join(cfg.basedir, cfg.database)
 
     # get connection
     connection = apsw.Connection(db_path)
@@ -262,7 +262,7 @@ def _script_data(script):
     delay_time = scripts.get_commit_delay_time(util.h2b(script))
     secret_hash = scripts.get_commit_revoke_secret_hash(util.h2b(script))
     commit_address = util.script2address(util.h2b(script),
-                                         netcode=config.netcode)
+                                         netcode=cfg.netcode)
     return {
         "commit_address": commit_address,
         "delay_time": delay_time,

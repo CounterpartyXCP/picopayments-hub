@@ -3,9 +3,9 @@ import unittest
 import shutil
 import tempfile
 from pycoin.serialize import b2h
-from picopayments import control
+from picopayments import ctrl
 from picopayments import cli
-from picopayments import database as db
+from picopayments import db
 
 
 class TestDB(unittest.TestCase):
@@ -13,7 +13,7 @@ class TestDB(unittest.TestCase):
     def setUp(self):
         self.basedir = tempfile.mkdtemp(prefix="picopayments_test_")
         # TODO start mock counterparty service
-        control.initialize(cli.parse([
+        ctrl.initialize(cli.parse([
             "--testnet",
             "--basedir={0}".format(self.basedir)
         ]))

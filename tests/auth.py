@@ -1,7 +1,7 @@
 import unittest
 from counterpartylib.lib.micropayments import util
 from picopayments import auth
-from picopayments import exceptions
+from picopayments import err
 
 
 class TestAuth(unittest.TestCase):
@@ -26,7 +26,7 @@ class TestAuth(unittest.TestCase):
             signed_json_data = auth.sign_json(data, util.random_wif())
             auth.verify_json(signed_json_data)
 
-        self.assertRaises(exceptions.AuthPubkeyMissmatch, func)
+        self.assertRaises(err.AuthPubkeyMissmatch, func)
 
     def test_invalid_signature(self):
 
@@ -35,7 +35,7 @@ class TestAuth(unittest.TestCase):
             pubkey = util.wif2pubkey(util.random_wif())
             auth.verify(pubkey, signature, b"bar")
 
-        self.assertRaises(exceptions.InvalidSignature, func)
+        self.assertRaises(err.InvalidSignature, func)
 
 
 if __name__ == "__main__":

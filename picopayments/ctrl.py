@@ -4,6 +4,8 @@
 
 
 import os
+import copy
+import json
 from pycoin.key.BIP32Node import BIP32Node
 from pycoin.serialize import b2h, h2b
 from counterpartylib.lib.micropayments import util
@@ -11,11 +13,66 @@ from counterpartylib.lib.micropayments.scripts import (
     get_deposit_payer_pubkey, get_deposit_payee_pubkey,
     get_deposit_expire_time, compile_deposit_script
 )
-from . import config
-from . import terms
-from . import rpc
-from . import database as db
-from . import exceptions
+from picopayments import rpc
+from picopayments import db
+from picopayments import err
+from picopayments import cfg
+
+
+DEFAULT_MAINNET = {  # TODO move to file
+    "BTC": {
+        "setup_ttl": 2,  # blocks,
+        "deposit_limit": 0,  # satoshis,
+        "deposit_ratio": 1.0,  # float,
+        "timeout_limit": 0,  # blocks,
+        "fee_setup": 10,  # satoshis,
+        "fee_sync": 1,  # satoshis
+    },
+    "XCP": {
+        "setup_ttl": 2,  # blocks,
+        "deposit_limit": 0,  # satoshis,
+        "deposit_ratio": 1.0,  # float,
+        "timeout_limit": 0,  # blocks,
+        "fee_setup": 10,  # satoshis,
+        "fee_sync": 1,  # satoshis
+    },
+    "SJCX": {
+        "setup_ttl": 2,  # blocks,
+        "deposit_limit": 0,  # satoshis,
+        "deposit_ratio": 1.0,  # float,
+        "timeout_limit": 0,  # blocks,
+        "fee_setup": 10,  # satoshis,
+        "fee_sync": 1,  # satoshis
+    },
+}
+
+
+DEFAULT_TESTNET = {  # TODO move to file
+    "BTC": {
+        "setup_ttl": 2,  # blocks,
+        "deposit_limit": 0,  # satoshis,
+        "deposit_ratio": 1.0,  # float,
+        "timeout_limit": 0,  # blocks,
+        "fee_setup": 10,  # satoshis,
+        "fee_sync": 1,  # satoshis
+    },
+    "XCP": {
+        "setup_ttl": 2,  # blocks,
+        "deposit_limit": 0,  # satoshis,
+        "deposit_ratio": 1.0,  # float,
+        "timeout_limit": 0,  # blocks,
+        "fee_setup": 10,  # satoshis,
+        "fee_sync": 1,  # satoshis
+    },
+    "A14456548018133352000": {
+        "setup_ttl": 2,  # blocks,
+        "deposit_limit": 0,  # satoshis,
+        "deposit_ratio": 1.0,  # float,
+        "timeout_limit": 0,  # blocks,
+        "fee_setup": 10,  # satoshis,  # FIXME remove setup fee
+        "fee_sync": 1,  # satoshis
+    },
+}
 
 
 def create_key(asset, netcode="BTC"):
@@ -46,7 +103,7 @@ def create_hub_connection(asset, client_pubkey,
     data.update(terms)
 
     # new hub key
-    hub_key = create_key(asset, netcode=config.netcode)
+    hub_key = create_key(asset, netcode=cfg.netcode)
     data["hub_wif"] = hub_key["wif"]
     data["hub_pubkey"] = hub_key["pubkey"]
     data["hub_address"] = hub_key["address"]
@@ -54,7 +111,7 @@ def create_hub_connection(asset, client_pubkey,
     # client key
     data["client_pubkey"] = client_pubkey
     data["client_address"] = util.pubkey2address(client_pubkey,
-                                                 netcode=config.netcode)
+                                                 netcode=cfg.netcode)
 
     # spend secret for receive channel
     data.update(create_secret())
@@ -120,12 +177,12 @@ def complete_connection(handle, recv_deposit_script, next_revoke_secret_hash):
         "recv_channel_id": hub_conn["recv_channel_id"],
         "recv_deposit_script": recv_deposit_script,
         "recv_deposit_address": util.script2address(
-            h2b(recv_deposit_script), netcode=config.netcode
+            h2b(recv_deposit_script), netcode=cfg.netcode
         ),
         "send_channel_id": hub_conn["send_channel_id"],
         "send_deposit_script": send_deposit_script,
         "send_deposit_address": util.script2address(
-            h2b(send_deposit_script), netcode=config.netcode
+            h2b(send_deposit_script), netcode=cfg.netcode
         ),
         "next_revoke_secret_hash": next_revoke_secret_hash,
     }
@@ -142,30 +199,23 @@ def complete_connection(handle, recv_deposit_script, next_revoke_secret_hash):
     )
 
 
-def read_current_terms(asset):
-    current_terms = terms.read().get(asset)
-    if current_terms is None:
-        raise exceptions.AssetNotInTerms(asset)
-    return current_terms
-
-
 def create_funding_addresses(assets):
     addresses = {}
     for asset in assets:
-        key = create_key(asset, netcode=config.netcode)
+        key = create_key(asset, netcode=cfg.netcode)
         db.add_keys([key])
         addresses[asset] = key["address"]
     return addresses
 
 
 def initialize(args):
-    config.load(args)  # load configuration
+    cfg.load(args)  # load configuration
 
     # ensure basedir path exists
-    if not os.path.exists(config.basedir):
-        os.makedirs(config.basedir)
+    if not os.path.exists(cfg.basedir):
+        os.makedirs(cfg.basedir)
 
-    terms.read()  # make sure terms file exists
+    terms()  # make sure terms file exists
     db.setup()  # setup and create db if needed
 
 
@@ -279,12 +329,12 @@ def load_channel_data(handle, cursor):
     send_state = db.load_channel_state(connection["send_channel_id"],
                                        connection["asset"], cursor=cursor)
     send_deposit_address = util.script2address(
-        util.h2b(send_state["deposit_script"]), netcode=config.netcode
+        util.h2b(send_state["deposit_script"]), netcode=cfg.netcode
     )
     recv_state = db.load_channel_state(connection["recv_channel_id"],
                                        connection["asset"], cursor=cursor)
     recv_deposit_address = util.script2address(
-        util.h2b(send_state["deposit_script"]), netcode=config.netcode
+        util.h2b(send_state["deposit_script"]), netcode=cfg.netcode
     )
     send_transferred = rpc.counterparty_call("mpc_transferred_amount", {
         "state": send_state
@@ -339,7 +389,7 @@ def process_payment(cursor, payment):
 
     # check payer has enough funds or can revoke sends until enough available
     if payment["amount"] > payer["sendable_amount"]:
-        raise exceptions.PaymentExceedsSpendable(
+        raise err.PaymentExceedsSpendable(
             payment["amount"], payer["sendable_amount"], payment["token"]
         )
 
@@ -349,7 +399,7 @@ def process_payment(cursor, payment):
 
         payee = load_channel_data(payee_handle, cursor)
         if payment["amount"] > payee["receivable_amount"]:
-            raise exceptions.PaymentExceedsReceivable(
+            raise err.PaymentExceedsReceivable(
                 payment["amount"], payee["receivable_amount"], payment["token"]
             )
 
@@ -363,3 +413,33 @@ def process_payment(cursor, payment):
 
     db.add_payment(payment, cursor=cursor)
     cursor.execute("COMMIT;")
+
+
+def terms_path():
+    return os.path.join(cfg.basedir, cfg.terms)
+
+
+def read_current_terms(asset):  # FIXME remove this
+    current_terms = terms().get(asset)
+    if current_terms is None:
+        raise err.AssetNotInTerms(asset)
+    return current_terms
+
+
+def terms():
+    _terms_path = terms_path()
+
+    # create terms and return default value
+    if not os.path.exists(_terms_path):
+        default_terms = DEFAULT_TESTNET if cfg.testnet else DEFAULT_MAINNET
+        with open(_terms_path, 'w') as outfile:
+            json.dump(default_terms, outfile, indent=2)
+        terms_data = copy.deepcopy(default_terms)
+
+    # read terms
+    else:
+        with open(_terms_path, 'r') as infile:
+            terms_data = json.load(infile)
+
+    # FIXME validate terms data
+    return terms_data

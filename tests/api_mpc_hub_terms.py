@@ -2,11 +2,12 @@ import shutil
 import unittest
 import tempfile
 from picopayments import api
-from picopayments import control
+from picopayments import ctrl
 from picopayments import cli
 
 
-CP_URL = "http://139.59.214.74:14000/api/"
+CP_URL = "http://127.0.0.1:14000/api/"
+# CP_URL = "http://139.59.214.74:14000/api/"
 
 
 class TestMpcHubTerms(unittest.TestCase):
@@ -14,7 +15,7 @@ class TestMpcHubTerms(unittest.TestCase):
     def setUp(self):
         self.basedir = tempfile.mkdtemp(prefix="picopayments_test_")
         # TODO start mock counterparty service
-        control.initialize(cli.parse([
+        ctrl.initialize(cli.parse([
             "--testnet",
             "--basedir={0}".format(self.basedir),
             "--cp_url={0}".format(CP_URL)

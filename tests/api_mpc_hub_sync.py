@@ -6,13 +6,14 @@ import tempfile
 import jsonschema
 from picopayments import api
 from picopayments import auth
-from picopayments import control
+from picopayments import ctrl
 from picopayments import cli
-from picopayments import exceptions
+from picopayments import err
 from counterpartylib.lib.micropayments import scripts
 
 
-CP_URL = "http://139.59.214.74:14000/api/"
+CP_URL = "http://127.0.0.1:14000/api/"
+# CP_URL = "http://139.59.214.74:14000/api/"
 
 
 def get_tx_func(txid):
@@ -45,7 +46,7 @@ class TestMpcHubSync(unittest.TestCase):
         self.tempdir = tempfile.mkdtemp(prefix="picopayments_test_")
         basedir = os.path.join(self.tempdir, "basedir")
         shutil.copytree("tests/fixtures", basedir)
-        control.initialize(cli.parse([
+        ctrl.initialize(cli.parse([
             "--testnet",
             "--basedir={0}".format(basedir),
             "--cp_url={0}".format(CP_URL)
@@ -60,8 +61,8 @@ class TestMpcHubSync(unittest.TestCase):
             with open("test_basedir/client.json") as fp:
                 connection = json.load(fp)
             asset = "XCP"
-            client_key = control.create_key(asset, netcode="XTN")
-            secret = control.create_secret()
+            client_key = ctrl.create_key(asset, netcode="XTN")
+            secret = ctrl.create_secret()
             connection["hub2client_revoke_secrets"].append(secret)
             params = {
                 "handle": connection["handle"],
@@ -78,7 +79,7 @@ class TestMpcHubSync(unittest.TestCase):
             params = auth.sign_json(params, client_key["wif"])
             api.mpc_hub_sync(**params)
 
-        self.assertRaises(exceptions.HandlesNotFound, func)
+        self.assertRaises(err.HandlesNotFound, func)
 
     def _test_validate_revoke_format(self):
 
@@ -86,8 +87,8 @@ class TestMpcHubSync(unittest.TestCase):
             with open("test_basedir/client.json") as fp:
                 connection = json.load(fp)
             asset = "XCP"
-            client_key = control.create_key(asset, netcode="XTN")
-            secret = control.create_secret()
+            client_key = ctrl.create_key(asset, netcode="XTN")
+            secret = ctrl.create_secret()
             connection["hub2client_revoke_secrets"].append(secret)
             params = {
                 "handle": connection["handle"],
@@ -104,7 +105,7 @@ class TestMpcHubSync(unittest.TestCase):
             params = auth.sign_json(params, client_key["wif"])
             api.mpc_hub_sync(**params)
 
-        self.assertRaises(jsonschema.exceptions.ValidationError, func)
+        self.assertRaises(jsonschema.err.ValidationError, func)
 
     def _test_validate_commit_format(self):
 
@@ -112,8 +113,8 @@ class TestMpcHubSync(unittest.TestCase):
             with open("test_basedir/client.json") as fp:
                 connection = json.load(fp)
             asset = "XCP"
-            client_key = control.create_key(asset, netcode="XTN")
-            secret = control.create_secret()
+            client_key = ctrl.create_key(asset, netcode="XTN")
+            secret = ctrl.create_secret()
             connection["hub2client_revoke_secrets"].append(secret)
             params = {
                 "handle": connection["handle"],
@@ -130,7 +131,7 @@ class TestMpcHubSync(unittest.TestCase):
             params = auth.sign_json(params, client_key["wif"])
             api.mpc_hub_sync(**params)
 
-        self.assertRaises(jsonschema.exceptions.ValidationError, func)
+        self.assertRaises(jsonschema.err.ValidationError, func)
 
     def test_standard_commit(self):
         with open("test_basedir/client.json") as fp:
@@ -159,10 +160,10 @@ class TestMpcHubSync(unittest.TestCase):
         )
 
         asset = "XCP"
-        client_key = control.create_key(asset, netcode="XTN")
+        client_key = ctrl.create_key(asset, netcode="XTN")
 
         # gen next revoke secret
-        next_secret = control.create_secret()
+        next_secret = ctrl.create_secret()
         connection["hub2client_revoke_secrets"].append(next_secret)
 
         # sync send payment to self

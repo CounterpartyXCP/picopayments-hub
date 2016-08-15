@@ -6,9 +6,9 @@
 import json
 import requests
 from requests.auth import HTTPBasicAuth
-from . import config
-from . import auth
-from . import exceptions
+from picopayments import auth
+from picopayments import err
+from picopayments import cfg
 
 
 def call(url, method, params, username=None, password=None,
@@ -29,7 +29,7 @@ def call(url, method, params, username=None, password=None,
         kwargs["auth"] = HTTPBasicAuth(username, password)
     response = requests.post(**kwargs).json()
     if "result" not in response:
-        raise exceptions.RpcCallFailed(payload, response)
+        raise err.RpcCallFailed(payload, response)
 
     result = response["result"]
     if authentication_wif:
@@ -40,7 +40,7 @@ def call(url, method, params, username=None, password=None,
 
 def counterparty_call(method, params):
     return call(
-        config.counterparty_url, method, params,
-        username=config.counterparty_username,
-        password=config.counterparty_password
+        cfg.counterparty_url, method, params,
+        username=cfg.counterparty_username,
+        password=cfg.counterparty_password
     )

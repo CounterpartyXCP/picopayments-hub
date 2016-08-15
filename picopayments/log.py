@@ -1,6 +1,6 @@
 import sys
 import logging
-from . import config
+from picopayments import cfg
 
 
 FORMAT = "%(asctime)s %(levelname)s %(name)s %(lineno)d: %(message)s"
@@ -24,7 +24,7 @@ def getLogger(name=None):
         level = LEVEL_DEFAULT
 
     # setup file handler
-    fh = logging.FileHandler(config.path_log)
+    fh = logging.FileHandler(cfg.path_log)
     fh.setFormatter(formatter)
     fh.setLevel(level)
 

@@ -5,15 +5,16 @@ import tempfile
 import jsonschema
 from picopayments import api
 from picopayments import auth
-from picopayments import control
+from picopayments import ctrl
 from picopayments import cli
-from picopayments import exceptions
+from picopayments import err
 from counterpartylib.lib.micropayments import util
 from pycoin.serialize import b2h
 from counterpartylib.lib.micropayments.scripts import compile_deposit_script
 
 
-CP_URL = "http://139.59.214.74:14000/api/"
+CP_URL = "http://127.0.0.1:14000/api/"
+# CP_URL = "http://139.59.214.74:14000/api/"
 
 
 DEPOSIT_RESULT_SCHEMA = {
@@ -37,7 +38,7 @@ class TestMpcHubDeposit(unittest.TestCase):
         self.tempdir = tempfile.mkdtemp(prefix="picopayments_test_")
         basedir = os.path.join(self.tempdir, "basedir")
         shutil.copytree("tests/fixtures", basedir)
-        control.initialize(cli.parse([
+        ctrl.initialize(cli.parse([
             "--testnet",
             "--basedir={0}".format(basedir),
             "--cp_url={0}".format(CP_URL)
@@ -49,7 +50,7 @@ class TestMpcHubDeposit(unittest.TestCase):
     def test_standard_usage_xcp(self):
 
         asset = "XCP"
-        client_key = control.create_key(asset, netcode="XTN")
+        client_key = ctrl.create_key(asset, netcode="XTN")
         client_pubkey = client_key["pubkey"]
 
         hub2client_spend_secret = util.b2h(os.urandom(32))
@@ -87,7 +88,7 @@ class TestMpcHubDeposit(unittest.TestCase):
         def func():
 
             asset = "XCP"
-            client_key = control.create_key(asset, netcode="XTN")
+            client_key = ctrl.create_key(asset, netcode="XTN")
             client_pubkey = client_key["pubkey"]
 
             hub2client_spend_secret = util.b2h(os.urandom(32))
@@ -132,14 +133,14 @@ class TestMpcHubDeposit(unittest.TestCase):
             params = auth.sign_json(params, client_key["wif"])
             result = api.mpc_hub_deposit(**params)
 
-        self.assertRaises(exceptions.DepositAlreadyGiven, func)
+        self.assertRaises(err.DepositAlreadyGiven, func)
 
     def test_validate_handle_exists(self):
 
         def func():
 
             asset = "XCP"
-            client_key = control.create_key(asset, netcode="XTN")
+            client_key = ctrl.create_key(asset, netcode="XTN")
             next_revoke_secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
             client2hub_deposit_script = util.b2h(os.urandom(32)),
 
@@ -151,7 +152,7 @@ class TestMpcHubDeposit(unittest.TestCase):
             params = auth.sign_json(params, client_key["wif"])
             api.mpc_hub_deposit(**params)
 
-        self.assertRaises(exceptions.HandleNotFound, func)
+        self.assertRaises(err.HandleNotFound, func)
 
 
 if __name__ == "__main__":
