@@ -4,7 +4,6 @@
 
 
 import os
-import sys
 import apsw
 import pkg_resources
 from threading import RLock
@@ -191,11 +190,6 @@ def set_next_revoke_secret_hash(handle, next_revoke_secret_hash, cursor=None):
         "handle": handle, "next_revoke_secret_hash": next_revoke_secret_hash
     }
     _exec(_SET_NEXT_REVOKE_SECRET_HASH, args, cursor=cursor)
-
-
-def add_payments(payments, cursor=None):
-    cursor = cursor or get_cursor()
-    cursor.executemany(_ADD_PAYMENT, payments)
 
 
 def unnotified_payments(handle):

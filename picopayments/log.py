@@ -5,39 +5,37 @@ from . import config
 
 FORMAT = "%(asctime)s %(levelname)s %(name)s %(lineno)d: %(message)s"
 LEVEL_DEFAULT = logging.INFO
-LEVEL_QUIET = logging.ERROR  # 60
+LEVEL_QUIET = 60
 LEVEL_VERBOSE = logging.DEBUG
 
 
-logging.basicConfig(format=FORMAT, level=LEVEL_QUIET)
+logging.basicConfig(format=FORMAT, level=LEVEL_DEFAULT)
 
 
 def getLogger(name=None):
-    logger = logging.getLogger(name=name)
     formatter = logging.Formatter(FORMAT)
+
+    # get log level
+    if "--debug" in sys.argv or "--verbose" in sys.argv:
+        level = LEVEL_VERBOSE  # full logging if --debug or --verbose arg given
+    elif "--quiet" in sys.argv:
+        level = LEVEL_QUIET  # no logging if --quite arg given
+    else:
+        level = LEVEL_DEFAULT
+
+    # setup file handler
     fh = logging.FileHandler(config.path_log)
     fh.setFormatter(formatter)
+    fh.setLevel(level)
+
+    # setup stream handler
     ch = logging.StreamHandler()
     ch.setFormatter(formatter)
+    ch.setLevel(level)
 
-    # full logging if --debug or --verbose arg given
-    if "--debug" in sys.argv or "--verbose" in sys.argv:
-        logger.setLevel(LEVEL_VERBOSE)  # pragma: no cover
-        fh.setLevel(LEVEL_VERBOSE)  # pragma: no cover
-        ch.setLevel(LEVEL_VERBOSE)  # pragma: no cover
-
-    # no logging if --quite arg given
-    elif "--quiet" in sys.argv:
-        logger.setLevel(LEVEL_QUIET)  # pragma: no cover
-        fh.setLevel(LEVEL_QUIET)  # pragma: no cover
-        ch.setLevel(LEVEL_QUIET)  # pragma: no cover
-
-    # default to info
-    else:
-        logger.setLevel(LEVEL_DEFAULT)  # pragma: no cover
-        fh.setLevel(LEVEL_DEFAULT)  # pragma: no cover
-        ch.setLevel(LEVEL_DEFAULT)  # pragma: no cover
-
+    # setup logger
+    logger = logging.getLogger(name=name)
+    logger.setLevel(level)
     logger.addHandler(ch)
     logger.addHandler(fh)
     return logger
