@@ -11,15 +11,15 @@ from picopayments import database as db
 class TestDB(unittest.TestCase):
 
     def setUp(self):
-        self.root = tempfile.mkdtemp(prefix="picopayments_test_")
+        self.basedir = tempfile.mkdtemp(prefix="picopayments_test_")
         # TODO start mock counterparty service
         control.initialize(cli.parse([
             "--testnet",
-            "--root={0}".format(self.root)
+            "--basedir={0}".format(self.basedir)
         ]))
 
     def tearDown(self):
-        shutil.rmtree(self.root)
+        shutil.rmtree(self.basedir)
 
     def test_handle_exists(self):
 

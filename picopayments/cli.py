@@ -4,14 +4,13 @@
 
 
 import os
-import sys
 import argparse
 
 
 def parse(args):
 
     # pre parse testnet to modify defaults depending on network
-    testnet = "--testnet" in sys.argv
+    testnet = "--testnet" in args
 
     description = "Decentral micropayment hub for counterparty assets."
     parser = argparse.ArgumentParser(description=description)
@@ -19,6 +18,17 @@ def parse(args):
     # network to use
     parser.add_argument(
         '--testnet', action='store_true', help="Use bitcoin testnet."
+    )
+
+    # logging
+    parser.add_argument(
+        '--debug', action='store_true', help="Maximum logging."
+    )
+    parser.add_argument(
+        '--verbose', action='store_true', help="Maximum logging."
+    )
+    parser.add_argument(
+        '--quite', action='store_true', help="Minimum logging."
     )
 
     # show version
@@ -37,21 +47,11 @@ def parse(args):
         '--terms', action='store_true', help="Show hub terms."
     )
 
-    # root file path
+    # basedir path
     default = os.path.join(os.path.expanduser("~"), ".picopayments")
     parser.add_argument(
-        '--root', default=default, metavar="PATH",
+        '--basedir', default=default, metavar="PATH",
         help="Location of application files: {0}".format(default)
-    )
-
-    # ssl cert and key
-    parser.add_argument(
-        '--ssl_cert_file', default=None, metavar="PATH",
-        help="Path to ssl certificate file."
-    )
-    parser.add_argument(
-        '--ssl_pkey_file', default=None, metavar="PATH",
-        help="Path to ssl private key file."
     )
 
     # server
@@ -63,6 +63,14 @@ def parse(args):
     parser.add_argument(
         '--port', type=int, default=default, metavar="PORT",
         help="Server port: {0}".format(default)
+    )
+    parser.add_argument(
+        '--ssl_cert_file', default=None, metavar="PATH",
+        help="Path to ssl certificate file."
+    )
+    parser.add_argument(
+        '--ssl_pkey_file', default=None, metavar="PATH",
+        help="Path to ssl private key file."
     )
 
     # counterpartylib api

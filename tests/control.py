@@ -8,22 +8,21 @@ from picopayments import rpc
 from picopayments import exceptions
 
 
-URL = "http://127.0.0.1:14000/api/"
+CP_URL = "http://127.0.0.1:14000/api/"
 
 
 class TestCtrl(unittest.TestCase):
 
     def setUp(self):
-        self.root = tempfile.mkdtemp(prefix="picopayments_test_")
-        # TODO start mock counterparty service
+        self.basedir = tempfile.mkdtemp(prefix="picopayments_test_")
         control.initialize(cli.parse([
             "--testnet",
-            "--root={0}".format(self.root),
-            "--cp_url={0}".format(URL)
+            "--basedir={0}".format(self.basedir),
+            "--cp_url={0}".format(CP_URL)
         ]))
 
     def tearDown(self):
-        shutil.rmtree(self.root)
+        shutil.rmtree(self.basedir)
 
     def test_get_funding_addresses(self):
         assets = ["XCP"]

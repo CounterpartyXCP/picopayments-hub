@@ -1,22 +1,18 @@
 import os
-import time
 import shutil
 import unittest
 import tempfile
-from pycoin.serialize import b2h
-from counterpartylib.lib.micropayments import util
-from counterpartylib.lib.micropayments.scripts import compile_deposit_script
-from picopayments import control
-from picopayments import exceptions
 import jsonschema
-from picopayments.main import main
-from multiprocessing import Process
-from picopayments import rpc
+from picopayments import api
+from picopayments import auth
+from picopayments import control
+from picopayments import cli
+from picopayments import exceptions
+from counterpartylib.lib.micropayments import util
+from pycoin.serialize import b2h
+from counterpartylib.lib.micropayments.scripts import compile_deposit_script
 
 
-HOST = "127.0.0.1"
-PORT = "15000"
-URL = "https://127.0.0.1:15000/api/"
 CP_URL = "http://127.0.0.1:14000/api/"
 
 
@@ -38,21 +34,17 @@ DEPOSIT_RESULT_SCHEMA = {
 class TestMpcHubDeposit(unittest.TestCase):
 
     def setUp(self):
-        self.root = tempfile.mkdtemp(prefix="picopayments_test_")
-        self.server = Process(target=main, args=([
+        self.tempdir = tempfile.mkdtemp(prefix="picopayments_test_")
+        basedir = os.path.join(self.tempdir, "basedir")
+        shutil.copytree("tests/fixtures", basedir)
+        control.initialize(cli.parse([
             "--testnet",
-            "--root={0}".format(self.root),
-            "--host={0}".format(HOST),
-            "--port={0}".format(PORT),
+            "--basedir={0}".format(basedir),
             "--cp_url={0}".format(CP_URL)
-        ],))
-        self.server.start()
-        time.sleep(5)  # wait until server started
+        ]))
 
     def tearDown(self):
-        self.server.terminate()
-        self.server.join()
-        shutil.rmtree(self.root)
+        shutil.rmtree(self.tempdir)
 
     def test_standard_usage_xcp(self):
 
@@ -63,16 +55,13 @@ class TestMpcHubDeposit(unittest.TestCase):
         hub2client_spend_secret = util.b2h(os.urandom(32))
         hub2client_spend_secret_hash = util.hash160hex(hub2client_spend_secret)
 
-        result = rpc.call(
-            url=URL,
-            method="mpc_hub_request",
-            params={
-                "asset": asset,
-                "spend_secret_hash": hub2client_spend_secret_hash
-            },
-            verify_ssl_cert=False,  # only needed for encryption
-            authentication_wif=client_key["wif"]
-        )
+        params = {
+            "asset": asset,
+            "spend_secret_hash": hub2client_spend_secret_hash
+        }
+        params = auth.sign_json(params, client_key["wif"])
+        result = api.mpc_hub_request(**params)
+
         handle = result["handle"]
         hub_pubkey = result["pubkey"]
         client2hub_spend_secret_hash = result["spend_secret_hash"]
@@ -82,17 +71,14 @@ class TestMpcHubDeposit(unittest.TestCase):
         ))
 
         next_revoke_secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
-        result = rpc.call(
-            url=URL,
-            method="mpc_hub_deposit",
-            params={
-                "handle": handle,
-                "deposit_script": client2hub_deposit_script,
-                "next_revoke_secret_hash": next_revoke_secret_hash
-            },
-            verify_ssl_cert=False,  # only needed for encryption
-            authentication_wif=client_key["wif"]
-        )
+        params = {
+            "handle": handle,
+            "deposit_script": client2hub_deposit_script,
+            "next_revoke_secret_hash": next_revoke_secret_hash
+        }
+        params = auth.sign_json(params, client_key["wif"])
+        result = api.mpc_hub_deposit(**params)
+
         self.assertIsNotNone(result)
         jsonschema.validate(result, DEPOSIT_RESULT_SCHEMA)
 
@@ -109,16 +95,13 @@ class TestMpcHubDeposit(unittest.TestCase):
                 hub2client_spend_secret
             )
 
-            result = rpc.call(
-                url=URL,
-                method="mpc_hub_request",
-                params={
-                    "asset": asset,
-                    "spend_secret_hash": hub2client_spend_secret_hash
-                },
-                verify_ssl_cert=False,  # only needed for encryption
-                authentication_wif=client_key["wif"]
-            )
+            params = {
+                "asset": asset,
+                "spend_secret_hash": hub2client_spend_secret_hash
+            }
+            params = auth.sign_json(params, client_key["wif"])
+            result = api.mpc_hub_request(**params)
+
             handle = result["handle"]
             hub_pubkey = result["pubkey"]
             client2hub_spend_secret_hash = result["spend_secret_hash"]
@@ -129,35 +112,27 @@ class TestMpcHubDeposit(unittest.TestCase):
 
             # submit deposit
             next_revoke_secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
-            result = rpc.call(
-                url=URL,
-                method="mpc_hub_deposit",
-                params={
-                    "handle": handle,
-                    "deposit_script": client2hub_deposit_script,
-                    "next_revoke_secret_hash": next_revoke_secret_hash
-                },
-                verify_ssl_cert=False,  # only needed for encryption
-                authentication_wif=client_key["wif"]
-            )
+
+            params = {
+                "handle": handle,
+                "deposit_script": client2hub_deposit_script,
+                "next_revoke_secret_hash": next_revoke_secret_hash
+            }
+            params = auth.sign_json(params, client_key["wif"])
+            result = api.mpc_hub_deposit(**params)
             self.assertIsNotNone(result)
 
             # resubmit deposit
             next_revoke_secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
-            result = rpc.call(
-                url=URL,
-                method="mpc_hub_deposit",
-                params={
-                    "handle": handle,
-                    "deposit_script": client2hub_deposit_script,
-                    "next_revoke_secret_hash": next_revoke_secret_hash
-                },
-                verify_ssl_cert=False,  # only needed for encryption
-                authentication_wif=client_key["wif"]
-            )
+            params = {
+                "handle": handle,
+                "deposit_script": client2hub_deposit_script,
+                "next_revoke_secret_hash": next_revoke_secret_hash
+            }
+            params = auth.sign_json(params, client_key["wif"])
+            result = api.mpc_hub_deposit(**params)
 
-        self.assertRaises(Exception, func)
-        # self.assertRaises(exceptions.DepositAlreadyGiven, func)
+        self.assertRaises(exceptions.DepositAlreadyGiven, func)
 
     def test_validate_handle_exists(self):
 
@@ -167,20 +142,16 @@ class TestMpcHubDeposit(unittest.TestCase):
             client_key = control.create_key(asset, netcode="XTN")
             next_revoke_secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
             client2hub_deposit_script = util.b2h(os.urandom(32)),
-            rpc.call(
-                url=URL,
-                method="mpc_hub_deposit",
-                params={
-                    "handle": "deadbeef",
-                    "deposit_script": client2hub_deposit_script,
-                    "next_revoke_secret_hash": next_revoke_secret_hash
-                },
-                verify_ssl_cert=False,  # only needed for encryption
-                authentication_wif=client_key["wif"]
-            )
 
-        self.assertRaises(Exception, func)
-        # self.assertRaises(exceptions.HandleNotFound, func)
+            params = {
+                "handle": "deadbeef",
+                "deposit_script": client2hub_deposit_script,
+                "next_revoke_secret_hash": next_revoke_secret_hash
+            }
+            params = auth.sign_json(params, client_key["wif"])
+            api.mpc_hub_deposit(**params)
+
+        self.assertRaises(exceptions.HandleNotFound, func)
 
 
 if __name__ == "__main__":

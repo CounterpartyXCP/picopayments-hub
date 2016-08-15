@@ -1,47 +1,33 @@
 import shutil
-import time
 import unittest
 import tempfile
-from picopayments.main import main
-from multiprocessing import Process
-from picopayments import rpc
+from picopayments import api
+from picopayments import control
+from picopayments import cli
 
 
-HOST = "127.0.0.1"
-PORT = "15000"
-URL = "https://127.0.0.1:15000/api/"
 CP_URL = "http://127.0.0.1:14000/api/"
 
 
 class TestMpcHubTerms(unittest.TestCase):
 
     def setUp(self):
-        self.root = tempfile.mkdtemp(prefix="picopayments_test_")
-        self.server = Process(target=main, args=([
+        self.basedir = tempfile.mkdtemp(prefix="picopayments_test_")
+        # TODO start mock counterparty service
+        control.initialize(cli.parse([
             "--testnet",
-            "--root={0}".format(self.root),
-            "--host={0}".format(HOST),
-            "--port={0}".format(PORT),
+            "--basedir={0}".format(self.basedir),
             "--cp_url={0}".format(CP_URL)
-        ],))
-        self.server.start()
-        time.sleep(5)  # wait until server started
+        ]))
 
     def tearDown(self):
-        self.server.terminate()
-        self.server.join()
-        shutil.rmtree(self.root)
+        shutil.rmtree(self.basedir)
 
     def test_standard_usage_xcp(self):
         # TODO test input validation
 
         # test gets all
-        terms = rpc.call(
-            url=URL,
-            method="mpc_hub_terms",
-            params={},
-            verify_ssl_cert=False  # only needed for encryption
-        )
+        terms = api.mpc_hub_terms()
         self.assertEqual(terms, {
             "BTC": {
                 "deposit_ratio": 1.0,
@@ -70,14 +56,7 @@ class TestMpcHubTerms(unittest.TestCase):
         })
 
         # test limits to asset
-        terms = rpc.call(
-            url=URL,
-            method="mpc_hub_terms",
-            params={
-                "assets": ["XCP"]
-            },
-            verify_ssl_cert=False  # only needed for encryption
-        )
+        terms = api.mpc_hub_terms(assets=["XCP"])
         self.assertEqual(terms, {
             "XCP": {
                 "deposit_ratio": 1.0,

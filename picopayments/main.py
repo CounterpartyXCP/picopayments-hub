@@ -4,11 +4,12 @@
 
 
 import json
-from picopayments import config
-from picopayments import cli
-from picopayments import control
-from picopayments import terms
-from picopayments import __version__
+import traceback
+from . import cli
+from . import control
+from . import terms
+from . import config
+from . import __version__
 from werkzeug.serving import run_simple
 from werkzeug.wrappers import Request, Response
 from jsonrpc import JSONRPCResponseManager, dispatcher
@@ -28,30 +29,26 @@ def main(args):
         return
 
     # parse args and initialize
-    parsed_args = cli.parse(args)
-    control.initialize(parsed_args)
+    parsed = cli.parse(args)
+    control.initialize(parsed)
 
     # show configured terms
-    if parsed_args["terms"]:
+    if parsed["terms"]:
         print("Terms file saved at {0}".format(terms.path()))
         print(json.dumps(terms.read(), indent=2, sort_keys=True))
         return
 
     # show funding address for assets
-    if parsed_args["funding"]:
+    if parsed["funding"]:
         assets = terms.read().keys()
         addresses = control.create_funding_addresses(assets)
         print(json.dumps(addresses, indent=2, sort_keys=True))
         return
 
     # setup ssl
-    if parsed_args["ssl_cert_file"] and parsed_args["ssl_pkey_file"]:
-        ssl_context = (
-            parsed_args["ssl_cert_file"],
-            parsed_args["ssl_pkey_file"]
-        )
-    else:
-        ssl_context = 'adhoc'  # automatically create ssl context
+    ssl_context = 'adhoc'  # automatically create ssl context
+    if parsed["ssl_cert_file"] and parsed["ssl_pkey_file"]:
+        ssl_context = (parsed["ssl_cert_file"], parsed["ssl_pkey_file"])
 
     # start server
     run_simple(

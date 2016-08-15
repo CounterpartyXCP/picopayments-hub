@@ -161,9 +161,9 @@ def create_funding_addresses(assets):
 def initialize(args):
     config.load(args)  # load configuration
 
-    # ensure root path exists
-    if not os.path.exists(config.root):
-        os.makedirs(config.root)
+    # ensure basedir path exists
+    if not os.path.exists(config.basedir):
+        os.makedirs(config.basedir)
 
     terms.read()  # make sure terms file exists
     db.setup()  # setup and create db if needed

@@ -11,8 +11,7 @@ ifeq ($(USE_WHEELS), 0)
 else
   WHEEL_INSTALL_ARGS := --use-wheel --no-index --find-links=$(WHEEL_DIR)
 endif
-export PYCOIN_NATIVE=openssl
-export STORJNODE_QUERY_TIMEOUT=0.3
+export VIRTUALENV_PATH=env/bin/
 
 
 help:
@@ -37,6 +36,9 @@ clean:
 	rm -rf env
 	rm -rf build
 	rm -rf dist
+	rm -rf test_basedir
+	rm -rf __pycache__
+	rm -rf htmlcov
 	rm -rf *.egg
 	rm -rf *.egg-info
 	find | grep -i ".*\.pyc$$" | xargs -r -L1 rm
@@ -66,6 +68,7 @@ setup: virtualenv
 	$(PIP) install $(WHEEL_INSTALL_ARGS) -r requirements.txt
 	$(PIP) install $(WHEEL_INSTALL_ARGS) -r requirements_tests.txt
 	$(PIP) install $(WHEEL_INSTALL_ARGS) -r requirements_develop.txt
+	$(PY) setup.py develop
 
 
 install: setup
@@ -80,9 +83,13 @@ test: setup
 	$(AUTOPEP8) --in-place --aggressive --aggressive --recursive picopayments
 	$(AUTOPEP8) --in-place --aggressive --aggressive --recursive examples
 	$(AUTOPEP8) --in-place --aggressive --aggressive --recursive tests
-	$(COVERAGE) run --source="picopayments" setup.py test
-	$(COVERAGE) report --fail-under=70
+	$(PEP8) picopayments
+	$(PEP8) examples
+	$(PEP8) tests
+	cp -a tests/fixtures test_basedir
+	$(COVERAGE) run --source=picopayments setup.py test
 	$(COVERAGE) html
+	$(COVERAGE) report  # --fail-under=90
 
 
 publish: test

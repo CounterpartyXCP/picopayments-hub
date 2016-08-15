@@ -90,7 +90,7 @@ def _all(sql, args=None, asdict=True, cursor=None):
 def setup():
 
     # get db path
-    db_path = os.path.join(config.root, config.database)
+    db_path = os.path.join(config.basedir, config.database)
 
     # get connection
     connection = apsw.Connection(db_path)

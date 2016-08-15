@@ -66,7 +66,7 @@ DEFAULT_TESTNET = {
 
 
 def path():
-    return os.path.join(config.root, config.terms)
+    return os.path.join(config.basedir, config.terms)
 
 
 def read():

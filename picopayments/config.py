@@ -3,14 +3,18 @@
 # License: MIT (see LICENSE file)
 
 
+import os
+
+
 testnet = None  # loaded from args
 netcode = None  # loaded from args
 
 
 # paths and files
-root = None  # loaded from args
-database = None  # loaded from args
-terms = None  # loaded from args
+basedir = None  # loaded from args
+database = None  # loaded from args  # FIXME change to 'path_database
+terms = None  # loaded from args     # FIXME change to 'path_terms'
+path_log = None  # loaded from args
 
 
 # server
@@ -25,13 +29,15 @@ counterparty_password = None  # loaded from args
 
 
 def load(args):
+    testnet = args["testnet"]
+    basedir = args["basedir"]
     globals().update({
 
         "testnet": args["testnet"],
-        "netcode": "XTN" if args["testnet"] else "BTC",
+        "netcode": "XTN" if testnet else "BTC",
 
         # paths and files
-        "root": args["root"],
+        "basedir": basedir,
 
         # server
         "host": args["host"],
@@ -43,6 +49,10 @@ def load(args):
         "counterparty_password": args["cp_password"],
 
         # set paths
-        "database": "testnet.db" if args["testnet"] else "mainnet.db",
-        "terms": "testnet.terms" if args["testnet"] else "mainnet.terms",
+        "database": "testnet.db" if testnet else "mainnet.db",
+        "terms": "testnet.terms" if testnet else "mainnet.terms",
+
+        "path_log": os.path.join(
+            basedir, "testnet.log" if testnet else "mainnet.log"
+        ),
     })
