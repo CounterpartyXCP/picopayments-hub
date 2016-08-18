@@ -38,7 +38,7 @@ def call(url, method, params, username=None, password=None,
     return result
 
 
-def counterparty_call(method, params):
+def cp_call(method, params):
     return call(
         cfg.counterparty_url, method, params,
         username=cfg.counterparty_username,

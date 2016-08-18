@@ -89,7 +89,7 @@ def mpc_hub_sync(**kwargs):
 
 def _add_cp_call(method):
     def counterparty_method(**kwargs):
-        return rpc.counterparty_call(method, kwargs)
+        return rpc.cp_call(method=method, params=kwargs)
     dispatcher[method] = counterparty_method
     return counterparty_method
 
@@ -109,3 +109,4 @@ mpc_heighest_commit = _add_cp_call("mpc_heighest_commit")
 mpc_transferred_amount = _add_cp_call("mpc_transferred_amount")
 mpc_payouts = _add_cp_call("mpc_payouts")
 mpc_recoverables = _add_cp_call("mpc_recoverables")
+mpc_recoverables = _add_cp_call("mpc_deposit_expired")

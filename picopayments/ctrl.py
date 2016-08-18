@@ -226,15 +226,21 @@ def update_channel_state(channel_id, asset, commit=None,
     unnotified_revokes = db.unnotified_revokes(channel_id, cursor=None)
     unnotified_commit = db.unnotified_commit(channel_id, cursor=cursor)
     if commit is not None:
-        state = rpc.counterparty_call("mpc_add_commit", {
-            "state": state,
-            "commit_rawtx": commit["rawtx"],
-            "commit_script": commit["script"]
-        })
+        state = rpc.cp_call(
+            method="mpc_add_commit",
+            params={
+                "state": state,
+                "commit_rawtx": commit["rawtx"],
+                "commit_script": commit["script"]
+            }
+        )
     if revokes is not None:
-        state = rpc.counterparty_call("mpc_revoke_all", {
-            "state": state, "secrets": revokes
-        })
+        state = rpc.cp_call(
+            method="mpc_revoke_all",
+            params={
+                "state": state, "secrets": revokes
+            }
+        )
     db.save_channel_state(
         channel_id, state, unnotified_commit=unnotified_commit,
         unnotified_revokes=unnotified_revokes, cursor=cursor
@@ -324,32 +330,50 @@ def sync_hub_connection(handle, next_revoke_secret_hash,
     )
 
 
+def _balance(address, asset):
+    return rpc.cp_call(
+        method="get_balances",
+        params={
+            "filters": [
+                {'field': 'address', 'op': '==', 'value': address},
+                {'field': 'asset', 'op': '==', 'value': asset},
+            ]
+        }
+    )[0]["quantity"]
+
+
+def _deposit_address(state):
+    return util.script2address(
+        util.h2b(state["deposit_script"]), netcode=cfg.netcode
+    )
+
+
+def _transferred(state):
+    return rpc.cp_call(
+        method="mpc_transferred_amount",
+        params={"state": state}
+    )
+
+
+def _expired(state):
+    return rpc.cp_call(
+        method="mpc_deposit_expired",
+        params={"state": state, "clearance": 1}
+    )
+
+
 def load_channel_data(handle, cursor):
     connection = db.hub_connection(handle, cursor=cursor)
     send_state = db.load_channel_state(connection["send_channel_id"],
                                        connection["asset"], cursor=cursor)
-    send_deposit_address = util.script2address(
-        util.h2b(send_state["deposit_script"]), netcode=cfg.netcode
-    )
+    send_deposit_address = _deposit_address(send_state)
     recv_state = db.load_channel_state(connection["recv_channel_id"],
                                        connection["asset"], cursor=cursor)
-    recv_deposit_address = util.script2address(
-        util.h2b(send_state["deposit_script"]), netcode=cfg.netcode
-    )
-    send_transferred = rpc.counterparty_call("mpc_transferred_amount", {
-        "state": send_state
-    })
-    send_deposit_amount = rpc.counterparty_call("get_balances", {"filters": [
-        {'field': 'address', 'op': '==', 'value': send_deposit_address},
-        {'field': 'asset', 'op': '==', 'value': connection["asset"]},
-    ]})[0]["quantity"]
-    recv_transferred = rpc.counterparty_call("mpc_transferred_amount", {
-        "state": recv_state
-    })
-    recv_deposit_amount = rpc.counterparty_call("get_balances", {"filters": [
-        {'field': 'address', 'op': '==', 'value': recv_deposit_address},
-        {'field': 'asset', 'op': '==', 'value': connection["asset"]},
-    ]})[0]["quantity"]
+    recv_deposit_address = _deposit_address(recv_state)
+    send_transferred = _transferred(send_state)
+    send_deposit_amount = _balance(send_deposit_address, connection["asset"])
+    recv_transferred = _transferred(recv_state)
+    recv_deposit_amount = _balance(recv_deposit_address, connection["asset"])
     unnotified_commit = db.unnotified_commit(handle, cursor=cursor)
     send_payments_sum = db.send_payments_sum(handle, cursor=cursor)
     recv_payments_sum = db.recv_payments_sum(handle, cursor=cursor)
@@ -363,13 +387,16 @@ def load_channel_data(handle, cursor):
     receivable_potential = send_deposit_amount + recv_transferred
     receivable_owed = (abs(payments_sum) if payments_sum < 0 else 0)
     receivable_amount = receivable_potential - receivable_owed
+
     return {
         "connection": connection,
         "send_state": send_state,
+        "send_expired": _expired(send_state),
         "send_transferred_amount": send_transferred,
         "send_payments_sum": send_payments_sum,
         "send_deposit_amount": send_deposit_amount,
         "recv_state": recv_state,
+        "recv_expired": _expired(recv_state),
         "recv_transferred_amount": recv_transferred,
         "recv_payments_sum": recv_payments_sum,
         "recv_deposit_amount": recv_deposit_amount,
@@ -386,6 +413,8 @@ def process_payment(cursor, payment):
     # load payer
     payer_handle = payment["payer_handle"]
     payer = load_channel_data(payer_handle, cursor)
+    if payer["recv_expired"]:
+        raise err.DepositExpired(payer_handle, "client2hub")
 
     # check payer has enough funds or can revoke sends until enough available
     if payment["amount"] > payer["sendable_amount"]:
@@ -398,6 +427,11 @@ def process_payment(cursor, payment):
     if payee_handle:
 
         payee = load_channel_data(payee_handle, cursor)
+        if payer["asset"] != payee["asset"]:
+            raise err.AssetMissmatch(payer["asset"], payee["asset"])
+        if payee["send_expired"]:
+            raise err.DepositExpired(payee_handle, "hub2client")
+
         if payment["amount"] > payee["receivable_amount"]:
             raise err.PaymentExceedsReceivable(
                 payment["amount"], payee["receivable_amount"], payment["token"]

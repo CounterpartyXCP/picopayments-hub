@@ -63,6 +63,13 @@ class PaymentExceedsReceivable(Exception):
         super(PaymentExceedsReceivable, self).__init__(msg)
 
 
+class AssetMissmatch(Exception):
+
+    def __init__(self, expected, found):
+        msg = "Expected asset {0} does not match found asset {1}!"
+        super(AssetMissmatch, self).__init__(msg.format(expected, found))
+
+
 class AuthPubkeyMissmatch(Exception):
 
     def __init__(self, expected, found):
@@ -79,3 +86,10 @@ class InvalidSignature(Exception):
         super(InvalidSignature, self).__init__(
             msg.format(pubkey, signature, data)
         )
+
+
+class DepositExpired(Exception):
+
+    def __init__(self, handle, direction):
+        msg = "Deposit expired for connection {0} {1}"
+        super(DepositExpired, self).__init__(msg.format(handle, direction))

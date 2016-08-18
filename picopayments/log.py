@@ -1,3 +1,8 @@
+# coding: utf-8
+# Copyright (c) 2016 Fabian Barkhau <f483@storj.io>
+# License: MIT (see LICENSE file)
+
+
 import sys
 import logging
 from picopayments import cfg

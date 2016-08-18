@@ -37,7 +37,7 @@ class TestCtrl(unittest.TestCase):
     def test_failed_rpc_call(self):
 
         def func():
-            rpc.counterparty_call(method="nonexistant", params={})
+            rpc.cp_call(method="nonexistant", params={})
         self.assertRaises(err.RpcCallFailed, func)
 
     def test_validate_read_unknown_asset(self):

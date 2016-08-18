@@ -6,11 +6,11 @@
 import re
 import jsonschema
 from counterpartylib.lib.micropayments import validate
-from . import err
-from . import db
-from . import cfg
-from . import rpc
-from . import ctrl
+from picopayments import err
+from picopayments import db
+from picopayments import cfg
+from picopayments import rpc
+from picopayments import ctrl
 
 
 URL_REGEX = re.compile(
@@ -95,7 +95,7 @@ def deposit_input(handle, deposit_script, next_revoke_secret_hash):
 def is_recv_commit(handle, commit_rawtx, commit_script):
     netcode = "XTN" if cfg.testnet else "BTC"
     recv_channel = db.receive_channel(handle)
-    deposit_utxos = rpc.counterparty_call(
+    deposit_utxos = rpc.cp_call(
         method="get_unspent_txouts",
         params={"address": recv_channel["deposit_address"]}
     )
@@ -118,7 +118,6 @@ def sync_input(handle, next_revoke_secret_hash, sends, commit, revokes):
             validate.is_hex(send["payer_handle"])
             validate.is_quantity(send["amount"])
             handles += [send["payer_handle"], send["payee_handle"]]
-            # FIXME validate assets match on both ends
 
     # make sure all handles actually exist
     if not db.handles_exist(handles):
@@ -130,5 +129,3 @@ def sync_input(handle, next_revoke_secret_hash, sends, commit, revokes):
     if commit:
         jsonschema.validate(commit, COMMIT_SCHEMA)
         is_recv_commit(handle, commit["rawtx"], commit["script"])
-
-    # FIXME validate channels not expired

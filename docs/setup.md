@@ -46,12 +46,14 @@ Best use a screen as the node does not run as a daemon.
     source env/bin/activate
     pip install python-bitcoinlib==0.5.1
     pip install pycoin==0.70
-    pip install counterparty-cli==1.1.2
+    pip install apsw==3.9.2-r1
+    pip install prettytable==0.7.2
 
-    # replace counterparty-lib with patched micropayments version
-    wget https://transfer.sh/iAiIb/counterparty-lib-9.55.0-py3-none-any.whl
-    pip uninstall counterparty-lib
+    # install counterparty-lib with micropayments patch
+    wget https://transfer.sh/buCO1/counterparty-lib-9.55.0-py3-none-any.whl
     pip install --use-wheel --no-index --find-links=$PWD counterparty-lib
+    
+    pip install counterparty-cli==1.1.2
 
     # Start counterparty full node (will take time to process the blockchain)
     counterparty-server --testnet --backend-port=18332 --backend-user=bitcoinrpcuser --backend-password=bitcoinrpcpass start

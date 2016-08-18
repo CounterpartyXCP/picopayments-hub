@@ -55,8 +55,8 @@ fetch_wheel: virtualenv
 
 wheels: virtualenv
 	$(PIP) wheel --find-links=$(WHEEL_DIR) --wheel-dir=$(WHEEL_DIR) -r requirements.txt
-	$(PIP) wheel --find-links=$(WHEEL_DIR) --wheel-dir=$(WHEEL_DIR) -r test_requirements.txt
-	$(PIP) wheel --find-links=$(WHEEL_DIR) --wheel-dir=$(WHEEL_DIR) -r develop_requirements.txt
+	$(PIP) wheel --find-links=$(WHEEL_DIR) --wheel-dir=$(WHEEL_DIR) -r requirements_tests.txt
+	$(PIP) wheel --find-links=$(WHEEL_DIR) --wheel-dir=$(WHEEL_DIR) -r requirements_develop.txt
 
 
 wheel: setup
@@ -68,7 +68,6 @@ setup: virtualenv
 	$(PIP) install $(WHEEL_INSTALL_ARGS) -r requirements.txt
 	$(PIP) install $(WHEEL_INSTALL_ARGS) -r requirements_tests.txt
 	$(PIP) install $(WHEEL_INSTALL_ARGS) -r requirements_develop.txt
-	$(PY) setup.py develop
 
 
 install: setup
@@ -114,6 +113,10 @@ bitcoind_getinfo:
 
 bitcoind_stopserver:
 	bitcoin-cli --rpcuser=bitcoinrpcuser --rpcpassword=bitcoinrpcpass --rpcport=18332 stop
+
+
+counterparty_startserver:
+	env/bin/counterparty-server --testnet --backend-port=18332 --backend-user=bitcoinrpcuser --backend-password=bitcoinrpcpass start
 
 
 # Break in case of bug!

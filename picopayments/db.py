@@ -9,7 +9,7 @@ import pkg_resources
 from threading import RLock
 from counterpartylib.lib.micropayments import util
 from counterpartylib.lib.micropayments import scripts
-from . import cfg
+from picopayments import cfg
 
 
 def _sql(name):

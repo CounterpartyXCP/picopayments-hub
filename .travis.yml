@@ -1,0 +1,22 @@
+language: python
+python:
+  - "2.7"
+  - "3.3"
+  - "3.4"
+  - "3.5"
+  - "pypy"
+
+install:
+  - pip install -r requirements.txt
+  - pip install -r requirements_tests.txt
+
+script:
+  - pep8 storj
+  - coverage run --source="picopayments" setup.py test
+
+after_success:
+  - coveralls
+
+notifications:
+  slack: storjcommunity:TZfUO9ycY8R9UYwztWZTo0jk
+  email: false
