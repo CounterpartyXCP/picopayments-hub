@@ -32,8 +32,8 @@ _UNNOTIFIED_PAYMENTS = _sql("unnotified_payments")
 _UNNOTIFIED_COMMITS = _sql("unnotified_commits")
 _UNNOTIFIED_REVOKES = _sql("unnotified_revokes")
 _RECEIVE_CHANNEL = _sql("receive_channel")
-_SEND_PAYMENTS_SUM = _sql("send_payments_sum")
-_RECV_PAYMENTS_SUM = _sql("recv_payments_sum")
+_HUB2CLIENT_PAYMENTS_SUM = _sql("hub2client_payments_sum")
+_RECV_PAYMENTS_SUM = _sql("client2hub_payments_sum")
 _COMMITS_REQUESTED = _sql("commits_requested")
 _COMMITS_ACTIVE = _sql("commits_active")
 _COMMITS_REVOKED = _sql("commits_revoked")
@@ -88,11 +88,8 @@ def _all(sql, args=None, asdict=True, cursor=None):
 
 def setup():
 
-    # get db path
-    db_path = os.path.join(cfg.basedir, cfg.database)
-
     # get connection
-    connection = apsw.Connection(db_path)
+    connection = apsw.Connection(cfg.path_database)
 
     # use foreign keys
     cursor = connection.cursor()
@@ -172,7 +169,7 @@ def complete_hub_connection(data, cursor=None):
     add_revoke_secret_args = {
         "secret_hash": data["secret_hash"],
         "secret_value": data["secret_value"],
-        "channel_id": data["recv_channel_id"],
+        "channel_id": data["client2hub_channel_id"],
     }
     _exec(_ADD_REVOKE_SECRET, args=add_revoke_secret_args, cursor=cursor)
     cursor.execute("COMMIT")
@@ -337,14 +334,15 @@ def save_channel_state(channel_id, state, unnotified_commit=None,
     cursor.execute("COMMIT;")
 
 
-def send_payments_sum(handle, cursor=None):
-    result = _one(_SEND_PAYMENTS_SUM, args={"handle": handle}, cursor=cursor)
+def hub2client_payments_sum(handle, cursor=None):
+    result = _one(_HUB2CLIENT_PAYMENTS_SUM,
+                  args={"handle": handle}, cursor=cursor)
     if result:
         return result["sum"]
     return 0
 
 
-def recv_payments_sum(handle, cursor=None):
+def client2hub_payments_sum(handle, cursor=None):
     result = _one(_RECV_PAYMENTS_SUM, args={"handle": handle}, cursor=cursor)
     if result:
         return result["sum"]

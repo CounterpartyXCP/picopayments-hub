@@ -81,27 +81,28 @@ def request_input(asset, pubkey, spend_secret_hash, hub_rpc_url):
 def deposit_input(handle, deposit_script, next_revoke_secret_hash):
     validate.is_hex(handle)
     validate.hash160(next_revoke_secret_hash)
-    recv_channel = db.receive_channel(handle)
-    if not recv_channel:
+    client2hub_channel = db.receive_channel(handle)
+    # FIXME verify signing pubkey matches channel client pubkey
+    if not client2hub_channel:
         raise err.HandleNotFound(handle)
-    expected_payee_pubkey = recv_channel["payee_pubkey"]
-    expected_spend_secret_hash = recv_channel["spend_secret_hash"]
+    expected_payee_pubkey = client2hub_channel["payee_pubkey"]
+    expected_spend_secret_hash = client2hub_channel["spend_secret_hash"]
     validate.deposit_script(deposit_script, expected_payee_pubkey,
                             expected_spend_secret_hash)
-    if recv_channel["meta_complete"]:
+    if client2hub_channel["meta_complete"]:
         raise err.DepositAlreadyGiven(handle)
 
 
-def is_recv_commit(handle, commit_rawtx, commit_script):
+def is_client2hub_commit(handle, commit_rawtx, commit_script):
     netcode = "XTN" if cfg.testnet else "BTC"
-    recv_channel = db.receive_channel(handle)
+    client2hub_channel = db.receive_channel(handle)
     deposit_utxos = rpc.cp_call(
         method="get_unspent_txouts",
-        params={"address": recv_channel["deposit_address"]}
+        params={"address": client2hub_channel["deposit_address"]}
     )
     validate.commit_rawtx(
-        deposit_utxos, commit_rawtx, recv_channel["asset"],
-        recv_channel["deposit_script"], commit_script, netcode
+        deposit_utxos, commit_rawtx, client2hub_channel["asset"],
+        client2hub_channel["deposit_script"], commit_script, netcode
     )
 
 
@@ -123,9 +124,12 @@ def sync_input(handle, next_revoke_secret_hash, sends, commit, revokes):
     if not db.handles_exist(handles):
         raise err.HandlesNotFound(handles)
 
+    # FIXME verify signing pubkey matches channel client pubkey
+
     if revokes:
         jsonschema.validate(revokes, REVOKES_SCHEMA)
+        # FIXME check revokes match commits?
 
     if commit:
         jsonschema.validate(commit, COMMIT_SCHEMA)
-        is_recv_commit(handle, commit["rawtx"], commit["script"])
+        is_client2hub_commit(handle, commit["rawtx"], commit["script"])

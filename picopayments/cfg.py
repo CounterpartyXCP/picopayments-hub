@@ -11,9 +11,8 @@ netcode = None  # loaded from args
 
 
 # paths and files
-basedir = None  # loaded from args
-database = None  # loaded from args  # FIXME change to 'path_database
-terms = None  # loaded from args     # FIXME change to 'path_terms'
+path_database = None  # loaded from args
+path_terms = None  # loaded from args
 path_log = None  # loaded from args
 
 
@@ -31,6 +30,9 @@ counterparty_password = None  # loaded from args
 def load(args):
     testnet = args["testnet"]
     basedir = args["basedir"]
+    database_file = "testnet.db" if testnet else "mainnet.db"
+    terms_file = "testnet.terms" if testnet else "mainnet.terms"
+    log_file = "testnet.log" if testnet else "mainnet.log"
     globals().update({
 
         "testnet": args["testnet"],
@@ -49,10 +51,7 @@ def load(args):
         "counterparty_password": args["cp_password"],
 
         # set paths
-        "database": "testnet.db" if testnet else "mainnet.db",
-        "terms": "testnet.terms" if testnet else "mainnet.terms",
-
-        "path_log": os.path.join(
-            basedir, "testnet.log" if testnet else "mainnet.log"
-        ),
+        "path_database": os.path.join(basedir, database_file),
+        "path_terms": os.path.join(basedir, terms_file),
+        "path_log": os.path.join(basedir, log_file),
     })

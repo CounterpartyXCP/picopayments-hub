@@ -7,8 +7,7 @@ CREATE TABLE Terms(
     deposit_limit               INTEGER NOT NULL,       -- satoshis
     deposit_ratio               REAL NOT NULL,
     timeout_limit               INTEGER NOT NULL,       -- blocks
-    fee_setup                   INTEGER NOT NULL,       -- satoshis
-    fee_sync                    INTEGER NOT NULL,       -- satoshis
+    sync_fee                    INTEGER NOT NULL,       -- satoshis
     unixtimestamp               timestamp default (strftime('%s', 'now')) 
 );
 
@@ -46,15 +45,15 @@ CREATE TABLE HubConnection(
     id                          INTEGER NOT NULL PRIMARY KEY,
     handle                      TEXT NOT NULL UNIQUE,   -- hex
     asset                       TEXT NOT NULL,
-    send_channel_id             INTEGER NOT NULL,
-    recv_channel_id             INTEGER NOT NULL,
+    hub2client_channel_id       INTEGER NOT NULL,
+    client2hub_channel_id       INTEGER NOT NULL,
     terms_id                    INTEGER NOT NULL,
     hub_rpc_url                 TEXT,                   -- client is a hub
     next_revoke_secret_hash     TEXT DEFAULT NULL,      -- hex (for send)
     unixtimestamp               timestamp default (strftime('%s', 'now')),
 
-    FOREIGN KEY(send_channel_id) REFERENCES MicropaymentChannel(id),
-    FOREIGN KEY(recv_channel_id) REFERENCES MicropaymentChannel(id),
+    FOREIGN KEY(hub2client_channel_id) REFERENCES MicropaymentChannel(id),
+    FOREIGN KEY(client2hub_channel_id) REFERENCES MicropaymentChannel(id),
     FOREIGN KEY(terms_id) REFERENCES Terms(id) 
 );
 

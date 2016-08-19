@@ -30,8 +30,7 @@ class TestDB(unittest.TestCase):
                 "deposit_limit": b2h(os.urandom(32)),
                 "deposit_ratio": b2h(os.urandom(32)),
                 "timeout_limit": b2h(os.urandom(32)),
-                "fee_setup": b2h(os.urandom(32)),
-                "fee_sync": b2h(os.urandom(32)),
+                "sync_fee": b2h(os.urandom(32)),
                 "hub_wif": b2h(os.urandom(32)),
                 "hub_pubkey": b2h(os.urandom(32)),
                 "hub_address": b2h(os.urandom(32)),
@@ -39,7 +38,7 @@ class TestDB(unittest.TestCase):
                 "client_address": b2h(os.urandom(32)),
                 "secret_hash": b2h(os.urandom(32)),
                 "secret_value": b2h(os.urandom(32)),
-                "send_spend_secret_hash": b2h(os.urandom(32)),
+                "hub2client_spend_secret_hash": b2h(os.urandom(32)),
                 "handle": handle,
                 "hub_rpc_url": b2h(os.urandom(32)),
             })

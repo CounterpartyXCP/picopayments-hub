@@ -1,11 +1,11 @@
 -- insert current terms if they do not the latest saved
 INSERT INTO Terms (
     asset, setup_ttl, deposit_limit, deposit_ratio,
-    timeout_limit, fee_setup, fee_sync
+    timeout_limit, sync_fee
 )
 SELECT
     :asset, :setup_ttl, :deposit_limit, :deposit_ratio,
-    :timeout_limit, :fee_setup, :fee_sync
+    :timeout_limit, :sync_fee
 WHERE NOT EXISTS(
     SELECT id FROM Terms WHERE
         asset = :asset and
@@ -13,8 +13,7 @@ WHERE NOT EXISTS(
         deposit_limit = :deposit_limit and
         deposit_ratio = :deposit_ratio and
         timeout_limit = :timeout_limit and
-        fee_setup = :fee_setup and
-        fee_sync = :fee_sync -- FIXME just check if newest matches
+        sync_fee = :sync_fee -- FIXME just check if newest matches
 );
 
 -- insert new key for every connection (avoid reusing keys)
@@ -30,7 +29,7 @@ INSERT INTO MicropaymentChannel (
     payee_address, payer_address, expire_time, spend_secret_hash
 ) VALUES (
     NULL, NULL, :client_pubkey, :hub_pubkey, :client_address,
-    :hub_address, NULL, :send_spend_secret_hash
+    :hub_address, NULL, :hub2client_spend_secret_hash
 );
 
 -- insert receive micropayment channel
@@ -39,12 +38,13 @@ INSERT INTO MicropaymentChannel (
     payee_address, payer_address, expire_time, spend_secret_hash
 ) VALUES (
     NULL, NULL, :hub_pubkey, :client_pubkey, :hub_address,
-    :client_address, :recv_expire_time, :secret_hash
+    :client_address, :client2hub_expire_time, :secret_hash
 );
 
 -- insert hub connection
 INSERT INTO HubConnection(
-    handle, asset, send_channel_id, recv_channel_id, terms_id, hub_rpc_url
+    handle, asset, hub2client_channel_id,
+    client2hub_channel_id, terms_id, hub_rpc_url
 ) VALUES (
     :handle, :asset,
     (
@@ -63,8 +63,7 @@ INSERT INTO HubConnection(
             deposit_limit = :deposit_limit and
             deposit_ratio = :deposit_ratio and
             timeout_limit = :timeout_limit and
-            fee_setup = :fee_setup and
-            fee_sync = :fee_sync  -- FIXME select newest
+            sync_fee = :sync_fee  -- FIXME select newest
     ),
     :hub_rpc_url
 );

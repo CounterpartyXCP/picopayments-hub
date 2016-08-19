@@ -3,5 +3,5 @@ SELECT
     payee_address, payer_address, expire_time, spend_secret_hash,
     meta_complete, asset
 FROM MicropaymentChannel INNER JOIN HubConnection 
-ON MicropaymentChannel.id = HubConnection.recv_channel_id
+ON MicropaymentChannel.id = HubConnection.client2hub_channel_id
 WHERE HubConnection.handle = :handle;

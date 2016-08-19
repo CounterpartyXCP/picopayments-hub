@@ -1,26 +1,23 @@
 {
   "BTC": {
     "deposit_limit": 0,
-    "fee_sync": 1,
+    "sync_fee": 1,
     "timeout_limit": 0,
     "deposit_ratio": 1.0,
     "setup_ttl": 2,
-    "fee_setup": 10
   },
   "XCP": {
     "deposit_limit": 0,
-    "fee_sync": 1,
+    "sync_fee": 1,
     "timeout_limit": 0,
     "deposit_ratio": 1.0,
     "setup_ttl": 2,
-    "fee_setup": 10
   },
   "A14456548018133352000": {
     "deposit_limit": 0,
-    "fee_sync": 1,
+    "sync_fee": 1,
     "timeout_limit": 0,
     "deposit_ratio": 1.0,
     "setup_ttl": 2,
-    "fee_setup": 10
   }
 }

@@ -24,7 +24,6 @@
     "deposit_limit": 0,
     "deposit_ratio": 1.0,
     "timeout_limit": 0,
-    "fee_setup": 10,
-    "fee_sync": 1
+    "sync_fee": 1
   }
 }

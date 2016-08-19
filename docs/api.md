@@ -35,8 +35,7 @@ Get current terms of the hub.
             "deposit_limit": satoshis,  # max server will invest in channel
             "deposit_ratio": float,  # deposit ratio compared to client
             "timeout_limit": blocks,  # max timeout server will set
-            "fee_setup": satoshis,  # fee per channel setup
-            "fee_sync": satoshisa  # fee per sync
+            "sync_fee": satoshisa  # fee per sync
         }
     }
 
@@ -65,8 +64,7 @@ Channel culled if deposit not made fast enough.
             "deposit_limit": satoshis,  # max server will invest in channel
             "deposit_ratio": float,  # deposit ratio compared to client
             "timeout_limit": blocks,  # max timeout server will set
-            "fee_setup": satoshis,  # fee per channel setup
-            "fee_sync": satoshisa  # fee per sync
+            "sync_fee": satoshisa  # fee per sync
         }
     }
 
@@ -92,24 +90,6 @@ Channel culled if client deposit not made fast enough.
         "signature": "hex",
         "deposit_script": "hex",
         "next_revoke_secret_hash": "hex"  # client to hub channel
-    }
-
-
-# mpc_hub_status
-
-    Arguments: {
-        "handle": "hex",
-        "pending": bool,
-    }
-
-    Response: {
-        "sends": [{
-            "handle": "hex",
-            "amount": satoshis,
-            "token": "hex",
-            "pending": bool
-        }],
-        "balance": satoshis
     }
 
 

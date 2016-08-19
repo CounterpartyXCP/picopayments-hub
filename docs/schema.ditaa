@@ -16,8 +16,8 @@
    |   | o id (pkey, int)                       |
    +-->| o handle (hex)                         |
        | o asset (str)                          |
-+------| o send_channel_id (fkey, int)          |
-+------| o recv_channel_id (fkey, int)          |
++------| o hub2client_channel_id (fkey, int)    |
++------| o client2hub_channel_id (fkey, int)    |
 |  +---| o terms_id (fkey, int)                 |
 |  |   | o hub_rpc_url (url, str)               |
 |  |   | o next_revoke_secret_hash (hex, str)   |
@@ -33,8 +33,7 @@
 |      | o deposit_limit (satoshis, int)        |
 |      | o deposit_ratio (float)                |
 |      | o timeout_limit (blocks, int)          |
-|      | o fee_setup (satoshis, int)            |
-|      | o fee_sync (satoshis, int)             |
+|      | o sync_fee (satoshis, int)             |
 |      | o unixtimestamp (unixtime, int)        |
 |      +----------------------------------------+
 |

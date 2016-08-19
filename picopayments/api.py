@@ -13,19 +13,13 @@ from picopayments import rpc
 
 @dispatcher.add_method
 def mpc_hub_terms(assets=None):
-    all_trems = ctrl.terms()
-    if assets:
-        for key in list(all_trems.keys())[:]:
-            if key not in assets:
-                all_trems.pop(key)
-    return all_trems
+    # FIXME validate assets
+    return ctrl.terms(assets=assets)
 
 
-# @dispatcher.add_method
-# def mpc_hub_clients(clients=None, assets=None):
-#     # FIXME verify input
-#     print("mpc_hub_clients")
-#     return None  # TODO implement
+@dispatcher.add_method
+def mpc_hub_clients(clients=None, assets=None):
+    pass  # FIXME implement
 
 
 @dispatcher.add_method
@@ -50,7 +44,6 @@ def mpc_hub_request(**kwargs):
 @dispatcher.add_method
 def mpc_hub_deposit(**kwargs):
     with db.lock:
-        # FIXME verify signing pubkey matches channel client pubkey
         auth.verify_json(kwargs)
         verify.deposit_input(
             kwargs["handle"],
@@ -68,7 +61,6 @@ def mpc_hub_deposit(**kwargs):
 @dispatcher.add_method
 def mpc_hub_sync(**kwargs):
     with db.lock:
-        # FIXME verify signing pubkey matches channel client pubkey
         auth.verify_json(kwargs)
         verify.sync_input(
             kwargs["handle"],
