@@ -33,12 +33,11 @@ PAYMENT_SCHEMA = {
     "items": {
         "type": "object",
         "properties": {
-            "payer_handle": {"type": "string"},
             "payee_handle": {"type": "string"},
             "amount": {"type": "number"},
             "token": {"type": "string"}
         },
-        "required": ["payer_handle", "payee_handle", "amount", "token"],
+        "required": ["payee_handle", "amount", "token"],
         "additionalProperties": False
     }
 }
@@ -81,7 +80,7 @@ def is_url(url):
         raise err.InvalidUrl(url)
 
 
-def is_client2hub_commit(handle, commit_rawtx, commit_script):
+def client2hub_commit(handle, commit_rawtx, commit_script):
     netcode = "XTN" if cfg.testnet else "BTC"
     client2hub_channel = db.receive_channel(handle)
     deposit_utxos = rpc.cp_call(
@@ -92,6 +91,21 @@ def is_client2hub_commit(handle, commit_rawtx, commit_script):
         deposit_utxos, commit_rawtx, client2hub_channel["asset"],
         client2hub_channel["deposit_script"], commit_script, netcode
     )
+
+
+def channel_client(handle, pubkey):
+
+    # check channel exists
+    client2hub_channel = db.receive_channel(handle)
+    if not client2hub_channel:
+        raise err.HandleNotFound(handle)
+
+    # signature was done by correct client
+    expected_pubkey = client2hub_channel["payer_pubkey"]
+    if expected_pubkey != pubkey:
+        raise err.ClientPubkeyMissmatch(expected_pubkey, pubkey)
+
+    return client2hub_channel
 
 
 def terms_input(assets):
@@ -119,13 +133,11 @@ def request_input(asset, pubkey, spend_secret_hash, hub_rpc_url):
         raise err.AssetNotInTerms(asset)
 
 
-def deposit_input(handle, deposit_script, next_revoke_secret_hash):
+def deposit_input(handle, deposit_script,
+                  next_revoke_secret_hash, client_pubkey):
     validate.is_hex(handle)
     validate.hash160(next_revoke_secret_hash)
-    client2hub_channel = db.receive_channel(handle)
-    # FIXME verify signing pubkey matches channel client pubkey
-    if not client2hub_channel:
-        raise err.HandleNotFound(handle)
+    client2hub_channel = channel_client(handle, client_pubkey)
     expected_payee_pubkey = client2hub_channel["payee_pubkey"]
     expected_spend_secret_hash = client2hub_channel["spend_secret_hash"]
     validate.deposit_script(deposit_script, expected_payee_pubkey,
@@ -134,22 +146,22 @@ def deposit_input(handle, deposit_script, next_revoke_secret_hash):
         raise err.DepositAlreadyGiven(handle)
 
 
-def sync_input(handle, next_revoke_secret_hash, sends, commit, revokes):
+def sync_input(handle, next_revoke_secret_hash, client_pubkey,
+               payments, commit, revokes):
     validate.is_hex(handle)
     validate.hash160(next_revoke_secret_hash)
-    handles = [handle]
+    channel_client(handle, client_pubkey)
 
-    if sends:
-        jsonschema.validate(sends, PAYMENT_SCHEMA)
-        for send in sends:
-            validate.is_hex(send["token"])
-            validate.is_hex(send["payee_handle"])
-            validate.is_quantity(send["amount"])
-            handles.append(send["payee_handle"])
+    handles = []
+    if payments:
+        jsonschema.validate(payments, PAYMENT_SCHEMA)
+        for payment in payments:
+            validate.is_hex(payment["token"])
+            validate.is_hex(payment["payee_handle"])
+            validate.is_quantity(payment["amount"])
+            handles.append(payment["payee_handle"])
 
     handles_exist(handles)
-
-    # FIXME verify signing pubkey matches channel client pubkey
 
     if revokes:
         jsonschema.validate(revokes, REVOKES_SCHEMA)
@@ -157,4 +169,4 @@ def sync_input(handle, next_revoke_secret_hash, sends, commit, revokes):
 
     if commit:
         jsonschema.validate(commit, COMMIT_SCHEMA)
-        is_client2hub_commit(handle, commit["rawtx"], commit["script"])
+        client2hub_commit(handle, commit["rawtx"], commit["script"])

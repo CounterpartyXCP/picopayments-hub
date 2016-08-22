@@ -49,7 +49,8 @@ def mpc_hub_deposit(**kwargs):
         validate.deposit_input(
             kwargs["handle"],
             kwargs["deposit_script"],
-            kwargs["next_revoke_secret_hash"]
+            kwargs["next_revoke_secret_hash"],
+            kwargs["pubkey"]
         )
         result, authwif = ctrl.complete_connection(
             kwargs["handle"],
@@ -66,6 +67,7 @@ def mpc_hub_sync(**kwargs):
         validate.sync_input(
             kwargs["handle"],
             kwargs["next_revoke_secret_hash"],
+            kwargs["pubkey"],
             kwargs.get("sends"),
             kwargs.get("commit"),
             kwargs.get("revokes")
