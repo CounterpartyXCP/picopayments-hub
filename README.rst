@@ -5,8 +5,8 @@ PicoPayments
 |BuildLink|_ |CoverageLink|_ |LicenseLink|_ |IssuesLink|_
 
 
-.. |BuildLink| image:: https://travis-ci.org/Storj/picopayments.svg
-.. _BuildLink: https://travis-ci.org/Storj/picopayments
+.. |BuildLink| image:: https://travis-ci.org/StorjRND/picopayments.svg
+.. _BuildLink: https://travis-ci.org/StorjRND/picopayments
 
 .. |CoverageLink| image:: https://coveralls.io/repos/Storj/picopayments/badge.svg
 .. _CoverageLink: https://coveralls.io/r/Storj/picopayments

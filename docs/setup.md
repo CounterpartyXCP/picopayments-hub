@@ -5,8 +5,12 @@ Tested with Ubuntu 16.04.1 x64.
 
 ## 1. Install dependencies
 
-    sudo apt-get install python-virtualenv gcc python3-dev
-    sudo apt-get install python-cffi python3-cffi libffi-dev python3-openssl libssl-dev
+    sudo apt-get -qq update
+    sudo apt-get install -y libxml2-dev
+    sudo apt-get install -y gcc
+    sudo apt-get install -y python3-dev
+    sudo apt-get install -y libffi-dev
+    sudo apt-get install -y libssl-dev
 
 
 ## 2. Setup local bitcoin full node
@@ -44,10 +48,26 @@ Best use a screen as the node does not run as a daemon.
     cd counterparty
     virtualenv -p /usr/bin/python3 env
     source env/bin/activate
-    pip install python-bitcoinlib==0.5.1
-    pip install pycoin==0.70
-    pip install apsw==3.9.2-r1
+
     pip install prettytable==0.7.2
+    pip install apsw
+    pip install python-dateutil==2.5.3
+    pip install Flask-HTTPAuth==3.1.2
+    pip install Flask==0.11
+    pip install appdirs==1.4.0
+    pip install colorlog==2.7.0
+    pip install json-rpc==1.10.3
+    pip install six>=1.10.0
+    pip install pycoin==0.70
+    pip install pycrypto==2.6.1
+    pip install pysha3==0.3
+    pip install pytest==2.9.1
+    pip install pytest-cov==2.2.1
+    pip install python-bitcoinlib==0.5.1
+    pip install requests==2.10.0
+    pip install tendo==0.2.8
+    pip install xmltodict==0.10.1
+    pip install cachetools==1.1.6
 
     # install counterparty-lib with micropayments patch
     wget https://transfer.sh/buCO1/counterparty-lib-9.55.0-py3-none-any.whl
@@ -70,12 +90,31 @@ Best use a screen as the node does not run as a daemon.
     virtualenv -p /usr/bin/python3 env
     source env/bin/activate
 
-    pip install picopayments
-    
-    # replace counterparty-lib with patched micropayments version
-    wget https://transfer.sh/iAiIb/counterparty-lib-9.55.0-py3-none-any.whl
-    pip uninstall counterparty-lib
+    pip install prettytable==0.7.2
+    pip install apsw
+    pip install python-dateutil==2.5.3
+    pip install Flask-HTTPAuth==3.1.2
+    pip install Flask==0.11
+    pip install appdirs==1.4.0
+    pip install colorlog==2.7.0
+    pip install json-rpc==1.10.3
+    pip install six>=1.10.0
+    pip install pycoin==0.70
+    pip install pycrypto==2.6.1
+    pip install pysha3==0.3
+    pip install pytest==2.9.1
+    pip install pytest-cov==2.2.1
+    pip install python-bitcoinlib==0.5.1
+    pip install requests==2.10.0
+    pip install tendo==0.2.8
+    pip install xmltodict==0.10.1
+    pip install cachetools==1.1.6
+
+    # install counterparty-lib with micropayments patch
+    wget https://transfer.sh/buCO1/counterparty-lib-9.55.0-py3-none-any.whl
     pip install --use-wheel --no-index --find-links=$PWD counterparty-lib
+
+    pip install picopayments
     
     # show hub terms (edit terms file as you see fit)
     picopayments --testnet --terms
