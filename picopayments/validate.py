@@ -61,14 +61,55 @@ REVOKES_SCHEMA = {
 }
 
 
+def asset_exists(asset):
+    validate.is_string(asset)
+    # FIXME check against all counterparty assets
+
+
+def assets_exists(assets):
+    for asset in assets:
+        asset_exists(asset)
+
+
+def handles_exist(handles):
+    if not db.handles_exist(handles):
+        raise err.HandlesNotFound(handles)
+
+
 def is_url(url):
     if not URL_REGEX.match(url):
         raise err.InvalidUrl(url)
 
 
+def is_client2hub_commit(handle, commit_rawtx, commit_script):
+    netcode = "XTN" if cfg.testnet else "BTC"
+    client2hub_channel = db.receive_channel(handle)
+    deposit_utxos = rpc.cp_call(
+        method="get_unspent_txouts",
+        params={"address": client2hub_channel["deposit_address"]}
+    )
+    validate.commit_rawtx(
+        deposit_utxos, commit_rawtx, client2hub_channel["asset"],
+        client2hub_channel["deposit_script"], commit_script, netcode
+    )
+
+
+def terms_input(assets):
+    if assets:
+        assets_exists(assets)
+
+
+def connections_input(handles, assets):
+    if assets:
+        assets_exists(assets)
+    if handles:
+        handles_exist(handles)
+
+
 def request_input(asset, pubkey, spend_secret_hash, hub_rpc_url):
     validate.pubkey(pubkey)
     validate.hash160(spend_secret_hash)
+    asset_exists(asset)
     if hub_rpc_url:
         is_url(hub_rpc_url)
 
@@ -93,19 +134,6 @@ def deposit_input(handle, deposit_script, next_revoke_secret_hash):
         raise err.DepositAlreadyGiven(handle)
 
 
-def is_client2hub_commit(handle, commit_rawtx, commit_script):
-    netcode = "XTN" if cfg.testnet else "BTC"
-    client2hub_channel = db.receive_channel(handle)
-    deposit_utxos = rpc.cp_call(
-        method="get_unspent_txouts",
-        params={"address": client2hub_channel["deposit_address"]}
-    )
-    validate.commit_rawtx(
-        deposit_utxos, commit_rawtx, client2hub_channel["asset"],
-        client2hub_channel["deposit_script"], commit_script, netcode
-    )
-
-
 def sync_input(handle, next_revoke_secret_hash, sends, commit, revokes):
     validate.is_hex(handle)
     validate.hash160(next_revoke_secret_hash)
@@ -119,9 +147,7 @@ def sync_input(handle, next_revoke_secret_hash, sends, commit, revokes):
             validate.is_quantity(send["amount"])
             handles.append(send["payee_handle"])
 
-    # make sure all handles actually exist
-    if not db.handles_exist(handles):
-        raise err.HandlesNotFound(handles)
+    handles_exist(handles)
 
     # FIXME verify signing pubkey matches channel client pubkey
 

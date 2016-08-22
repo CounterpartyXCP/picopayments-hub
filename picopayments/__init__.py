@@ -12,4 +12,4 @@ from . import rpc  # NOQA
 from . import log  # NOQA
 from . import ctrl  # NOQA
 from . import db  # NOQA
-from . import verify  # NOQA
+from . import validate  # NOQA

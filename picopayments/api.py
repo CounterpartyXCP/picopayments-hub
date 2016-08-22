@@ -6,20 +6,20 @@
 from jsonrpc import dispatcher
 from picopayments import db
 from picopayments import auth
-from picopayments import verify
+from picopayments import validate
 from picopayments import ctrl
 from picopayments import rpc
 
 
 @dispatcher.add_method
 def mpc_hub_terms(assets=None):
-    # FIXME validate assets
+    validate.terms_input(assets)
     return ctrl.terms(assets=assets)
 
 
 @dispatcher.add_method
 def mpc_hub_connections(handles=None, assets=None):
-    # FIXME validate input
+    validate.connections_input(handles, assets)
     return ctrl.hub_connections(handles, assets)
 
 
@@ -27,7 +27,7 @@ def mpc_hub_connections(handles=None, assets=None):
 def mpc_hub_request(**kwargs):
     with db.lock:
         auth.verify_json(kwargs)
-        verify.request_input(
+        validate.request_input(
             kwargs["asset"],
             kwargs["pubkey"],
             kwargs["spend_secret_hash"],
@@ -46,7 +46,7 @@ def mpc_hub_request(**kwargs):
 def mpc_hub_deposit(**kwargs):
     with db.lock:
         auth.verify_json(kwargs)
-        verify.deposit_input(
+        validate.deposit_input(
             kwargs["handle"],
             kwargs["deposit_script"],
             kwargs["next_revoke_secret_hash"]
@@ -63,7 +63,7 @@ def mpc_hub_deposit(**kwargs):
 def mpc_hub_sync(**kwargs):
     with db.lock:
         auth.verify_json(kwargs)
-        verify.sync_input(
+        validate.sync_input(
             kwargs["handle"],
             kwargs["next_revoke_secret_hash"],
             kwargs.get("sends"),
@@ -87,10 +87,10 @@ def _add_cp_call(method):
     return counterparty_method
 
 
-create_send = _add_cp_call("create_send")
 getrawtransaction = _add_cp_call("getrawtransaction")
-sendrawtransaction = _add_cp_call("sendrawtransaction")
 get_unspent_txouts = _add_cp_call("get_unspent_txouts")
+create_send = _add_cp_call("create_send")
+sendrawtransaction = _add_cp_call("sendrawtransaction")
 mpc_make_deposit = _add_cp_call("mpc_make_deposit")
 mpc_set_deposit = _add_cp_call("mpc_set_deposit")
 mpc_request_commit = _add_cp_call("mpc_request_commit")
