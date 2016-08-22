@@ -15,6 +15,7 @@ from counterpartylib.lib.micropayments.scripts import (
 )
 from picopayments import rpc
 from picopayments import db
+from picopayments import auth
 from picopayments import err
 from picopayments import cfg
 
@@ -88,8 +89,8 @@ def create_secret():
     }
 
 
-def create_hub_connection(asset, client_pubkey,
-                          hub2client_spend_secret_hash, hub_rpc_url):
+def create_hub_connection(asset, client_pubkey, hub2client_spend_secret_hash,
+                          hub_rpc_url):
 
     # current terms and asset
     data = {"asset": asset}
@@ -294,15 +295,14 @@ def sync_hub_connection(handle, next_revoke_secret_hash,
 
     # add sync fee payment
     sends.insert(0, {
-        "payer_handle": handle,
         "payee_handle": None,  # to hub
         "amount": connection_terms["sync_fee"],
         "token": "sync_fee"
     })
 
     # process payments
-    for send in sends:
-        process_payment(cursor, send)
+    for payment in sends:
+        process_payment(handle, cursor, payment)
 
     # create next spend secret
     next_revoke_secret = create_secret()
@@ -316,9 +316,11 @@ def sync_hub_connection(handle, next_revoke_secret_hash,
     hub2client_commit_id = None
     if hub2client_commit:
         hub2client_commit_id = hub2client_commit.pop("id")
-    _save_sync_data(cursor, handle, next_revoke_secret_hash,
-                    receive_payments, hub2client_commit_id, hub2client_revokes,
-                    client2hub_id, next_revoke_secret)
+    _save_sync_data(
+        cursor, handle, next_revoke_secret_hash, receive_payments,
+        hub2client_commit_id, hub2client_revokes, client2hub_id,
+        next_revoke_secret
+    )
 
     hub_key = db.channel_payer_key(hub2client_id)
     return (
@@ -414,10 +416,9 @@ def load_channel_data(handle, cursor):
     }
 
 
-def process_payment(cursor, payment):
+def process_payment(payer_handle, cursor, payment):
 
     # load payer
-    payer_handle = payment["payer_handle"]
     payer = load_channel_data(payer_handle, cursor)
     if payer["client2hub_expired"]:
         raise err.DepositExpired(payer_handle, "client2hub")
@@ -451,6 +452,7 @@ def process_payment(cursor, payment):
     else:
         cursor.execute("BEGIN TRANSACTION;")
 
+    payment["payer_handle"] = payer_handle
     db.add_payment(payment, cursor=cursor)
     cursor.execute("COMMIT;")
 
@@ -478,3 +480,16 @@ def terms(assets=None):
                 terms_data.pop(key)
 
     return terms_data
+
+
+def hub_connections(handles, assets):
+    connections = []
+    for connection in db.hub_connections():
+        if assets is not None and connection["asset"] not in assets:
+            continue
+        if handles is not None and connection["handle"] not in handles:
+            continue
+        wif = connection.pop("wif")
+        connection = auth.sign_json(connection, wif)
+        connections.append(connection)
+    return connections

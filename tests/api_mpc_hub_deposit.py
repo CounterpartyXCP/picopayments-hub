@@ -32,7 +32,6 @@ DEPOSIT_RESULT_SCHEMA = {
 }
 
 
-@unittest.skip("FIXME")
 class TestMpcHubDeposit(unittest.TestCase):
 
     def setUp(self):

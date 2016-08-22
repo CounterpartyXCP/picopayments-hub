@@ -18,8 +18,9 @@ def mpc_hub_terms(assets=None):
 
 
 @dispatcher.add_method
-def mpc_hub_clients(clients=None, assets=None):
-    pass  # FIXME implement
+def mpc_hub_connections(handles=None, assets=None):
+    # FIXME validate input
+    return ctrl.hub_connections(handles, assets)
 
 
 @dispatcher.add_method

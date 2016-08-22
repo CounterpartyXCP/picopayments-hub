@@ -1,4 +1,4 @@
-# mpc_hub_clients
+# mpc_hub_connections
 
 Audit hubs liquidity to determan if a transfer is likely to succeed.
 
@@ -7,17 +7,18 @@ Each entry is signed by the hub to prove it controls the keypair.
 Optionally the entries can be limited to a set of provided clients and assets.
 
     Arguments: {
-        "clients": ["pubkey"],
+        "handles": ["handle"],
         "assets": ["asset"]
     }
 
     Response: [{
         "asset": "asset",
+        "handle": "handle",
         "client_url": "url" or null,
-        "client_deposit_script": "hex",
-        "hub_balance": satoshis,
-        "hub_deposit_script": "hex",
-        "hub_signature": "hex"
+        "client2hub_deposit_script": "hex",
+        "hub2client_deposit_script": "hex",
+        "pubkey": "hub pubkey hex",
+        "signature": "hub signature hex"
     }]
 
 
@@ -100,7 +101,6 @@ Channel culled if client deposit not made fast enough.
         "pubkey": "hex",
         "signature": "hex",
         "sends": [{
-            "payer_handle": "hex", 
             "payee_handle": "hex", 
             "amount": satoshis, 
             "token": "hex"
@@ -115,7 +115,6 @@ Channel culled if client deposit not made fast enough.
         "signature": "hex",
         "receive": [{
             "payer_handle": "hex", 
-            "payee_handle": "hex", 
             "amount": satoshis, 
             "token": "hex"
         }],

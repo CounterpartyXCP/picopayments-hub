@@ -10,7 +10,6 @@ from picopayments import cli
 CP_URL = "http://139.59.214.74:14000/api/"
 
 
-@unittest.skip("FIXME")
 class TestMpcHubTerms(unittest.TestCase):
 
     def setUp(self):

@@ -23,6 +23,7 @@ _MIGRATIONS = {
     0: _sql("migration_0"),
 }
 _HUB_CONNECTION = "SELECT * FROM HubConnection where handle = :handle"
+_HUB_CONNECTIONS = _sql("hub_connections")
 _MICROPAYMENT_CHANNEL = "SELECT * FROM MicropaymentChannel WHERE id = :id"
 _HANDLE_EXISTS = "SELECT EXISTS(SELECT * FROM HubConnection WHERE handle = ?);"
 _CONNECTION_TERMS = "SELECT * FROM Terms WHERE id = :id;"
@@ -359,3 +360,7 @@ def key(pubkey, cursor=None):
 
 def channel_payer_key(channel_id, cursor=None):
     return _one(_CHANNEL_PAYER_KEY, args={"id": channel_id}, cursor=cursor)
+
+
+def hub_connections(cursor=None):
+    return _all(_HUB_CONNECTIONS, cursor=cursor)

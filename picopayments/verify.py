@@ -116,9 +116,8 @@ def sync_input(handle, next_revoke_secret_hash, sends, commit, revokes):
         for send in sends:
             validate.is_hex(send["token"])
             validate.is_hex(send["payee_handle"])
-            validate.is_hex(send["payer_handle"])
             validate.is_quantity(send["amount"])
-            handles += [send["payer_handle"], send["payee_handle"]]
+            handles.append(send["payee_handle"])
 
     # make sure all handles actually exist
     if not db.handles_exist(handles):

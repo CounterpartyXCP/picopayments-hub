@@ -56,7 +56,7 @@ class TestMpcHubSync(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tempdir)
 
-    def _test_validate_handles_exist(self):
+    def test_validate_handles_exist(self):
 
         def func():
             with open("test_basedir/client.json") as fp:
@@ -82,7 +82,7 @@ class TestMpcHubSync(unittest.TestCase):
 
         self.assertRaises(err.HandlesNotFound, func)
 
-    def _test_validate_revoke_format(self):
+    def test_validate_revoke_format(self):
 
         def func():
             with open("test_basedir/client.json") as fp:
@@ -108,7 +108,7 @@ class TestMpcHubSync(unittest.TestCase):
 
         self.assertRaises(jsonschema.err.ValidationError, func)
 
-    def _test_validate_commit_format(self):
+    def test_validate_commit_format(self):
 
         def func():
             with open("test_basedir/client.json") as fp:
