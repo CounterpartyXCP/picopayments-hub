@@ -52,7 +52,7 @@ Channel culled if deposit not made fast enough.
         "pubkey": "hex",
         "signature": "hex",
         "spend_secret_hash": "hex"  # hub to client channel
-        "url": "url" or None
+        "url": "url" or None  # client is itself a payment hub
     }
 
     Response: {
@@ -82,14 +82,14 @@ Channel culled if client deposit not made fast enough.
         "handle": "hex",
         "pubkey": "hex",
         "signature": "hex",
-        "deposit_script": "hex",
+        "deposit_script": "hex",  # client to hub
         "next_revoke_secret_hash": "hex"  # hub to client channel
     }
 
     Response: {
         "pubkey": "hex",
         "signature": "hex",
-        "deposit_script": "hex",
+        "deposit_script": "hex",  # hub to client
         "next_revoke_secret_hash": "hex"  # client to hub channel
     }
 

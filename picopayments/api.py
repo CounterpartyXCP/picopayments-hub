@@ -90,8 +90,9 @@ def _add_cp_call(method):
 
 
 getrawtransaction = _add_cp_call("getrawtransaction")
+getrawtransaction_batch = _add_cp_call("getrawtransaction_batch")
 get_unspent_txouts = _add_cp_call("get_unspent_txouts")
-create_send = _add_cp_call("create_send")
+create_send = _add_cp_call("create_send")  # FIXME always disable_utxo_locks
 sendrawtransaction = _add_cp_call("sendrawtransaction")
 mpc_make_deposit = _add_cp_call("mpc_make_deposit")
 mpc_set_deposit = _add_cp_call("mpc_set_deposit")

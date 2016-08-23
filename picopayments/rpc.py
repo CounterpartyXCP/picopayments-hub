@@ -11,14 +11,12 @@ from picopayments import err
 from picopayments import cfg
 
 
-def call(url, method, params, username=None, password=None,
-         verify_ssl_cert=True, authentication_wif=None):
+_CALL_LOCAL_PROCESS = False  # XXX monkey patch for testing only
 
-    if authentication_wif:
-        params = auth.sign_json(params, authentication_wif)
 
+def _http_call(url, method, params, username=None,
+               password=None, verify_ssl_cert=True):
     payload = {"method": method, "params": params, "jsonrpc": "2.0", "id": 0}
-
     kwargs = {
         "url": url,
         "headers": {'content-type': 'application/json'},
@@ -30,17 +28,58 @@ def call(url, method, params, username=None, password=None,
     response = requests.post(**kwargs).json()
     if "result" not in response:
         raise err.RpcCallFailed(payload, response)
+    return response["result"]
 
-    result = response["result"]
-    if authentication_wif:
+
+def call(url, method, params, username=None, password=None,
+         verify_ssl_cert=True, auth_wif=None):
+
+    if auth_wif:
+        params = auth.sign_json(params, auth_wif)
+
+    if _CALL_LOCAL_PROCESS:
+        from picopayments import api
+        result = getattr(api, method)(**params)
+    else:
+        result = _http_call(url, method, params, username=username,
+                            password=password, verify_ssl_cert=verify_ssl_cert)
+
+    if auth_wif:
         auth.verify_json(result)
 
     return result
 
 
 def cp_call(method, params):
-    return call(
+    return _http_call(
         cfg.counterparty_url, method, params,
         username=cfg.counterparty_username,
         password=cfg.counterparty_password
     )
+
+
+class RPC(object):
+
+    def __init__(self, url, auth_wif=None, username=None,
+                 password=None, verify_ssl_cert=True):
+        self.url = url
+        self.auth_wif = auth_wif
+        self.username = username
+        self.password = password
+        self.verify_ssl_cert = verify_ssl_cert
+
+    def __getattribute__(self, name):
+        props = ["url", "auth_wif", "username", "password", "verify_ssl_cert"]
+        auth_methods = ["mpc_hub_request", "mpc_hub_deposit", "mpc_hub_sync"]
+
+        if name in props:
+            return object.__getattribute__(self, name)
+
+        def wrapper(**kwargs):
+            return call(
+                url=self.url, method=name, params=kwargs,
+                auth_wif=self.auth_wif if name in auth_methods else None,
+                verify_ssl_cert=self.verify_ssl_cert,
+                username=self.username, password=self.password,
+            )
+        return wrapper

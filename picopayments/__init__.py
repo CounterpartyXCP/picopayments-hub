@@ -13,3 +13,4 @@ from . import log  # NOQA
 from . import ctrl  # NOQA
 from . import db  # NOQA
 from . import validate  # NOQA
+from . import client  # NOQA
