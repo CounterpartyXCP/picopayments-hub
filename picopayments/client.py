@@ -4,41 +4,44 @@
 
 
 import os
-from picopayments.rpc import RPC
+from picopayments import RPC
 from counterpartylib.lib.micropayments import util
 from counterpartylib.lib.micropayments.scripts import sign_deposit
 
 
 class Client(object):
 
-    _SERIALIZABLE_PROPS = [
-        "handle",
-        "channel_terms",
-        "client_wif",
-        "client_pubkey",
-        "hub_pubkey",
+    _SERIALIZABLE_ATTRS = [
+        "handle",  # set once
+        "channel_terms",  # set once
+        "client_wif",  # set once
+        "client_pubkey",  # set once
+        "hub_pubkey",  # set once
         "secrets",  # append only
         "c2h_state",  # mutable
-        "c2h_spend_secret_hash",
+        "c2h_spend_secret_hash",  # set once
         "c2h_next_revoke_secret_hash",  # mutable
-        "c2h_deposit_expire_time",
-        "c2h_deposit_quantity",
-        "h2c_state",
+        "c2h_deposit_expire_time",  # set once
+        "c2h_deposit_quantity",  # set once
+        "h2c_state",  # set once
     ]
 
     def __init__(self, url, auth_wif=None, username=None,
                  password=None, verify_ssl_cert=True):
         self.rpc = RPC(url, auth_wif=auth_wif, username=username,
                        password=password, verify_ssl_cert=False)
+        for attr in self._SERIALIZABLE_ATTRS:
+            setattr(self, attr, None)
 
     @classmethod
     def deserialize(cls, data):
         obj = cls(**data["hub"])
-        # FIXME batch set attributes
+        for attr in obj._SERIALIZABLE_ATTRS:
+            setattr(obj, attr, data[attr])
         return obj
 
     def serialize(self):
-        return {
+        data = {
             "hub": {
                 "url": self.rpc.url,
                 "auth_wif": self.rpc.auth_wif,
@@ -46,8 +49,10 @@ class Client(object):
                 "password": self.rpc.password,
                 "verify_ssl_cert": self.rpc.verify_ssl_cert,
             },
-            # FIXME batch get attributes
         }
+        for attr in self._SERIALIZABLE_ATTRS:
+            data[attr] = getattr(self, attr)
+        return data
 
     def get_tx(self, txid):
         return self.rpc.getrawtransaction(tx_hash=txid)
@@ -61,11 +66,11 @@ class Client(object):
         signed_rawtx = sign_deposit(self.get_tx, src_wif, unsigned_rawtx)
         if publish_tx:
             return self.rpc.sendrawtransaction(tx_hex=signed_rawtx)
-        return None
+        else:
+            return util.gettxid(signed_rawtx)
 
-    def open_connection(self, deposit_quantity, deposit_expire_time,
-                        netcode="BTC", asset="XCP",
-                        own_url=None, publish_tx=True):
+    def connect(self, deposit_quantity, deposit_expire_time,
+                asset="XCP", own_url=None, publish_tx=True):
 
         self.asset = asset
         self.client_wif = self.rpc.auth_wif
@@ -80,14 +85,10 @@ class Client(object):
         h2c_deposit_script = self._exchange_deposit_scripts(
             h2c_next_revoke_secret_hash
         )
-        self._sign_and_publish_deposit(c2h_deposit_rawtx, publish_tx)
-        self.h2c_state = {
-            "asset": self.asset,
-            "deposit_script": h2c_deposit_script,
-            "commits_requested": [],
-            "commits_active": [],
-            "commits_revoked": [],
-        }
+        c2h_deposit_txid = self._sign_and_publish_deposit(c2h_deposit_rawtx,
+                                                          publish_tx)
+        self._set_initial_h2c_state(h2c_deposit_script)
+        return c2h_deposit_txid
 
     def _create_initial_secrets(self):
         h2c_spend_secret_value = util.b2h(os.urandom(32))
@@ -114,6 +115,7 @@ class Client(object):
 
     def _exchange_deposit_scripts(self, h2c_next_revoke_secret_hash):
         result = self.rpc.mpc_hub_deposit(
+            handle=self.handle,
             asset=self.asset,
             deposit_script=self.c2h_state["deposit_script"],
             next_revoke_secret_hash=h2c_next_revoke_secret_hash
@@ -139,7 +141,9 @@ class Client(object):
             self.get_tx, self.client_wif, c2h_deposit_rawtx
         )
         if publish_tx:
-            self.rpc.sendrawtransaction(tx_hex=signed_c2h_deposit_rawtx)
+            return self.rpc.sendrawtransaction(tx_hex=signed_c2h_deposit_rawtx)
+        else:
+            return util.gettxid(signed_c2h_deposit_rawtx)
 
     def _validate_matches_terms(self):
         timeout_limit = self.channel_terms["timeout_limit"]
@@ -148,3 +152,12 @@ class Client(object):
         deposit_limit = self.channel_terms["deposit_limit"]
         if deposit_limit != 0:
             assert(self.c2h_deposit_quantity <= deposit_limit)
+
+    def _set_initial_h2c_state(self, h2c_deposit_script):
+        self.h2c_state = {
+            "asset": self.asset,
+            "deposit_script": h2c_deposit_script,
+            "commits_requested": [],
+            "commits_active": [],
+            "commits_revoked": [],
+        }

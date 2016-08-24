@@ -9,8 +9,10 @@ from . import api  # NOQA
 from . import cfg  # NOQA
 from . import auth  # NOQA
 from . import rpc  # NOQA
+from .rpc import RPC  # NOQA
 from . import log  # NOQA
 from . import ctrl  # NOQA
 from . import db  # NOQA
 from . import validate  # NOQA
 from . import client  # NOQA
+from .client import Client  # NOQA
