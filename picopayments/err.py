@@ -83,12 +83,9 @@ class ClientPubkeyMissmatch(Exception):
 
     def __init__(self, expected, found):
         msg = "Given pubkey {0} does not match channel client pubkey {1}!"
-        super(
-            ClientPubkeyMissmatch,
-            self).__init__(
-            msg.format(
-                found,
-                expected))
+        super(ClientPubkeyMissmatch, self).__init__(
+            msg.format(found, expected)
+        )
 
 
 class InvalidSignature(Exception):

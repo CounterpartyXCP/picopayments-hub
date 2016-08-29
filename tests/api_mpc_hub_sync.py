@@ -7,6 +7,7 @@ import jsonschema
 from picopayments import api
 from picopayments import auth
 from picopayments import sys
+from picopayments import etc
 from picopayments import cli
 from picopayments import err
 from picopayments import rpc
@@ -36,6 +37,72 @@ class TestMpcHubSync(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.tempdir)
+
+    def test_payment_exceeds_spendable(self):
+
+        def func():
+            secret = sys.create_secret()
+            connection = self.data["connections"]["alpha"]
+            handle = connection["handle"]
+            wif = connection["client_wif"]
+            params = {
+                "handle": handle,
+                "sends": [{
+                    "payee_handle": handle,
+                    "amount": 31337,
+                    "token": "deadbeef"
+                }],
+                "commit": None,
+                "revokes": None,
+                "next_revoke_secret_hash": secret["secret_hash"]
+            }
+            params = auth.sign_json(params, wif)
+            api.mpc_hub_sync(**params)
+
+        self.assertRaises(err.PaymentExceedsSpendable, func)
+
+    @unittest.skip("fix test")
+    def test_payment_exceeds_receivable(self):
+
+        def func():
+            secret = sys.create_secret()
+            connection = self.data["connections"]["alpha"]
+            handle = connection["handle"]
+            wif = connection["client_wif"]
+            params = {
+                "handle": handle,
+                "sends": [{
+                    "payee_handle": handle,
+                    "amount": 1336,
+                    "token": "deadbeef"
+                }],
+                "commit": None,
+                "revokes": None,
+                "next_revoke_secret_hash": secret["secret_hash"]
+            }
+            params = auth.sign_json(params, wif)
+            api.mpc_hub_sync(**params)
+
+        self.assertRaises(err.PaymentExceedsReceivable, func)
+
+    def test_pubkey_missmatch(self):
+
+        def func():
+            secret = sys.create_secret()
+            connection = self.data["connections"]["alpha"]
+            handle = connection["handle"]
+            wif = util.random_wif(netcode=etc.netcode)
+            params = {
+                "handle": handle,
+                "sends": [],
+                "commit": None,
+                "revokes": None,
+                "next_revoke_secret_hash": secret["secret_hash"]
+            }
+            params = auth.sign_json(params, wif)
+            api.mpc_hub_sync(**params)
+
+        self.assertRaises(err.ClientPubkeyMissmatch, func)
 
     def test_validate_handles_exist(self):
 
@@ -99,7 +166,6 @@ class TestMpcHubSync(unittest.TestCase):
         self.assertRaises(jsonschema.exceptions.ValidationError, func)
 
     def test_standard_commit(self):
-
         quantity = 5
         client = Client.deserialize(self.data["connections"]["alpha"])
         sync_fee = client.channel_terms["sync_fee"]
