@@ -6,6 +6,7 @@
 import os
 import copy
 import json
+import pkg_resources
 from pycoin.key.BIP32Node import BIP32Node
 from pycoin.serialize import b2h, h2b
 from counterpartylib.lib.micropayments import util
@@ -20,54 +21,8 @@ from picopayments import err
 from picopayments import etc
 
 
-DEFAULT_MAINNET = {  # TODO move to file
-    "BTC": {
-        "setup_ttl": 2,  # blocks,
-        "deposit_limit": 0,  # satoshis,
-        "deposit_ratio": 1.0,  # float,
-        "timeout_limit": 0,  # blocks,
-        "sync_fee": 1,  # satoshis
-    },
-    "XCP": {
-        "setup_ttl": 2,  # blocks,
-        "deposit_limit": 0,  # satoshis,
-        "deposit_ratio": 1.0,  # float,
-        "timeout_limit": 0,  # blocks,
-        "sync_fee": 1,  # satoshis
-    },
-    "SJCX": {
-        "setup_ttl": 2,  # blocks,
-        "deposit_limit": 0,  # satoshis,
-        "deposit_ratio": 1.0,  # float,
-        "timeout_limit": 0,  # blocks,
-        "sync_fee": 1,  # satoshis
-    },
-}
-
-
-DEFAULT_TESTNET = {  # TODO move to file
-    "BTC": {
-        "setup_ttl": 2,  # blocks,
-        "deposit_limit": 0,  # satoshis,
-        "deposit_ratio": 1.0,  # float,
-        "timeout_limit": 0,  # blocks,
-        "sync_fee": 1,  # satoshis
-    },
-    "XCP": {
-        "setup_ttl": 2,  # blocks,
-        "deposit_limit": 0,  # satoshis,
-        "deposit_ratio": 1.0,  # float,
-        "timeout_limit": 0,  # blocks,
-        "sync_fee": 1,  # satoshis
-    },
-    "A14456548018133352000": {
-        "setup_ttl": 2,  # blocks,
-        "deposit_limit": 0,  # satoshis,
-        "deposit_ratio": 1.0,  # float,
-        "timeout_limit": 0,  # blocks,
-        "sync_fee": 1,  # satoshis
-    },
-}
+_TERMS_FP = pkg_resources.resource_stream("picopayments", "terms.json")
+TERMS = json.loads(_TERMS_FP.read().decode("utf-8"))
 
 
 def create_key(asset, netcode="BTC"):
@@ -462,7 +417,7 @@ def terms(assets=None):
 
     # create terms and return default value
     if not os.path.exists(etc.path_terms):
-        default_terms = DEFAULT_TESTNET if etc.testnet else DEFAULT_MAINNET
+        default_terms = TERMS["TESTNET"] if etc.testnet else TERMS["MAINNET"]
         with open(etc.path_terms, 'w') as outfile:
             json.dump(default_terms, outfile, indent=2)
         terms_data = copy.deepcopy(default_terms)

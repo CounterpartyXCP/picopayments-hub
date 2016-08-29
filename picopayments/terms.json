@@ -1,0 +1,48 @@
+{
+    "MAINNET": {
+        "BTC": {
+            "setup_ttl": 2,
+            "deposit_limit": 0,
+            "deposit_ratio": 1.0,
+            "timeout_limit": 0,
+            "sync_fee": 1
+        },
+        "XCP": {
+            "setup_ttl": 2,
+            "deposit_limit": 0,
+            "deposit_ratio": 1.0,
+            "timeout_limit": 0,
+            "sync_fee": 1
+        },
+        "SJCX": {
+            "setup_ttl": 2,
+            "deposit_limit": 0,
+            "deposit_ratio": 1.0,
+            "timeout_limit": 0,
+            "sync_fee": 1
+        }
+    },
+    "TESTNET": {
+        "BTC": {
+            "setup_ttl": 2,
+            "deposit_limit": 0,
+            "deposit_ratio": 1.0,
+            "timeout_limit": 0,
+            "sync_fee": 1
+        },
+        "XCP": {
+            "setup_ttl": 2,
+            "deposit_limit": 0,
+            "deposit_ratio": 1.0,
+            "timeout_limit": 0,
+            "sync_fee": 1
+        },
+        "A14456548018133352000": {
+            "setup_ttl": 2,
+            "deposit_limit": 0,
+            "deposit_ratio": 1.0,
+            "timeout_limit": 0,
+            "sync_fee": 1
+        }
+    }
+}

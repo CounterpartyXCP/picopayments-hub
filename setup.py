@@ -21,7 +21,7 @@ setup(
     version=__version__,  # NOQA
     test_suite="tests",
     dependency_links=[],
-    package_data={'picopayments': ['sql/*.sql']},
+    package_data={'picopayments': ['sql/*.sql', '*.json']},
     include_package_data=True,
     install_requires=open("requirements.txt").readlines(),
     tests_require=open("requirements_tests.txt").readlines(),
