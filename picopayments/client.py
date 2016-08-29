@@ -7,6 +7,7 @@ import os
 from picopayments import RPC
 from counterpartylib.lib.micropayments import util
 from counterpartylib.lib.micropayments.scripts import sign_deposit
+from counterpartylib.lib.micropayments.scripts import sign_created_commit
 
 
 class Client(object):
@@ -20,10 +21,14 @@ class Client(object):
         "secrets",  # append only
         "c2h_state",  # mutable
         "c2h_spend_secret_hash",  # set once
+        "c2h_commit_delay_time",  # set once
         "c2h_next_revoke_secret_hash",  # mutable
         "c2h_deposit_expire_time",  # set once
         "c2h_deposit_quantity",  # set once
         "h2c_state",  # set once
+        "payments_sent",
+        "payments_received",
+        "payments_queued",
     ]
 
     def __init__(self, url, auth_wif=None, username=None,
@@ -35,12 +40,14 @@ class Client(object):
 
     @classmethod
     def deserialize(cls, data):
+        """TODO doc string"""
         obj = cls(**data["hub"])
         for attr in obj._SERIALIZABLE_ATTRS:
             setattr(obj, attr, data[attr])
         return obj
 
     def serialize(self):
+        """TODO doc string"""
         data = {
             "hub": {
                 "url": self.rpc.url,
@@ -48,36 +55,79 @@ class Client(object):
                 "username": self.rpc.username,
                 "password": self.rpc.password,
                 "verify_ssl_cert": self.rpc.verify_ssl_cert,
-            },
+            }
         }
         for attr in self._SERIALIZABLE_ATTRS:
             data[attr] = getattr(self, attr)
         return data
 
     def get_tx(self, txid):
+        """TODO doc string"""
         return self.rpc.getrawtransaction(tx_hash=txid)
 
-    def send(self, src_wif, dest_address, asset, quantity, publish_tx=True):
+    def block_send(self, src_wif, dest_address, asset, quantity):
+        """TODO doc string"""
+
+        # FIXME add fee and dust size args
         src_address = util.wif2address(src_wif)
         unsigned_rawtx = self.rpc.create_send(
             source=src_address, destination=dest_address,
             quantity=quantity, asset=asset, regular_dust_size=200000,
         )
         signed_rawtx = sign_deposit(self.get_tx, src_wif, unsigned_rawtx)
-        if publish_tx:
-            return self.rpc.sendrawtransaction(tx_hex=signed_rawtx)
-        else:
-            return util.gettxid(signed_rawtx)
+        return self.rpc.sendrawtransaction(tx_hex=signed_rawtx)
 
-    def connect(self, deposit_quantity, deposit_expire_time,
-                asset="XCP", own_url=None, publish_tx=True):
+    def micro_send(self, handle, quantity, token=None):
+        """TODO doc string"""
 
+        assert(self.connected())
+        if token is None:
+            token = util.b2h(os.urandom(32))
+        self.payments_queued.append({
+            "payee_handle": handle,
+            "amount": quantity,
+            "token": token
+        })
+        return token
+
+    def sync(self):
+        """TODO doc string"""
+
+        assert(self.connected())
+        pass  # FIXME implement
+
+    def connected(self):
+        """Returns True if connected to a hub"""
+        return bool(self.handle)
+
+    def create_commit(self, quantity):
+        """TODO doc string"""
+        result = self.rpc.mpc_create_commit(
+            state=self.c2h_state,
+            quantity=quantity,
+            revoke_secret_hash=self.c2h_next_revoke_secret_hash,
+            delay_time=self.c2h_commit_delay_time
+        )
+        script = result["commit_script"]
+        rawtx = sign_created_commit(
+            self.get_tx,
+            self.client_wif,
+            result["tosign"]["commit_rawtx"],
+            result["tosign"]["deposit_script"],
+        )
+        return {"rawtx": rawtx, "script": script}
+
+    def connect(self, quantity, expire_time, asset="XCP",
+                delay_time=2, own_url=None):
+        """TODO doc string"""
+
+        assert(not self.connected())
         self.asset = asset
         self.client_wif = self.rpc.auth_wif
         self.own_url = own_url
         self.client_pubkey = util.wif2pubkey(self.client_wif)
-        self.c2h_deposit_expire_time = deposit_expire_time
-        self.c2h_deposit_quantity = deposit_quantity
+        self.c2h_deposit_expire_time = expire_time
+        self.c2h_deposit_quantity = quantity
         h2c_next_revoke_secret_hash = self._create_initial_secrets()
         self._request_connection()
         self._validate_matches_terms()
@@ -85,9 +135,12 @@ class Client(object):
         h2c_deposit_script = self._exchange_deposit_scripts(
             h2c_next_revoke_secret_hash
         )
-        c2h_deposit_txid = self._sign_and_publish_deposit(c2h_deposit_rawtx,
-                                                          publish_tx)
+        c2h_deposit_txid = self._sign_and_publish_deposit(c2h_deposit_rawtx)
         self._set_initial_h2c_state(h2c_deposit_script)
+        self.payments_sent = []
+        self.payments_received = []
+        self.payments_queued = []
+        self.c2h_commit_delay_time = delay_time
         return c2h_deposit_txid
 
     def _create_initial_secrets(self):
@@ -136,14 +189,11 @@ class Client(object):
         self.c2h_state = result["state"]
         return result["topublish"]
 
-    def _sign_and_publish_deposit(self, c2h_deposit_rawtx, publish_tx):
+    def _sign_and_publish_deposit(self, c2h_deposit_rawtx):
         signed_c2h_deposit_rawtx = sign_deposit(
             self.get_tx, self.client_wif, c2h_deposit_rawtx
         )
-        if publish_tx:
-            return self.rpc.sendrawtransaction(tx_hex=signed_c2h_deposit_rawtx)
-        else:
-            return util.gettxid(signed_c2h_deposit_rawtx)
+        return self.rpc.sendrawtransaction(tx_hex=signed_c2h_deposit_rawtx)
 
     def _validate_matches_terms(self):
         timeout_limit = self.channel_terms["timeout_limit"]

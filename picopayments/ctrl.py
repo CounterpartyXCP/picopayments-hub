@@ -335,7 +335,7 @@ def sync_hub_connection(handle, next_revoke_secret_hash,
 
 
 def _balance(address, asset):
-    return rpc.cp_call(
+    results = rpc.cp_call(
         method="get_balances",
         params={
             "filters": [
@@ -343,7 +343,8 @@ def _balance(address, asset):
                 {'field': 'asset', 'op': '==', 'value': asset},
             ]
         }
-    )[0]["quantity"]
+    )
+    return results[0]["quantity"] if results else 0
 
 
 def _deposit_address(state):
@@ -434,7 +435,7 @@ def process_payment(payer_handle, cursor, payment):
     if payee_handle:
 
         payee = load_channel_data(payee_handle, cursor)
-        if payer["asset"] != payee["asset"]:
+        if payer["connection"]["asset"] != payee["connection"]["asset"]:
             raise err.AssetMissmatch(payer["asset"], payee["asset"])
         if payee["hub2client_expired"]:
             raise err.DepositExpired(payee_handle, "hub2client")

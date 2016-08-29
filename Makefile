@@ -36,7 +36,6 @@ clean:
 	rm -rf env
 	rm -rf build
 	rm -rf dist
-	rm -rf test_basedir
 	rm -rf __pycache__
 	rm -rf htmlcov
 	rm -rf *.egg
@@ -85,7 +84,6 @@ test: setup
 	$(PEP8) picopayments
 	$(PEP8) examples
 	$(PEP8) tests
-	cp -a tests/fixtures test_basedir
 	$(COVERAGE) run --source=picopayments setup.py test
 	$(COVERAGE) html
 	$(COVERAGE) report  # --fail-under=90

@@ -11,7 +11,7 @@ from picopayments import err
 from picopayments import cfg
 
 
-_CALL_LOCAL_PROCESS = False  # XXX monkey patch for testing only
+CALL_LOCAL_PROCESS = False
 
 
 def _http_call(url, method, params, username=None,
@@ -37,7 +37,7 @@ def call(url, method, params, username=None, password=None,
     if auth_wif:
         params = auth.sign_json(params, auth_wif)
 
-    if _CALL_LOCAL_PROCESS:
+    if CALL_LOCAL_PROCESS:
         from picopayments import api
         result = getattr(api, method)(**params)
     else:

@@ -1,3 +1,5 @@
+import os
+import json
 import shutil
 import unittest
 import tempfile
@@ -11,19 +13,22 @@ from picopayments import err
 CP_URL = "http://127.0.0.1:14000/api/"
 
 
-@unittest.skip("FIXME")
 class TestCtrl(unittest.TestCase):
 
     def setUp(self):
-        self.basedir = tempfile.mkdtemp(prefix="picopayments_test_")
+        self.tempdir = tempfile.mkdtemp(prefix="picopayments_test_")
+        self.basedir = os.path.join(self.tempdir, "basedir")
+        shutil.copytree("tests/fixtures", self.basedir)
         ctrl.initialize(cli.parse([
             "--testnet",
             "--basedir={0}".format(self.basedir),
             "--cp_url={0}".format(CP_URL)
         ]))
+        with open(os.path.join(self.basedir, "data.json")) as fp:
+            self.data = json.load(fp)
 
     def tearDown(self):
-        shutil.rmtree(self.basedir)
+        shutil.rmtree(self.tempdir)
 
     def test_get_funding_addresses(self):
         assets = ["XCP"]
@@ -42,9 +47,8 @@ class TestCtrl(unittest.TestCase):
 
     def test_validate_read_unknown_asset(self):
 
-        def func():
-            ctrl.read_current_terms("deadbeef")
-        self.assertRaises(err.AssetNotInTerms, func)
+        terms = ctrl.terms(["deadbeef"])
+        self.assertEqual(terms, {})
 
 
 if __name__ == "__main__":

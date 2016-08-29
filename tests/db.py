@@ -1,4 +1,5 @@
 import os
+import json
 import unittest
 import shutil
 import tempfile
@@ -8,18 +9,25 @@ from picopayments import cli
 from picopayments import db
 
 
+CP_URL = "http://127.0.0.1:14000/api/"
+
+
 class TestDB(unittest.TestCase):
 
     def setUp(self):
-        self.basedir = tempfile.mkdtemp(prefix="picopayments_test_")
-        # TODO start mock counterparty service
+        self.tempdir = tempfile.mkdtemp(prefix="picopayments_test_")
+        self.basedir = os.path.join(self.tempdir, "basedir")
+        shutil.copytree("tests/fixtures", self.basedir)
         ctrl.initialize(cli.parse([
             "--testnet",
-            "--basedir={0}".format(self.basedir)
+            "--basedir={0}".format(self.basedir),
+            "--cp_url={0}".format(CP_URL)
         ]))
+        with open(os.path.join(self.basedir, "data.json")) as fp:
+            self.data = json.load(fp)
 
     def tearDown(self):
-        shutil.rmtree(self.basedir)
+        shutil.rmtree(self.tempdir)
 
     def test_handle_exists(self):
 

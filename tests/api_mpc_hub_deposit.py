@@ -1,4 +1,5 @@
 import os
+import json
 import shutil
 import unittest
 import tempfile
@@ -35,13 +36,15 @@ class TestMpcHubDeposit(unittest.TestCase):
 
     def setUp(self):
         self.tempdir = tempfile.mkdtemp(prefix="picopayments_test_")
-        basedir = os.path.join(self.tempdir, "basedir")
-        shutil.copytree("tests/fixtures", basedir)
+        self.basedir = os.path.join(self.tempdir, "basedir")
+        shutil.copytree("tests/fixtures", self.basedir)
         ctrl.initialize(cli.parse([
             "--testnet",
-            "--basedir={0}".format(basedir),
+            "--basedir={0}".format(self.basedir),
             "--cp_url={0}".format(CP_URL)
         ]))
+        with open(os.path.join(self.basedir, "data.json")) as fp:
+            self.data = json.load(fp)
 
     def tearDown(self):
         shutil.rmtree(self.tempdir)

@@ -7,9 +7,13 @@
     "connections": {
         "alpha": {
             "c2h_deposit_expire_time": 65535,
+            "c2h_commit_delay_time": 2,
             "c2h_deposit_quantity": 1337,
             "c2h_next_revoke_secret_hash": "d0235d7c2ef20b95be397ba140c84214a91ade40",
             "c2h_spend_secret_hash": "0225c47a27dc8c20bc81461dcbbddc15f6ce9731",
+            "payments_sent": [],
+            "payments_received": [],
+            "payments_queued": [],
             "c2h_state": {
                 "asset": "A14456548018133352000",
                 "commits_active": [],
@@ -49,9 +53,13 @@
         },
         "beta": {
             "c2h_deposit_expire_time": 65535,
+            "c2h_commit_delay_time": 2,
             "c2h_deposit_quantity": 1337,
             "c2h_next_revoke_secret_hash": "0a9a50a20005beaf3aec116ed7678e016ba1deaf",
             "c2h_spend_secret_hash": "dcb04f2cb616d6bf91e37facc2ee31dbf71cddc8",
+            "payments_sent": [],
+            "payments_received": [],
+            "payments_queued": [],
             "c2h_state": {
                 "asset": "A14456548018133352000",
                 "commits_active": [],
@@ -91,9 +99,13 @@
         },
         "delta": {
             "c2h_deposit_expire_time": 65535,
+            "c2h_commit_delay_time": 2,
             "c2h_deposit_quantity": 1337,
             "c2h_next_revoke_secret_hash": "85c9fb6e69267ca728a1e021ea536b45ed2b4a8c",
             "c2h_spend_secret_hash": "038911d1b6f62b4ff07053db87e7d4a80e195693",
+            "payments_sent": [],
+            "payments_received": [],
+            "payments_queued": [],
             "c2h_state": {
                 "asset": "A14456548018133352000",
                 "commits_active": [],
@@ -133,9 +145,13 @@
         },
         "epsilon": {
             "c2h_deposit_expire_time": 65535,
+            "c2h_commit_delay_time": 2,
             "c2h_deposit_quantity": 1337,
             "c2h_next_revoke_secret_hash": "1047bba1d3a6c351598cf1a9db48915c2412fb32",
             "c2h_spend_secret_hash": "3d83d69713173c9a16f25ea894cb0e57129ef193",
+            "payments_sent": [],
+            "payments_received": [],
+            "payments_queued": [],
             "c2h_state": {
                 "asset": "A14456548018133352000",
                 "commits_active": [],
@@ -175,9 +191,13 @@
         },
         "gamma": {
             "c2h_deposit_expire_time": 65535,
+            "c2h_commit_delay_time": 2,
             "c2h_deposit_quantity": 1337,
             "c2h_next_revoke_secret_hash": "28c5649df291acfae40a57abd6288fe4ade87644",
             "c2h_spend_secret_hash": "9e602b29985212e551b15765fedc944bd6438835",
+            "payments_sent": [],
+            "payments_received": [],
+            "payments_queued": [],
             "c2h_state": {
                 "asset": "A14456548018133352000",
                 "commits_active": [],
@@ -217,9 +237,13 @@
         },
         "zeta": {
             "c2h_deposit_expire_time": 65535,
+            "c2h_commit_delay_time": 2,
             "c2h_deposit_quantity": 1337,
             "c2h_next_revoke_secret_hash": "a90a9d37e4acc7f76ca588eafaaa92a1fbb6f548",
             "c2h_spend_secret_hash": "b502079e76a0ec28d2ab5bc6d0ea2bb238f160f1",
+            "payments_sent": [],
+            "payments_received": [],
+            "payments_queued": [],
             "c2h_state": {
                 "asset": "A14456548018133352000",
                 "commits_active": [],
