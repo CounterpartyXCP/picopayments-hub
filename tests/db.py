@@ -4,7 +4,7 @@ import unittest
 import shutil
 import tempfile
 from pycoin.serialize import b2h
-from picopayments import ctrl
+from picopayments import sys
 from picopayments import cli
 from picopayments import db
 
@@ -18,7 +18,7 @@ class TestDB(unittest.TestCase):
         self.tempdir = tempfile.mkdtemp(prefix="picopayments_test_")
         self.basedir = os.path.join(self.tempdir, "basedir")
         shutil.copytree("tests/fixtures", self.basedir)
-        ctrl.initialize(cli.parse([
+        sys.initialize(cli.parse([
             "--testnet",
             "--basedir={0}".format(self.basedir),
             "--cp_url={0}".format(CP_URL)

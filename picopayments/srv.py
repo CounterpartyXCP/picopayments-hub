@@ -47,7 +47,7 @@ def main(args):
 
     # start server
     run_simple(
-        picopayments.cfg.host, picopayments.cfg.port,
+        picopayments.etc.host, picopayments.etc.port,
         application,
         processes=1,  # ensure db integrety, avoid race conditions
         ssl_context=ssl_context

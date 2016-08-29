@@ -6,34 +6,34 @@
 from jsonrpc import dispatcher
 from picopayments import db
 from picopayments import auth
-from picopayments import validate
-from picopayments import ctrl
+from picopayments import verify
+from picopayments import sys
 from picopayments import rpc
 
 
 @dispatcher.add_method
 def mpc_hub_terms(assets=None):
-    validate.terms_input(assets)
-    return ctrl.terms(assets=assets)
+    verify.terms_input(assets)
+    return sys.terms(assets=assets)
 
 
 @dispatcher.add_method
 def mpc_hub_connections(handles=None, assets=None):
-    validate.connections_input(handles, assets)
-    return ctrl.hub_connections(handles, assets)
+    verify.connections_input(handles, assets)
+    return sys.hub_connections(handles, assets)
 
 
 @dispatcher.add_method
 def mpc_hub_request(**kwargs):
     with db.lock:
         auth.verify_json(kwargs)
-        validate.request_input(
+        verify.request_input(
             kwargs["asset"],
             kwargs["pubkey"],
             kwargs["spend_secret_hash"],
             kwargs.get("hub_rpc_url")
         )
-        result, authwif = ctrl.create_hub_connection(
+        result, authwif = sys.create_hub_connection(
             kwargs["asset"],
             kwargs["pubkey"],
             kwargs["spend_secret_hash"],
@@ -46,13 +46,13 @@ def mpc_hub_request(**kwargs):
 def mpc_hub_deposit(**kwargs):
     with db.lock:
         auth.verify_json(kwargs)
-        validate.deposit_input(
+        verify.deposit_input(
             kwargs["handle"],
             kwargs["deposit_script"],
             kwargs["next_revoke_secret_hash"],
             kwargs["pubkey"]
         )
-        result, authwif = ctrl.complete_connection(
+        result, authwif = sys.complete_connection(
             kwargs["handle"],
             kwargs["deposit_script"],
             kwargs["next_revoke_secret_hash"]
@@ -64,7 +64,7 @@ def mpc_hub_deposit(**kwargs):
 def mpc_hub_sync(**kwargs):
     with db.lock:
         auth.verify_json(kwargs)
-        validate.sync_input(
+        verify.sync_input(
             kwargs["handle"],
             kwargs["next_revoke_secret_hash"],
             kwargs["pubkey"],
@@ -72,7 +72,7 @@ def mpc_hub_sync(**kwargs):
             kwargs.get("commit"),
             kwargs.get("revokes")
         )
-        result, authwif = ctrl.sync_hub_connection(
+        result, authwif = sys.sync_hub_connection(
             kwargs["handle"],
             kwargs["next_revoke_secret_hash"],
             kwargs.get("sends"),

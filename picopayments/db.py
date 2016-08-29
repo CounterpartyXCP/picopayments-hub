@@ -9,7 +9,7 @@ import pkg_resources
 from threading import RLock
 from counterpartylib.lib.micropayments import util
 from counterpartylib.lib.micropayments import scripts
-from picopayments import cfg
+from picopayments import etc
 
 
 def _sql(name):
@@ -90,7 +90,7 @@ def _all(sql, args=None, asdict=True, cursor=None):
 def setup():
 
     # get connection
-    connection = apsw.Connection(cfg.path_database)
+    connection = apsw.Connection(etc.path_database)
 
     # use foreign keys
     cursor = connection.cursor()
@@ -260,7 +260,7 @@ def _script_data(script):
     delay_time = scripts.get_commit_delay_time(util.h2b(script))
     secret_hash = scripts.get_commit_revoke_secret_hash(util.h2b(script))
     commit_address = util.script2address(util.h2b(script),
-                                         netcode=cfg.netcode)
+                                         netcode=etc.netcode)
     return {
         "commit_address": commit_address,
         "delay_time": delay_time,

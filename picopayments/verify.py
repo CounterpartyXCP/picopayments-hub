@@ -8,9 +8,9 @@ import jsonschema
 from counterpartylib.lib.micropayments import validate
 from picopayments import err
 from picopayments import db
-from picopayments import cfg
+from picopayments import etc
 from picopayments import rpc
-from picopayments import ctrl
+from picopayments import sys
 
 
 URL_REGEX = re.compile(
@@ -81,7 +81,7 @@ def is_url(url):
 
 
 def client2hub_commit(handle, commit_rawtx, commit_script):
-    netcode = "XTN" if cfg.testnet else "BTC"
+    netcode = "XTN" if etc.testnet else "BTC"
     client2hub_channel = db.receive_channel(handle)
     deposit_utxos = rpc.cp_call(
         method="get_unspent_txouts",
@@ -128,7 +128,7 @@ def request_input(asset, pubkey, spend_secret_hash, hub_rpc_url):
         is_url(hub_rpc_url)
 
     # asset must be in terms
-    all_terms = ctrl.terms()
+    all_terms = sys.terms()
     if asset not in all_terms:
         raise err.AssetNotInTerms(asset)
 

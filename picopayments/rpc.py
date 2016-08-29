@@ -8,7 +8,7 @@ import requests
 from requests.auth import HTTPBasicAuth
 from picopayments import auth
 from picopayments import err
-from picopayments import cfg
+from picopayments import etc
 
 
 CALL_LOCAL_PROCESS = False
@@ -52,9 +52,9 @@ def call(url, method, params, username=None, password=None,
 
 def cp_call(method, params):
     return _http_call(
-        cfg.counterparty_url, method, params,
-        username=cfg.counterparty_username,
-        password=cfg.counterparty_password
+        etc.counterparty_url, method, params,
+        username=etc.counterparty_username,
+        password=etc.counterparty_password
     )
 
 

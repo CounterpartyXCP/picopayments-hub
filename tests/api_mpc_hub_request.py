@@ -6,7 +6,7 @@ import tempfile
 import jsonschema
 from picopayments import api
 from picopayments import auth
-from picopayments import ctrl
+from picopayments import sys
 from picopayments import cli
 from picopayments import err
 from counterpartylib.lib.micropayments import util
@@ -37,7 +37,7 @@ class TestMpcHubRequest(unittest.TestCase):
         self.tempdir = tempfile.mkdtemp(prefix="picopayments_test_")
         self.basedir = os.path.join(self.tempdir, "basedir")
         shutil.copytree("tests/fixtures", self.basedir)
-        ctrl.initialize(cli.parse([
+        sys.initialize(cli.parse([
             "--testnet",
             "--basedir={0}".format(self.basedir),
             "--cp_url={0}".format(CP_URL)
@@ -50,7 +50,7 @@ class TestMpcHubRequest(unittest.TestCase):
 
     def test_standard_usage_xcp(self):
         asset = "XCP"
-        client_key = ctrl.create_key(asset)
+        client_key = sys.create_key(asset)
         secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
         params = {"asset": asset, "spend_secret_hash": secret_hash}
         params = auth.sign_json(params, client_key["wif"])
@@ -63,7 +63,7 @@ class TestMpcHubRequest(unittest.TestCase):
 
         def func():
             asset = "BADASSET"
-            client_key = ctrl.create_key(asset)
+            client_key = sys.create_key(asset)
             secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
             params = {"asset": asset, "spend_secret_hash": secret_hash}
             params = auth.sign_json(params, client_key["wif"])
@@ -75,7 +75,7 @@ class TestMpcHubRequest(unittest.TestCase):
 
         def func():
             asset = "XCP"
-            client_key = ctrl.create_key(asset)
+            client_key = sys.create_key(asset)
             secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
             params = {
                 "asset": asset,

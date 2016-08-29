@@ -17,7 +17,7 @@ from picopayments import rpc
 from picopayments import db
 from picopayments import auth
 from picopayments import err
-from picopayments import cfg
+from picopayments import etc
 
 
 DEFAULT_MAINNET = {  # TODO move to file
@@ -101,7 +101,7 @@ def create_hub_connection(asset, client_pubkey, hub2client_spend_secret_hash,
     data.update(current_terms)
 
     # new hub key
-    hub_key = create_key(asset, netcode=cfg.netcode)
+    hub_key = create_key(asset, netcode=etc.netcode)
     data["hub_wif"] = hub_key["wif"]
     data["hub_pubkey"] = hub_key["pubkey"]
     data["hub_address"] = hub_key["address"]
@@ -109,7 +109,7 @@ def create_hub_connection(asset, client_pubkey, hub2client_spend_secret_hash,
     # client key
     data["client_pubkey"] = client_pubkey
     data["client_address"] = util.pubkey2address(client_pubkey,
-                                                 netcode=cfg.netcode)
+                                                 netcode=etc.netcode)
 
     # spend secret for receive channel
     data.update(create_secret())
@@ -178,12 +178,12 @@ def complete_connection(
         "client2hub_channel_id": hub_conn["client2hub_channel_id"],
         "client2hub_deposit_script": client2hub_deposit_script,
         "client2hub_deposit_address": util.script2address(
-            h2b(client2hub_deposit_script), netcode=cfg.netcode
+            h2b(client2hub_deposit_script), netcode=etc.netcode
         ),
         "hub2client_channel_id": hub_conn["hub2client_channel_id"],
         "hub2client_deposit_script": hub2client_deposit_script,
         "hub2client_deposit_address": util.script2address(
-            h2b(hub2client_deposit_script), netcode=cfg.netcode
+            h2b(hub2client_deposit_script), netcode=etc.netcode
         ),
         "next_revoke_secret_hash": next_revoke_secret_hash,
     }
@@ -203,18 +203,18 @@ def complete_connection(
 def create_funding_addresses(assets):
     addresses = {}
     for asset in assets:
-        key = create_key(asset, netcode=cfg.netcode)
+        key = create_key(asset, netcode=etc.netcode)
         db.add_keys([key])
         addresses[asset] = key["address"]
     return addresses
 
 
 def initialize(args):
-    cfg.load(args)  # load configuration
+    etc.load(args)  # load configuration
 
     # ensure basedir path exists
-    if not os.path.exists(cfg.basedir):
-        os.makedirs(cfg.basedir)
+    if not os.path.exists(etc.basedir):
+        os.makedirs(etc.basedir)
 
     terms()  # make sure terms file exists
     db.setup()  # setup and create db if needed
@@ -349,7 +349,7 @@ def _balance(address, asset):
 
 def _deposit_address(state):
     return util.script2address(
-        util.h2b(state["deposit_script"]), netcode=cfg.netcode
+        util.h2b(state["deposit_script"]), netcode=etc.netcode
     )
 
 
@@ -461,15 +461,15 @@ def process_payment(payer_handle, cursor, payment):
 def terms(assets=None):
 
     # create terms and return default value
-    if not os.path.exists(cfg.path_terms):
-        default_terms = DEFAULT_TESTNET if cfg.testnet else DEFAULT_MAINNET
-        with open(cfg.path_terms, 'w') as outfile:
+    if not os.path.exists(etc.path_terms):
+        default_terms = DEFAULT_TESTNET if etc.testnet else DEFAULT_MAINNET
+        with open(etc.path_terms, 'w') as outfile:
             json.dump(default_terms, outfile, indent=2)
         terms_data = copy.deepcopy(default_terms)
 
     # read terms
     else:
-        with open(cfg.path_terms, 'r') as infile:
+        with open(etc.path_terms, 'r') as infile:
             terms_data = json.load(infile)
 
     # FIXME validate terms data

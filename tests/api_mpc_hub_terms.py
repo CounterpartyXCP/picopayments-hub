@@ -4,7 +4,7 @@ import shutil
 import unittest
 import tempfile
 from picopayments import api
-from picopayments import ctrl
+from picopayments import sys
 from picopayments import cli
 
 
@@ -17,7 +17,7 @@ class TestMpcHubTerms(unittest.TestCase):
         self.tempdir = tempfile.mkdtemp(prefix="picopayments_test_")
         self.basedir = os.path.join(self.tempdir, "basedir")
         shutil.copytree("tests/fixtures", self.basedir)
-        ctrl.initialize(cli.parse([
+        sys.initialize(cli.parse([
             "--testnet",
             "--basedir={0}".format(self.basedir),
             "--cp_url={0}".format(CP_URL)
