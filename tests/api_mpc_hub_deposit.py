@@ -6,8 +6,8 @@ import tempfile
 import jsonschema
 from picopayments import api
 from picopayments import auth
-from picopayments import sys
-from picopayments import cli
+from picopayments import lib
+from picopayments import srv
 from picopayments import err
 from counterpartylib.lib.micropayments import util
 from pycoin.serialize import b2h
@@ -38,11 +38,11 @@ class TestMpcHubDeposit(unittest.TestCase):
         self.tempdir = tempfile.mkdtemp(prefix="picopayments_test_")
         self.basedir = os.path.join(self.tempdir, "basedir")
         shutil.copytree("tests/fixtures", self.basedir)
-        sys.initialize(cli.parse([
+        srv.main([
             "--testnet",
             "--basedir={0}".format(self.basedir),
             "--cp_url={0}".format(CP_URL)
-        ]))
+        ], serve=False)
         with open(os.path.join(self.basedir, "data.json")) as fp:
             self.data = json.load(fp)
 
@@ -52,7 +52,7 @@ class TestMpcHubDeposit(unittest.TestCase):
     def test_standard_usage_xcp(self):
 
         asset = "XCP"
-        client_key = sys.create_key(asset, netcode="XTN")
+        client_key = lib.create_key(asset, netcode="XTN")
         client_pubkey = client_key["pubkey"]
 
         hub2client_spend_secret = util.b2h(os.urandom(32))
@@ -90,7 +90,7 @@ class TestMpcHubDeposit(unittest.TestCase):
         def func():
 
             asset = "XCP"
-            client_key = sys.create_key(asset, netcode="XTN")
+            client_key = lib.create_key(asset, netcode="XTN")
             client_pubkey = client_key["pubkey"]
 
             hub2client_spend_secret = util.b2h(os.urandom(32))
@@ -142,7 +142,7 @@ class TestMpcHubDeposit(unittest.TestCase):
         def func():
 
             asset = "XCP"
-            client_key = sys.create_key(asset, netcode="XTN")
+            client_key = lib.create_key(asset, netcode="XTN")
             next_revoke_secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
             client2hub_deposit_script = util.b2h(os.urandom(32)),
 

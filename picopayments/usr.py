@@ -65,17 +65,19 @@ class Client(object):
         """TODO doc string"""
         return self.rpc.getrawtransaction(tx_hash=txid)
 
-    def block_send(self, src_wif, dest_address, asset, quantity):
+    def block_send(self, publish_tx=True, **kwargs):
         """TODO doc string"""
 
-        # FIXME add fee and dust size args
-        src_address = util.wif2address(src_wif)
-        unsigned_rawtx = self.rpc.create_send(
-            source=src_address, destination=dest_address,
-            quantity=quantity, asset=asset, regular_dust_size=200000,
-        )
-        signed_rawtx = sign_deposit(self.get_tx, src_wif, unsigned_rawtx)
-        return self.rpc.sendrawtransaction(tx_hex=signed_rawtx)
+        # replace source wif with address
+        wif = kwargs.pop("source")
+        kwargs["source"] = util.wif2address(wif)
+
+        # create and sign transaction
+        unsigned_rawtx = self.rpc.create_send(**kwargs)
+        signed_rawtx = sign_deposit(self.get_tx, wif, unsigned_rawtx)
+
+        # publish transaction
+        return self._publish(signed_rawtx, publish_tx)
 
     def micro_send(self, handle, quantity, token=None):
         """TODO doc string"""
@@ -118,7 +120,7 @@ class Client(object):
         return {"rawtx": rawtx, "script": script}
 
     def connect(self, quantity, expire_time, asset="XCP",
-                delay_time=2, own_url=None):
+                delay_time=2, own_url=None, publish_tx=True):
         """TODO doc string"""
 
         assert(not self.connected())
@@ -135,7 +137,9 @@ class Client(object):
         h2c_deposit_script = self._exchange_deposit_scripts(
             h2c_next_revoke_secret_hash
         )
-        c2h_deposit_txid = self._sign_and_publish_deposit(c2h_deposit_rawtx)
+        c2h_deposit_txid = self._sign_and_publish_deposit(
+            c2h_deposit_rawtx, publish_tx
+        )
         self._set_initial_h2c_state(h2c_deposit_script)
         self.payments_sent = []
         self.payments_received = []
@@ -189,19 +193,29 @@ class Client(object):
         self.c2h_state = result["state"]
         return result["topublish"]
 
-    def _sign_and_publish_deposit(self, c2h_deposit_rawtx):
+    def _publish(self, rawtx, publish_tx=True):
+        if publish_tx:
+            return self.rpc.sendrawtransaction(
+                tx_hex=rawtx
+            )  # pragma: no cover
+        else:
+            return util.gettxid(rawtx)
+
+    def _sign_and_publish_deposit(self, c2h_deposit_rawtx, publish_tx):
         signed_c2h_deposit_rawtx = sign_deposit(
             self.get_tx, self.client_wif, c2h_deposit_rawtx
         )
-        return self.rpc.sendrawtransaction(tx_hex=signed_c2h_deposit_rawtx)
+        return self._publish(signed_c2h_deposit_rawtx, publish_tx)
 
     def _validate_matches_terms(self):
         timeout_limit = self.channel_terms["timeout_limit"]
-        if timeout_limit != 0:
-            assert(self.c2h_deposit_expire_time <= timeout_limit)
+        assert(
+            timeout_limit == 0 or self.c2h_deposit_expire_time <= timeout_limit
+        )
         deposit_limit = self.channel_terms["deposit_limit"]
-        if deposit_limit != 0:
-            assert(self.c2h_deposit_quantity <= deposit_limit)
+        assert(
+            deposit_limit == 0 or self.c2h_deposit_quantity <= deposit_limit
+        )
 
     def _set_initial_h2c_state(self, h2c_deposit_script):
         self.h2c_state = {

@@ -7,20 +7,20 @@ from jsonrpc import dispatcher
 from picopayments import db
 from picopayments import auth
 from picopayments import verify
-from picopayments import sys
+from picopayments import lib
 from picopayments import rpc
 
 
 @dispatcher.add_method
 def mpc_hub_terms(assets=None):
     verify.terms_input(assets)
-    return sys.terms(assets=assets)
+    return lib.terms(assets=assets)
 
 
 @dispatcher.add_method
 def mpc_hub_connections(handles=None, assets=None):
     verify.connections_input(handles, assets)
-    return sys.hub_connections(handles, assets)
+    return lib.hub_connections(handles, assets)
 
 
 @dispatcher.add_method
@@ -33,7 +33,7 @@ def mpc_hub_request(**kwargs):
             kwargs["spend_secret_hash"],
             kwargs.get("hub_rpc_url")
         )
-        result, authwif = sys.create_hub_connection(
+        result, authwif = lib.create_hub_connection(
             kwargs["asset"],
             kwargs["pubkey"],
             kwargs["spend_secret_hash"],
@@ -52,7 +52,7 @@ def mpc_hub_deposit(**kwargs):
             kwargs["next_revoke_secret_hash"],
             kwargs["pubkey"]
         )
-        result, authwif = sys.complete_connection(
+        result, authwif = lib.complete_connection(
             kwargs["handle"],
             kwargs["deposit_script"],
             kwargs["next_revoke_secret_hash"]
@@ -72,7 +72,7 @@ def mpc_hub_sync(**kwargs):
             kwargs.get("commit"),
             kwargs.get("revokes")
         )
-        result, authwif = sys.sync_hub_connection(
+        result, authwif = lib.sync_hub_connection(
             kwargs["handle"],
             kwargs["next_revoke_secret_hash"],
             kwargs.get("sends"),
@@ -89,10 +89,15 @@ def _add_cp_call(method):
     return counterparty_method
 
 
+@dispatcher.add_method
+def create_send(**kwargs):
+    kwargs["disable_utxo_locks"] = True  # always disable on public api
+    return rpc.cp_call(method="create_send", params=kwargs)
+
+
 getrawtransaction = _add_cp_call("getrawtransaction")
 getrawtransaction_batch = _add_cp_call("getrawtransaction_batch")
 get_unspent_txouts = _add_cp_call("get_unspent_txouts")
-create_send = _add_cp_call("create_send")  # FIXME always disable_utxo_locks
 sendrawtransaction = _add_cp_call("sendrawtransaction")
 mpc_make_deposit = _add_cp_call("mpc_make_deposit")
 mpc_set_deposit = _add_cp_call("mpc_set_deposit")

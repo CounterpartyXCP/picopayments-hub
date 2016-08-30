@@ -8,42 +8,39 @@ import logging
 from picopayments import etc
 
 
-FORMAT = "%(asctime)s %(levelname)s %(name)s %(lineno)d: %(message)s"
+# FORMAT = "%(asctime)s %(levelname)s %(name)s %(lineno)d: %(message)s"
+FORMAT = "%(asctime)s %(levelname)s: %(message)s"
 LEVEL_DEFAULT = logging.INFO
 LEVEL_QUIET = 60
 LEVEL_VERBOSE = logging.DEBUG
 
 
-logging.basicConfig(format=FORMAT, level=LEVEL_DEFAULT)
+# silence global logger
+logging.basicConfig(format=FORMAT, level=LEVEL_QUIET)
 
 
-def getLogger(name=None):
-    formatter = logging.Formatter(FORMAT)
+def getLogger(suffix=None, name=None):
+    level = LEVEL_DEFAULT
 
-    # get log level
+    # full logging if --debug or --verbose arg given
     if "--debug" in sys.argv or "--verbose" in sys.argv:
-        level = LEVEL_VERBOSE  # full logging if --debug or --verbose arg given
+        level = LEVEL_VERBOSE  # pragma: no cover
+
+    # no logging if --quite arg given
     elif "--quiet" in sys.argv:
-        level = LEVEL_QUIET  # no logging if --quite arg given
-    else:
-        level = LEVEL_DEFAULT
+        level = LEVEL_QUIET  # pragma: no cover
 
     # setup file handler
     fh = logging.FileHandler(etc.path_log)
-    fh.setFormatter(formatter)
+    fh.setFormatter(logging.Formatter(FORMAT))
     fh.setLevel(level)
 
-    # setup stream handler
-    ch = logging.StreamHandler()
-    ch.setFormatter(formatter)
-    ch.setLevel(level)
-
     # setup logger
-    logger = logging.getLogger(name=name)
-    logger.setLevel(level)
-    logger.addHandler(ch)
-    logger.addHandler(fh)
-    return logger
+    base = logging.getLogger()
+    child = base.getChild(name or suffix or "Default")
+    child.setLevel(level)
+    child.addHandler(fh)
+    return child
 
 
 def debug(msg, *args, **kwargs):

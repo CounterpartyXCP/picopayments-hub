@@ -27,6 +27,10 @@ counterparty_username = None  # loaded from args
 counterparty_password = None  # loaded from args
 
 
+# vars
+database_connection = None  # set in db.setup
+
+
 def load(args):
     testnet = args["testnet"]
     basedir = args["basedir"]

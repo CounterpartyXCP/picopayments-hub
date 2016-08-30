@@ -41,9 +41,10 @@ def call(url, method, params, username=None, password=None,
         from picopayments import api
         result = getattr(api, method)(**params)
     else:
-        result = _http_call(url, method, params, username=username,
-                            password=password, verify_ssl_cert=verify_ssl_cert)
-
+        result = _http_call(
+            url, method, params, username=username,
+            password=password, verify_ssl_cert=verify_ssl_cert
+        )  # pragma: no cover
     if auth_wif:
         auth.verify_json(result)
 

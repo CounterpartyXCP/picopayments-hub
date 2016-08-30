@@ -19,6 +19,8 @@ from picopayments import db
 from picopayments import auth
 from picopayments import err
 from picopayments import etc
+from picopayments import log
+from picopayments import sql
 
 
 _TERMS_FP = pkg_resources.resource_stream("picopayments", "terms.json")
@@ -78,6 +80,7 @@ def create_hub_connection(asset, client_pubkey, hub2client_spend_secret_hash,
     data["hub_rpc_url"] = hub_rpc_url
 
     db.add_hub_connection(data)
+    log.info("Created connection {0}".format(handle))
     return (
         {
             "handle": handle,
@@ -95,20 +98,20 @@ def _load_complete_connection(handle, client2hub_deposit_script):
     hub_pubkey = get_deposit_payee_pubkey(client2hub_ds_bin)
     expire_time = get_deposit_expire_time(client2hub_ds_bin)
 
-    hub_conn = db.hub_connection(handle)
+    hub_conn = db.hub_connection(handle=handle)
     assert(hub_conn is not None)
 
-    hub2client = db.micropayment_channel(hub_conn["hub2client_channel_id"])
+    hub2client = db.micropayment_channel(id=hub_conn["hub2client_channel_id"])
     assert(hub2client["payer_pubkey"] == hub_pubkey)
     assert(hub2client["payee_pubkey"] == client_pubkey)
     assert(not hub2client["meta_complete"])
 
-    client2hub = db.micropayment_channel(hub_conn["client2hub_channel_id"])
+    client2hub = db.micropayment_channel(id=hub_conn["client2hub_channel_id"])
     assert(client2hub["payer_pubkey"] == client_pubkey)
     assert(client2hub["payee_pubkey"] == hub_pubkey)
     assert(not client2hub["meta_complete"])
 
-    hub_key = db.key(hub_pubkey)
+    hub_key = db.key(pubkey=hub_pubkey)
 
     return hub_conn, hub2client, expire_time, hub_key
 
@@ -146,6 +149,7 @@ def complete_connection(
     data.update(create_secret())  # revoke secret
 
     db.complete_hub_connection(data)
+    log.info("Completed connection {0}".format(handle))
     return (
         {
             "deposit_script": hub2client_deposit_script,
@@ -173,14 +177,16 @@ def initialize(args):
 
     terms()  # make sure terms file exists
     db.setup()  # setup and create db if needed
+    log.info("Basedir: {0}".format(etc.basedir))  # make sure log file exists
 
 
 def update_channel_state(channel_id, asset, commit=None,
                          revokes=None, cursor=None):
 
     state = db.load_channel_state(channel_id, asset, cursor=cursor)
-    unnotified_revokes = db.unnotified_revokes(channel_id, cursor=None)
-    unnotified_commit = db.unnotified_commit(channel_id, cursor=cursor)
+    unnotified_revokes = db.unnotified_revokes(channel_id=channel_id)
+    unnotified_commit = db.unnotified_commit(channel_id=channel_id,
+                                             cursor=cursor)
     if commit is not None:
         state = rpc.cp_call(
             method="mpc_add_commit",
@@ -214,12 +220,12 @@ def _save_sync_data(cursor, handle, next_revoke_secret_hash,
     db.set_next_revoke_secret_hash(handle, next_revoke_secret_hash)
 
     # mark sent payments as received
-    payment_ids = [p.pop("id") for p in receive_payments]
+    payment_ids = [{"id": p.pop("id")} for p in receive_payments]
     db.set_payments_notified(payment_ids, cursor=cursor)
 
     # mark sent commit as received
     if hub2client_commit_id:
-        db.set_commit_notified(hub2client_commit_id, cursor=cursor)
+        db.set_commit_notified(id=hub2client_commit_id, cursor=cursor)
 
     # mark sent revokes as received
     revoke_ids = [p.pop("id") for p in hub2client_revokes]
@@ -235,11 +241,11 @@ def _save_sync_data(cursor, handle, next_revoke_secret_hash,
 def sync_hub_connection(handle, next_revoke_secret_hash,
                         sends, commit, revokes):
 
-    cursor = db.get_cursor()
+    cursor = sql.get_cursor()
 
     # load receive channel
-    hub_connection = db.hub_connection(handle, cursor=cursor)
-    connection_terms = db.connection_terms(hub_connection["terms_id"])
+    hub_connection = db.hub_connection(handle=handle, cursor=cursor)
+    connection_terms = db.terms(id=hub_connection["terms_id"])
     asset = hub_connection["asset"]
     client2hub_id = hub_connection["client2hub_channel_id"]
     hub2client_id = hub_connection["hub2client_channel_id"]
@@ -263,9 +269,9 @@ def sync_hub_connection(handle, next_revoke_secret_hash,
     next_revoke_secret = create_secret()
 
     # load unnotified
-    hub2client_commit = db.unnotified_commit(handle)
-    hub2client_revokes = db.unnotified_revokes(hub2client_id)
-    receive_payments = db.unnotified_payments(hub2client_id)
+    hub2client_commit = db.unnotified_commit(channel_id=hub2client_id)
+    hub2client_revokes = db.unnotified_revokes(channel_id=hub2client_id)
+    receive_payments = db.unnotified_payments(payee_handle=handle)
 
     # save sync data
     hub2client_commit_id = None
@@ -277,7 +283,7 @@ def sync_hub_connection(handle, next_revoke_secret_hash,
         next_revoke_secret
     )
 
-    hub_key = db.channel_payer_key(hub2client_id)
+    hub_key = db.channel_payer_key(id=hub2client_id)
     return (
         {
             "receive": receive_payments,
@@ -323,7 +329,7 @@ def _expired(state):
 
 
 def load_channel_data(handle, cursor):
-    connection = db.hub_connection(handle, cursor=cursor)
+    connection = db.hub_connection(handle=handle, cursor=cursor)
     hub2client_state = db.load_channel_state(
         connection["hub2client_channel_id"], connection["asset"], cursor=cursor
     )
@@ -338,9 +344,13 @@ def load_channel_data(handle, cursor):
     client2hub_transferred = _transferred(client2hub_state)
     client2hub_deposit_amount = _balance(
         client2hub_deposit_address, connection["asset"])
-    unnotified_commit = db.unnotified_commit(handle, cursor=cursor)
-    hub2client_payments_sum = db.hub2client_payments_sum(handle, cursor=cursor)
-    client2hub_payments_sum = db.client2hub_payments_sum(handle, cursor=cursor)
+    unnotified_commit = db.unnotified_commit(
+        channel_id=connection["hub2client_channel_id"], cursor=cursor
+    )
+    hub2client_payments_sum = db.hub2client_payments_sum(handle=handle,
+                                                         cursor=cursor)
+    client2hub_payments_sum = db.client2hub_payments_sum(handle=handle,
+                                                         cursor=cursor)
     transferred_amount = client2hub_transferred - hub2client_transferred
     payments_sum = hub2client_payments_sum - client2hub_payments_sum
 
@@ -406,7 +416,7 @@ def process_payment(payer_handle, cursor, payment):
         cursor.execute("BEGIN TRANSACTION;")
 
     payment["payer_handle"] = payer_handle
-    db.add_payment(payment, cursor=cursor)
+    db.add_payment(cursor=cursor, **payment)
     cursor.execute("COMMIT;")
 
 

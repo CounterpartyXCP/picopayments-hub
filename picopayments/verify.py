@@ -10,7 +10,7 @@ from picopayments import err
 from picopayments import db
 from picopayments import etc
 from picopayments import rpc
-from picopayments import sys
+from picopayments import lib
 
 
 URL_REGEX = re.compile(
@@ -82,7 +82,7 @@ def is_url(url):
 
 def client2hub_commit(handle, commit_rawtx, commit_script):
     netcode = "XTN" if etc.testnet else "BTC"
-    client2hub_channel = db.receive_channel(handle)
+    client2hub_channel = db.receive_channel(handle=handle)
     deposit_utxos = rpc.cp_call(
         method="get_unspent_txouts",
         params={"address": client2hub_channel["deposit_address"]}
@@ -96,7 +96,7 @@ def client2hub_commit(handle, commit_rawtx, commit_script):
 def channel_client(handle, pubkey):
 
     # check channel exists
-    client2hub_channel = db.receive_channel(handle)
+    client2hub_channel = db.receive_channel(handle=handle)
     if not client2hub_channel:
         raise err.HandleNotFound(handle)
 
@@ -128,7 +128,7 @@ def request_input(asset, pubkey, spend_secret_hash, hub_rpc_url):
         is_url(hub_rpc_url)
 
     # asset must be in terms
-    all_terms = sys.terms()
+    all_terms = lib.terms()
     if asset not in all_terms:
         raise err.AssetNotInTerms(asset)
 

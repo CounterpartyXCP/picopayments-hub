@@ -6,9 +6,9 @@ import tempfile
 import jsonschema
 from picopayments import api
 from picopayments import auth
-from picopayments import sys
+from picopayments import lib
 from picopayments import etc
-from picopayments import cli
+from picopayments import srv
 from picopayments import err
 from picopayments import rpc
 from picopayments import Client
@@ -27,11 +27,11 @@ class TestMpcHubSync(unittest.TestCase):
         self.tempdir = tempfile.mkdtemp(prefix="picopayments_test_")
         self.basedir = os.path.join(self.tempdir, "basedir")
         shutil.copytree("tests/fixtures", self.basedir)
-        sys.initialize(cli.parse([
+        srv.main([
             "--testnet",
             "--basedir={0}".format(self.basedir),
             "--cp_url={0}".format(CP_URL)
-        ]))
+        ], serve=False)
         with open(os.path.join(self.basedir, "data.json")) as fp:
             self.data = json.load(fp)
 
@@ -41,7 +41,7 @@ class TestMpcHubSync(unittest.TestCase):
     def test_payment_exceeds_spendable(self):
 
         def func():
-            secret = sys.create_secret()
+            secret = lib.create_secret()
             connection = self.data["connections"]["alpha"]
             handle = connection["handle"]
             wif = connection["client_wif"]
@@ -65,7 +65,7 @@ class TestMpcHubSync(unittest.TestCase):
     def test_payment_exceeds_receivable(self):
 
         def func():
-            secret = sys.create_secret()
+            secret = lib.create_secret()
             connection = self.data["connections"]["alpha"]
             handle = connection["handle"]
             wif = connection["client_wif"]
@@ -88,7 +88,7 @@ class TestMpcHubSync(unittest.TestCase):
     def test_pubkey_missmatch(self):
 
         def func():
-            secret = sys.create_secret()
+            secret = lib.create_secret()
             connection = self.data["connections"]["alpha"]
             handle = connection["handle"]
             wif = util.random_wif(netcode=etc.netcode)
@@ -107,7 +107,7 @@ class TestMpcHubSync(unittest.TestCase):
     def test_validate_handles_exist(self):
 
         def func():
-            secret = sys.create_secret()
+            secret = lib.create_secret()
             connection = self.data["connections"]["alpha"]
             handle = connection["handle"]
             wif = connection["client_wif"]
@@ -130,7 +130,7 @@ class TestMpcHubSync(unittest.TestCase):
     def test_validate_revoke_format(self):
 
         def func():
-            secret = sys.create_secret()
+            secret = lib.create_secret()
             connection = self.data["connections"]["alpha"]
             handle = connection["handle"]
             wif = connection["client_wif"]
@@ -149,7 +149,7 @@ class TestMpcHubSync(unittest.TestCase):
     def test_validate_commit_format(self):
 
         def func():
-            secret = sys.create_secret()
+            secret = lib.create_secret()
             connection = self.data["connections"]["alpha"]
             handle = connection["handle"]
             wif = connection["client_wif"]
