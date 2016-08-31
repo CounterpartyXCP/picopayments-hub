@@ -17,6 +17,13 @@ class AssetNotInTerms(Exception):
         super(AssetNotInTerms, self).__init__(msg.format(asset))
 
 
+class AssetDoesNotExist(Exception):
+
+    def __init__(self, asset):
+        msg = "Asset does not exist: '{0}'"
+        super(AssetDoesNotExist, self).__init__(msg.format(asset))
+
+
 class DepositAlreadyGiven(Exception):
 
     def __init__(self, handle):

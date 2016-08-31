@@ -62,7 +62,7 @@ class TestMpcHubRequest(unittest.TestCase):
     def test_validate_asset_in_terms(self):
 
         def func():
-            asset = "BADASSET"
+            asset = "TESTASSETONE"
             client_key = lib.create_key(asset)
             secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
             params = {"asset": asset, "spend_secret_hash": secret_hash}
@@ -70,6 +70,18 @@ class TestMpcHubRequest(unittest.TestCase):
             api.mpc_hub_request(**params)
 
         self.assertRaises(err.AssetNotInTerms, func)
+
+    def test_validate_asset_exists(self):
+
+        def func():
+            asset = "NONEXISTINGASSET"
+            client_key = lib.create_key(asset)
+            secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
+            params = {"asset": asset, "spend_secret_hash": secret_hash}
+            params = auth.sign_json(params, client_key["wif"])
+            api.mpc_hub_request(**params)
+
+        self.assertRaises(err.AssetDoesNotExist, func)
 
     def test_validate_url(self):
 

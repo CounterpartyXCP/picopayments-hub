@@ -86,7 +86,7 @@ test: setup
 	$(PEP8) tests
 	$(COVERAGE) run --source=picopayments setup.py test
 	$(COVERAGE) html
-	$(COVERAGE) report  # --fail-under=90
+	$(COVERAGE) report --fail-under=90
 
 
 publish: test

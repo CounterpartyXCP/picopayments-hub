@@ -4,61 +4,53 @@
 
 
 import apsw
-from threading import RLock
 from counterpartylib.lib.micropayments import util
 from counterpartylib.lib.micropayments import scripts
 from picopayments import etc
 from picopayments import sql
-from picopayments.sql import load
-from picopayments.sql import make_fetchone
-from picopayments.sql import make_fetchall
-from picopayments.sql import make_execute
 
 
 # old version -> migrate sql
 _MIGRATIONS = {
-    0: load("migration_0"),
+    0: sql.load("migration_0"),
 }
 _HANDLE_EXISTS = "SELECT EXISTS(SELECT * FROM HubConnection WHERE handle = ?);"
-_COMMITS_REQUESTED = load("commits_requested")
-_COMMITS_ACTIVE = load("commits_active")
-_COMMITS_REVOKED = load("commits_revoked")
-_ADD_HUB_CONNECTION = load("add_hub_connection")
-_ADD_REVOKE_SECRET = load("add_revoke_secret")
-_ADD_KEY = load("add_key")
-_ADD_COMMIT_REQUESTED = load("add_commit_requested")
-_ADD_COMMIT_ACTIVE = load("add_commit_active")
-_ADD_COMMIT_REVOKED = load("add_commit_revoked")
-_RM_COMMITS = load("rm_commits")
-_COMPLETE_HUB_CHANNELS = load("complete_hub_channels")
-_SET_PAYMENT_NOTIFIED = load("set_payment_notified")
-_SET_REVOKE_NOTIFIED = load("set_revoke_notified")
-_SET_NEXT_REVOKE_SECRET_HASH = load("set_next_revoke_secret_hash")
+_COMMITS_REQUESTED = sql.load("commits_requested")
+_COMMITS_ACTIVE = sql.load("commits_active")
+_COMMITS_REVOKED = sql.load("commits_revoked")
+_ADD_HUB_CONNECTION = sql.load("add_hub_connection")
+_ADD_REVOKE_SECRET = sql.load("add_revoke_secret")
+_ADD_KEY = sql.load("add_key")
+_ADD_COMMIT_REQUESTED = sql.load("add_commit_requested")
+_ADD_COMMIT_ACTIVE = sql.load("add_commit_active")
+_ADD_COMMIT_REVOKED = sql.load("add_commit_revoked")
+_RM_COMMITS = sql.load("rm_commits")
+_COMPLETE_HUB_CHANNELS = sql.load("complete_hub_channels")
+_SET_PAYMENT_NOTIFIED = sql.load("set_payment_notified")
+_SET_REVOKE_NOTIFIED = sql.load("set_revoke_notified")
+_SET_NEXT_REVOKE_SECRET_HASH = sql.load("set_next_revoke_secret_hash")
 
 
-key = make_fetchone("key")
-terms = make_fetchone("terms")
-channel_payer_key = make_fetchone("channel_payer_key")
-receive_channel = make_fetchone("receive_channel")
-unnotified_commit = make_fetchone("unnotified_commit")
-hub_connections = make_fetchall("hub_connections")
-set_commit_notified = make_execute("set_commit_notified")
-unnotified_revokes = make_fetchall("unnotified_revokes")
-add_payment = make_execute("add_payment")
-unnotified_payments = make_fetchall("unnotified_payments")
-hub_connection = make_fetchone("hub_connection")
-micropayment_channel = make_fetchone("micropayment_channel")
-hub2client_payments_sum = make_fetchone("hub2client_payments_sum", getsum=True)
-client2hub_payments_sum = make_fetchone("client2hub_payments_sum", getsum=True)
-
-
-lock = RLock()  # FIXME move to etc
+key = sql.make_fetchone("key")
+terms = sql.make_fetchone("terms")
+channel_payer_key = sql.make_fetchone("channel_payer_key")
+receive_channel = sql.make_fetchone("receive_channel")
+unnotified_commit = sql.make_fetchone("unnotified_commit")
+hub_connections = sql.make_fetchall("hub_connections")
+set_commit_notified = sql.make_execute("set_commit_notified")
+unnotified_revokes = sql.make_fetchall("unnotified_revokes")
+add_payment = sql.make_execute("add_payment")
+unnotified_payments = sql.make_fetchall("unnotified_payments")
+hub_connection = sql.make_fetchone("hub_connection")
+micropayment_channel = sql.make_fetchone("micropayment_channel")
+hub2client_payments_sum = sql.make_fetchone("hub2client_payments_sum", True)
+client2hub_payments_sum = sql.make_fetchone("client2hub_payments_sum", True)
 
 
 def setup():
 
     # get connection
-    connection = apsw.Connection(etc.path_database)
+    connection = apsw.Connection(etc.database_path)
 
     # use foreign keys
     cursor = connection.cursor()

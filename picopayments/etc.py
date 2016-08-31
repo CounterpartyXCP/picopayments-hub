@@ -4,14 +4,15 @@
 
 
 import os
+from threading import RLock
 
 
+# network
 testnet = None  # loaded from args
 netcode = None  # loaded from args
 
 
 # paths and files
-path_database = None  # loaded from args
 path_terms = None  # loaded from args
 path_log = None  # loaded from args
 
@@ -21,14 +22,16 @@ host = None  # loaded from args
 port = None  # loaded from args
 
 
-# counterpartylib api
+# counterparty
 counterparty_url = None  # loaded from args
 counterparty_username = None  # loaded from args
 counterparty_password = None  # loaded from args
 
 
-# vars
+# database
+database_path = None  # loaded from args
 database_connection = None  # set in db.setup
+database_lock = RLock()
 
 
 def load(args):
@@ -55,7 +58,7 @@ def load(args):
         "counterparty_password": args["cp_password"],
 
         # set paths
-        "path_database": os.path.join(basedir, database_file),
+        "database_path": os.path.join(basedir, database_file),
         "path_terms": os.path.join(basedir, terms_file),
         "path_log": os.path.join(basedir, log_file),
     })

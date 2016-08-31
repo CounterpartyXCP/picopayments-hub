@@ -14,7 +14,7 @@ from picopayments import etc
 CALL_LOCAL_PROCESS = False
 
 
-def _http_call(url, method, params, username=None,
+def _http_call(url, method, params={}, username=None,
                password=None, verify_ssl_cert=True):
     payload = {"method": method, "params": params, "jsonrpc": "2.0", "id": 0}
     kwargs = {
@@ -31,7 +31,7 @@ def _http_call(url, method, params, username=None,
     return response["result"]
 
 
-def call(url, method, params, username=None, password=None,
+def call(url, method, params={}, username=None, password=None,
          verify_ssl_cert=True, auth_wif=None):
 
     if auth_wif:
@@ -42,7 +42,7 @@ def call(url, method, params, username=None, password=None,
         result = getattr(api, method)(**params)
     else:
         result = _http_call(
-            url, method, params, username=username,
+            url, method, params=params, username=username,
             password=password, verify_ssl_cert=verify_ssl_cert
         )  # pragma: no cover
     if auth_wif:
@@ -51,9 +51,9 @@ def call(url, method, params, username=None, password=None,
     return result
 
 
-def cp_call(method, params):
+def cp_call(method, params={}):
     return _http_call(
-        etc.counterparty_url, method, params,
+        etc.counterparty_url, method, params=params,
         username=etc.counterparty_username,
         password=etc.counterparty_password
     )

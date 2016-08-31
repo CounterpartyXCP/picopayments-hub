@@ -62,7 +62,10 @@ REVOKES_SCHEMA = {
 
 def asset_exists(asset):
     validate.is_string(asset)
-    # FIXME check against all counterparty assets
+    # assets = rpc.cp_call(method="get_asset_names")
+    assets = [e["asset_name"] for e in rpc.cp_call(method="get_assets")]
+    if asset not in assets:
+        raise err.AssetDoesNotExist(asset)
 
 
 def assets_exists(assets):

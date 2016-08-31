@@ -42,6 +42,7 @@ install:
 script:
   - pep8 picopayments
   - coverage run --source="picopayments" setup.py test
+  - coverage report --fail-under=90
 
 after_success:
   - coveralls
