@@ -13,7 +13,7 @@ from picopayments import err
 CP_URL = "http://139.59.214.74:14000/api/"
 
 
-class TestSYS(unittest.TestCase):
+class TestLIB(unittest.TestCase):
 
     def setUp(self):
         self.tempdir = tempfile.mkdtemp(prefix="picopayments_test_")

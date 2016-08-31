@@ -35,10 +35,10 @@ class TestUsrClientBlockSend(unittest.TestCase):
     def test_standard_usage(self):
         url = "https://127.0.0.1:15000/api/"
         client = Client(url, verify_ssl_cert=False)
-        src_wif = self.data["funded_wifs"]["gamma"]
+        src_wif = self.data["funded"]["gamma"]["wif"]
+        asset = self.data["funded"]["gamma"]["asset"]
         dest_address = util.wif2address(util.random_wif(netcode=etc.netcode))
         quantity = 42
-        asset = "A14456548018133352000"
         txid = client.block_send(
             source=src_wif, destination=dest_address, asset=asset,
             quantity=quantity, publish_tx=False

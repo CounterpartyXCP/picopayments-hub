@@ -74,9 +74,11 @@ class Client(object):
 
         # create and sign transaction
         unsigned_rawtx = self.rpc.create_send(**kwargs)
-        signed_rawtx = sign_deposit(self.get_tx, wif, unsigned_rawtx)
+        return self.sign_and_publish(unsigned_rawtx, wif,
+                                     publish_tx=publish_tx)
 
-        # publish transaction
+    def sign_and_publish(self, unsigned_rawtx, wif, publish_tx=True):
+        signed_rawtx = sign_deposit(self.get_tx, wif, unsigned_rawtx)
         return self._publish(signed_rawtx, publish_tx)
 
     def micro_send(self, handle, quantity, token=None):
@@ -137,8 +139,8 @@ class Client(object):
         h2c_deposit_script = self._exchange_deposit_scripts(
             h2c_next_revoke_secret_hash
         )
-        c2h_deposit_txid = self._sign_and_publish_deposit(
-            c2h_deposit_rawtx, publish_tx
+        c2h_deposit_txid = self.sign_and_publish(
+            c2h_deposit_rawtx, self.client_wif, publish_tx=publish_tx
         )
         self._set_initial_h2c_state(h2c_deposit_script)
         self.payments_sent = []
@@ -200,12 +202,6 @@ class Client(object):
             )  # pragma: no cover
         else:
             return util.gettxid(rawtx)
-
-    def _sign_and_publish_deposit(self, c2h_deposit_rawtx, publish_tx):
-        signed_c2h_deposit_rawtx = sign_deposit(
-            self.get_tx, self.client_wif, c2h_deposit_rawtx
-        )
-        return self._publish(signed_c2h_deposit_rawtx, publish_tx)
 
     def _validate_matches_terms(self):
         timeout_limit = self.channel_terms["timeout_limit"]

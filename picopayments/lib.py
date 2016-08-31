@@ -400,7 +400,9 @@ def process_payment(payer_handle, cursor, payment):
     if payee_handle:
         payee = load_channel_data(payee_handle, cursor)
         if payer["connection"]["asset"] != payee["connection"]["asset"]:
-            raise err.AssetMissmatch(payer["asset"], payee["asset"])
+            raise err.AssetMissmatch(
+                payer["connection"]["asset"], payee["connection"]["asset"]
+            )
         if payee["hub2client_expired"]:
             raise err.DepositExpired(payee_handle, "hub2client")
         if payment["amount"] > payee["receivable_amount"]:

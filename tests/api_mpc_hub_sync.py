@@ -190,6 +190,45 @@ class TestMpcHubSync(unittest.TestCase):
 
         self.assertIsNotNone(result)
 
+    def test_asset_missmatch(self):
+
+        def func():
+            # create alice XCP connection
+            auth_wif = self.data["funded"]["epsilon"]["wif"]
+            asset = self.data["funded"]["epsilon"]["asset"]
+            alice = Client(
+                "https://127.0.0.1:15000/api/",
+                auth_wif=auth_wif,
+                verify_ssl_cert=False
+            )
+            txid = alice.connect(1337, 65535, asset=asset, publish_tx=False)
+            self.assertIsNotNone(txid)
+
+            # load bob A14456548018133352000 connection
+            quantity = 5
+            bob = Client.deserialize(self.data["connections"]["alpha"])
+            sync_fee = bob.channel_terms["sync_fee"]
+            commit = bob.create_commit(quantity + sync_fee)
+            h2c_next_revoke_secret_value = util.b2h(os.urandom(32))
+            h2c_next_revoke_secret_hash = util.hash160hex(
+                h2c_next_revoke_secret_value
+            )
+            params = {
+                "handle": bob.handle,
+                "sends": [{
+                    "payee_handle": alice.handle,
+                    "amount": quantity,
+                    "token": "deadbeef"
+                }],
+                "commit": commit,
+                "revokes": None,
+                "next_revoke_secret_hash": h2c_next_revoke_secret_hash
+            }
+            params = auth.sign_json(params, bob.client_wif)
+            api.mpc_hub_sync(**params)
+
+        self.assertRaises(err.AssetMissmatch, func)
+
 
 if __name__ == "__main__":
     unittest.main()

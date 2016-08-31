@@ -1,8 +1,25 @@
 {
-    "funded_wifs": {
-        "alpha": "cRBTTczEq4NxLqPffEnfAJ4FnVZfyo6hMhToT6soQYtvLNBRtDez",
-        "beta": "cReEXrioMRxKVUJbGA6YHoY7pNZUd3YHSKjbHJTbmyFTUnfNSkMn",
-        "gamma": "cN4WzfwJ6pzPhxmtJFoHCGddccZ7XiiscsyUaeRZSUgaXAMLpNVg"
+    "funded": {
+        "alpha": {
+            "asset": "A14456548018133352000",
+            "wif": "cRBTTczEq4NxLqPffEnfAJ4FnVZfyo6hMhToT6soQYtvLNBRtDez"
+        },
+        "beta": {
+            "asset": "A14456548018133352000",
+            "wif": "cReEXrioMRxKVUJbGA6YHoY7pNZUd3YHSKjbHJTbmyFTUnfNSkMn"
+        },
+        "gamma": {
+            "asset": "A14456548018133352000",
+            "wif": "cN4WzfwJ6pzPhxmtJFoHCGddccZ7XiiscsyUaeRZSUgaXAMLpNVg"
+        },
+        "delta": {
+            "asset": "XCP",
+            "wif": "cUzDUhFDr2cRybFxw8g5dCfsJP2tUdJrKZNuKCVAk5HnTVkiLvSv"
+        },
+        "epsilon": {
+            "asset": "XCP",
+            "wif": "cQ9CXvnQAkMfhkdWuL4E8DxgxUvN3qLd5ePGaGn9cBNiLsjszeQ6"
+        }
     },
     "connections": {
         "alpha": {
