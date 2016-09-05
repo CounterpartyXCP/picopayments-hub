@@ -61,30 +61,6 @@ class TestMpcHubSync(unittest.TestCase):
 
         self.assertRaises(err.PaymentExceedsSpendable, func)
 
-    @unittest.skip("fix test")
-    def test_payment_exceeds_receivable(self):
-
-        def func():
-            secret = lib.create_secret()
-            connection = self.data["connections"]["alpha"]
-            handle = connection["handle"]
-            wif = connection["client_wif"]
-            params = {
-                "handle": handle,
-                "sends": [{
-                    "payee_handle": handle,
-                    "amount": 1336,
-                    "token": "deadbeef"
-                }],
-                "commit": None,
-                "revokes": None,
-                "next_revoke_secret_hash": secret["secret_hash"]
-            }
-            params = auth.sign_json(params, wif)
-            api.mpc_hub_sync(**params)
-
-        self.assertRaises(err.PaymentExceedsReceivable, func)
-
     def test_pubkey_missmatch(self):
 
         def func():
@@ -228,6 +204,91 @@ class TestMpcHubSync(unittest.TestCase):
             api.mpc_hub_sync(**params)
 
         self.assertRaises(err.AssetMissmatch, func)
+
+    def test_payment_exceeds_receivable(self):
+
+        def func():
+            alice = Client.deserialize(self.data["connections"]["beta"])
+
+            # load bob A14456548018133352000 connection
+            quantity = 5
+            bob = Client.deserialize(self.data["connections"]["alpha"])
+            sync_fee = bob.channel_terms["sync_fee"]
+            commit = bob.create_commit(quantity + sync_fee)
+            h2c_next_revoke_secret_value = util.b2h(os.urandom(32))
+            h2c_next_revoke_secret_hash = util.hash160hex(
+                h2c_next_revoke_secret_value
+            )
+            params = {
+                "handle": bob.handle,
+                "sends": [{
+                    "payee_handle": alice.handle,
+                    "amount": quantity,
+                    "token": "deadbeef"
+                }],
+                "commit": commit,
+                "revokes": None,
+                "next_revoke_secret_hash": h2c_next_revoke_secret_hash
+            }
+            params = auth.sign_json(params, bob.client_wif)
+            api.mpc_hub_sync(**params)
+
+        self.assertRaises(err.PaymentExceedsReceivable, func)
+
+    def test_payer_deposit_expired(self):
+
+        def func():
+            quantity = 5
+            client = Client.deserialize(self.data["connections"]["eta"])
+            sync_fee = client.channel_terms["sync_fee"]
+            commit = client.create_commit(quantity + sync_fee)
+            h2c_next_revoke_secret_value = util.b2h(os.urandom(32))
+            h2c_next_revoke_secret_hash = util.hash160hex(
+                h2c_next_revoke_secret_value
+            )
+            params = {
+                "handle": client.handle,
+                "sends": [{
+                    "payee_handle": client.handle,
+                    "amount": quantity,
+                    "token": "deadbeef"
+                }],
+                "commit": commit,
+                "revokes": None,
+                "next_revoke_secret_hash": h2c_next_revoke_secret_hash
+            }
+            params = auth.sign_json(params, client.client_wif)
+            api.mpc_hub_sync(**params)
+
+        self.assertRaises(err.DepositExpired, func)
+
+    def test_payee_deposit_expired(self):
+
+        def func():
+            alice = Client.deserialize(self.data["connections"]["alpha"])
+            bob = Client.deserialize(self.data["connections"]["eta"])
+            quantity = 5
+            sync_fee = alice.channel_terms["sync_fee"]
+            commit = alice.create_commit(quantity + sync_fee)
+            h2c_next_revoke_secret_value = util.b2h(os.urandom(32))
+            h2c_next_revoke_secret_hash = util.hash160hex(
+                h2c_next_revoke_secret_value
+            )
+            params = {
+                "handle": alice.handle,
+                "sends": [{
+                    "payee_handle": bob.handle,
+                    "amount": quantity,
+                    "token": "deadbeef"
+                }],
+                "commit": commit,
+                "revokes": None,
+                "next_revoke_secret_hash": h2c_next_revoke_secret_hash
+            }
+            params = auth.sign_json(params, alice.client_wif)
+            api.mpc_hub_sync(**params)
+
+        self.assertRaises(err.DepositExpired, func)
 
 
 if __name__ == "__main__":

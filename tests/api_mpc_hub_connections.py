@@ -51,7 +51,7 @@ class TestMpcHubConnections(unittest.TestCase):
 
     def test_all(self):
         connections = api.mpc_hub_connections()
-        self.assertTrue(len(connections) == 6)
+        self.assertTrue(len(connections) == 7)
         for connection in connections:
             jsonschema.validate(connection, CONNECTION_RESULT_SCHEMA)
             auth.verify_json(connection)
@@ -62,7 +62,7 @@ class TestMpcHubConnections(unittest.TestCase):
         connection = self.data["connections"]["alpha"]
         asset = connection["c2h_state"]["asset"]
         connections = api.mpc_hub_connections(assets=[asset])
-        self.assertTrue(len(connections) == 6)
+        self.assertTrue(len(connections) == 7)
         for connection in connections:
             self.assertEqual(connection["asset"], asset)
 

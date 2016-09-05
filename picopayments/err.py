@@ -106,6 +106,6 @@ class InvalidSignature(Exception):
 
 class DepositExpired(Exception):
 
-    def __init__(self, handle, direction):
-        msg = "Deposit expired for connection {0} {1}"
-        super(DepositExpired, self).__init__(msg.format(handle, direction))
+    def __init__(self, handle, side):
+        msg = "Deposit expired for connection {0} side {1}"
+        super(DepositExpired, self).__init__(msg.format(handle, side))

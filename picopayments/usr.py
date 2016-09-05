@@ -4,6 +4,7 @@
 
 
 import os
+from picopayments import etc
 from picopayments import RPC
 from counterpartylib.lib.micropayments import util
 from counterpartylib.lib.micropayments.scripts import sign_deposit
@@ -31,8 +32,10 @@ class Client(object):
         "payments_queued",
     ]
 
-    def __init__(self, url, auth_wif=None, username=None,
-                 password=None, verify_ssl_cert=True):
+    def __init__(self, url=None, auth_wif=None,
+                 username=None, password=None, verify_ssl_cert=True):
+        if url is None:
+            url = "https://127.0.0.1:{0}/api/".format(etc.port)
         self.rpc = RPC(url, auth_wif=auth_wif, username=username,
                        password=password, verify_ssl_cert=False)
         for attr in self._SERIALIZABLE_ATTRS:
@@ -121,7 +124,7 @@ class Client(object):
         )
         return {"rawtx": rawtx, "script": script}
 
-    def connect(self, quantity, expire_time, asset="XCP",
+    def connect(self, quantity, expire_time=1024, asset="XCP",
                 delay_time=2, own_url=None, publish_tx=True):
         """TODO doc string"""
 

@@ -19,6 +19,18 @@
         "epsilon": {
             "asset": "XCP",
             "wif": "cQ9CXvnQAkMfhkdWuL4E8DxgxUvN3qLd5ePGaGn9cBNiLsjszeQ6"
+        },
+        "zeta": {
+            "asset": "XCP",
+            "wif": "cPdhMrBhPdTMe1CexTD1jRXUfQtHoEQQxt42vFsxXUUQwCZ9onMw"
+        },
+        "eta": {
+            "asset": "A14456548018133352000",
+            "wif": "cR6U73PjmxykL3d435YdyDdt4zGHbRMgf6r3gk4R168gjkmrVn5k"
+        },
+        "theta": {
+            "asset": "A14456548018133352000",
+            "wif": "cTBUGqvrEgCdpZqB9uZLT3seQZYFbz4Nij1JddmcU5aCCLTRkV3h"
         }
     },
     "connections": {
@@ -114,6 +126,52 @@
                 "70a0cd02d944b6ef3743c979509258a5b7bb8bad": "ac53d947ec236f81fdec7c604e61092129e88e7c57cb1d6e7c79bceca0c93ebb"
             }
         },
+        "gamma": {
+            "c2h_deposit_expire_time": 65535,
+            "c2h_commit_delay_time": 2,
+            "c2h_deposit_quantity": 1337,
+            "c2h_next_revoke_secret_hash": "28c5649df291acfae40a57abd6288fe4ade87644",
+            "c2h_spend_secret_hash": "9e602b29985212e551b15765fedc944bd6438835",
+            "payments_sent": [],
+            "payments_received": [],
+            "payments_queued": [],
+            "c2h_state": {
+                "asset": "A14456548018133352000",
+                "commits_active": [],
+                "commits_requested": [],
+                "commits_revoked": [],
+                "deposit_script": "635221027528aba3cbbb8df7ff4186ec0ca1629324f67166c74d4824a51081dae5867d142102f5fd63ffc6660d8f5131350323c830e14d6508da23904657ac204b021f93e85852ae6763a9149e602b29985212e551b15765fedc944bd64388358821027528aba3cbbb8df7ff4186ec0ca1629324f67166c74d4824a51081dae5867d14ac6703ffff00b27521027528aba3cbbb8df7ff4186ec0ca1629324f67166c74d4824a51081dae5867d14ac6868"
+            },
+            "channel_terms": {
+                "deposit_limit": 0,
+                "deposit_ratio": 1.0,
+                "setup_ttl": 2,
+                "sync_fee": 1,
+                "timeout_limit": 0
+            },
+            "client_pubkey": "027528aba3cbbb8df7ff4186ec0ca1629324f67166c74d4824a51081dae5867d14",
+            "client_wif": "cPdkWiXiNsufpPxjRyCgUDjLD6F4bV9D5mgpv4e9YAAFnRw3hvy1",
+            "h2c_state": {
+                "asset": "A14456548018133352000",
+                "commits_active": [],
+                "commits_requested": [],
+                "commits_revoked": [],
+                "deposit_script": "63522102f5fd63ffc6660d8f5131350323c830e14d6508da23904657ac204b021f93e85821027528aba3cbbb8df7ff4186ec0ca1629324f67166c74d4824a51081dae5867d1452ae6763a9147c79057ed6f2a51474249e8bf12444259569b0b8882102f5fd63ffc6660d8f5131350323c830e14d6508da23904657ac204b021f93e858ac6703ffff00b2752102f5fd63ffc6660d8f5131350323c830e14d6508da23904657ac204b021f93e858ac6868"
+            },
+            "handle": "56c0eaecaa7e1386629588c8d2a35ac1f3b46ab01c73c6baaf1374f3eab4d0bb",
+            "hub": {
+                "auth_wif": "cPdkWiXiNsufpPxjRyCgUDjLD6F4bV9D5mgpv4e9YAAFnRw3hvy1",
+                "password": null,
+                "url": "https://127.0.0.1:15000/api/",
+                "username": null,
+                "verify_ssl_cert": false
+            },
+            "hub_pubkey": "02f5fd63ffc6660d8f5131350323c830e14d6508da23904657ac204b021f93e858",
+            "secrets": {
+                "0b426f5689f6261d7d4540c8dbe5262667c45350": "7b1e168ad5371d30b183c72b7d5068802fb965d60e3a2b2933e0b68ab3d72cac",
+                "7c79057ed6f2a51474249e8bf12444259569b0b8": "3290bf3818d1096563ee030178da86bf29647d0fbffa4add95f8ff4799e99af5"
+            }
+        },
         "delta": {
             "c2h_deposit_expire_time": 65535,
             "c2h_commit_delay_time": 2,
@@ -206,52 +264,6 @@
                 "e3b292fec4b9f89a9872eb251df7e0146f8d9a9c": "bff12b4fb0357f3742f3f7500fb3d216c9d500744c66cb6d5e49f3bfcb203267"
             }
         },
-        "gamma": {
-            "c2h_deposit_expire_time": 65535,
-            "c2h_commit_delay_time": 2,
-            "c2h_deposit_quantity": 1337,
-            "c2h_next_revoke_secret_hash": "28c5649df291acfae40a57abd6288fe4ade87644",
-            "c2h_spend_secret_hash": "9e602b29985212e551b15765fedc944bd6438835",
-            "payments_sent": [],
-            "payments_received": [],
-            "payments_queued": [],
-            "c2h_state": {
-                "asset": "A14456548018133352000",
-                "commits_active": [],
-                "commits_requested": [],
-                "commits_revoked": [],
-                "deposit_script": "635221027528aba3cbbb8df7ff4186ec0ca1629324f67166c74d4824a51081dae5867d142102f5fd63ffc6660d8f5131350323c830e14d6508da23904657ac204b021f93e85852ae6763a9149e602b29985212e551b15765fedc944bd64388358821027528aba3cbbb8df7ff4186ec0ca1629324f67166c74d4824a51081dae5867d14ac6703ffff00b27521027528aba3cbbb8df7ff4186ec0ca1629324f67166c74d4824a51081dae5867d14ac6868"
-            },
-            "channel_terms": {
-                "deposit_limit": 0,
-                "deposit_ratio": 1.0,
-                "setup_ttl": 2,
-                "sync_fee": 1,
-                "timeout_limit": 0
-            },
-            "client_pubkey": "027528aba3cbbb8df7ff4186ec0ca1629324f67166c74d4824a51081dae5867d14",
-            "client_wif": "cPdkWiXiNsufpPxjRyCgUDjLD6F4bV9D5mgpv4e9YAAFnRw3hvy1",
-            "h2c_state": {
-                "asset": "A14456548018133352000",
-                "commits_active": [],
-                "commits_requested": [],
-                "commits_revoked": [],
-                "deposit_script": "63522102f5fd63ffc6660d8f5131350323c830e14d6508da23904657ac204b021f93e85821027528aba3cbbb8df7ff4186ec0ca1629324f67166c74d4824a51081dae5867d1452ae6763a9147c79057ed6f2a51474249e8bf12444259569b0b8882102f5fd63ffc6660d8f5131350323c830e14d6508da23904657ac204b021f93e858ac6703ffff00b2752102f5fd63ffc6660d8f5131350323c830e14d6508da23904657ac204b021f93e858ac6868"
-            },
-            "handle": "56c0eaecaa7e1386629588c8d2a35ac1f3b46ab01c73c6baaf1374f3eab4d0bb",
-            "hub": {
-                "auth_wif": "cPdkWiXiNsufpPxjRyCgUDjLD6F4bV9D5mgpv4e9YAAFnRw3hvy1",
-                "password": null,
-                "url": "https://127.0.0.1:15000/api/",
-                "username": null,
-                "verify_ssl_cert": false
-            },
-            "hub_pubkey": "02f5fd63ffc6660d8f5131350323c830e14d6508da23904657ac204b021f93e858",
-            "secrets": {
-                "0b426f5689f6261d7d4540c8dbe5262667c45350": "7b1e168ad5371d30b183c72b7d5068802fb965d60e3a2b2933e0b68ab3d72cac",
-                "7c79057ed6f2a51474249e8bf12444259569b0b8": "3290bf3818d1096563ee030178da86bf29647d0fbffa4add95f8ff4799e99af5"
-            }
-        },
         "zeta": {
             "c2h_deposit_expire_time": 65535,
             "c2h_commit_delay_time": 2,
@@ -297,6 +309,52 @@
                 "559fa76cdfc6142fdb27c00a93abcfd2188564fb": "77be0b3a8f0b015931fca79fae5367550da2a6c5541c068aab821fc7fa7c7a94",
                 "5dd30b9529016e046beee3efa4082ff13f3952b7": "f8d77d33c7ebead1b33d75b2df5b85d54fea775a9e393490fb0076fac562dad6"
             }
+        },
+        "eta": {
+            "client_wif": "cUxowdV2dcN1trniMdwLc3GK43Wc4qHoYtbC1cdKzwXSbShBwbJy",
+            "c2h_spend_secret_hash": "44f502ccfb551632e249df55a7c69982f8657952",
+            "client_pubkey": "02abb2c75a553230885e47f28a2926d4abee19d588cf04da5992e9e72fda109d35",
+            "h2c_state": {
+                "asset": "A14456548018133352000",
+                "commits_requested": [],
+                "deposit_script": "6352210358a0a3f96efc349f662817a80a2a157d1b1af646dac9a7b4693fbbb3a4b991992102abb2c75a553230885e47f28a2926d4abee19d588cf04da5992e9e72fda109d3552ae6763a91421d005d45d31532d224effb6f6814f9b283b9f3488210358a0a3f96efc349f662817a80a2a157d1b1af646dac9a7b4693fbbb3a4b99199ac6751b275210358a0a3f96efc349f662817a80a2a157d1b1af646dac9a7b4693fbbb3a4b99199ac6868",
+                "commits_revoked": [],
+                "commits_active": []
+            },
+            "payments_queued": [],
+            "handle": "9ac8dae8d89772f499d9f7a881803425168be6fbcd89d7ae052917b5152e5c49",
+            "c2h_deposit_expire_time": 1,
+            "secrets": {
+                "21d005d45d31532d224effb6f6814f9b283b9f34": "5f279cfca8ac8d0d3c2a355a0a1e90eecdfcf49543b43ab532e2f1dd2b0d57e1",
+                "511ebe973a34e4505363f59e9855e7442560ca0c": "2112c3237f3ca5f8f690d18f349b740568736003c3092fcd731b23b05b179bd6"
+            },
+            "c2h_state": {
+                "deposit_script": "63522102abb2c75a553230885e47f28a2926d4abee19d588cf04da5992e9e72fda109d35210358a0a3f96efc349f662817a80a2a157d1b1af646dac9a7b4693fbbb3a4b9919952ae6763a91444f502ccfb551632e249df55a7c69982f8657952882102abb2c75a553230885e47f28a2926d4abee19d588cf04da5992e9e72fda109d35ac6751b2752102abb2c75a553230885e47f28a2926d4abee19d588cf04da5992e9e72fda109d35ac6868",
+                "asset": "A14456548018133352000",
+                "commits_requested": [],
+                "commits_revoked": [],
+                "commits_active": []
+            },
+            "payments_received": [],
+            "payments_sent": [],
+            "c2h_next_revoke_secret_hash": "dcec9e8bc50343f83cddf26ee0e3dcd5e60ddce3",
+            "hub_pubkey": "0358a0a3f96efc349f662817a80a2a157d1b1af646dac9a7b4693fbbb3a4b99199",
+            "hub": {
+                "url": "https://127.0.0.1:15000/api/",
+                "username": null,
+                "verify_ssl_cert": false,
+                "auth_wif": "cUxowdV2dcN1trniMdwLc3GK43Wc4qHoYtbC1cdKzwXSbShBwbJy",
+                "password": null
+            },
+            "c2h_commit_delay_time": 2,
+            "channel_terms": {
+                "setup_ttl": 2,
+                "sync_fee": 1,
+                "timeout_limit": 0,
+                "deposit_ratio": 1.0,
+                "deposit_limit": 0
+            },
+            "c2h_deposit_quantity": 42
         }
     }
 }

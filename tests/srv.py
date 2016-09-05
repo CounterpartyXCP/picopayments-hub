@@ -1,7 +1,9 @@
 import os
+import time
 import shutil
 import unittest
 import tempfile
+import threading
 from pycoin.key import validate
 from picopayments import srv
 from picopayments import etc
@@ -74,6 +76,28 @@ class TestSRV(unittest.TestCase):
             "--version"
         ], serve=False)
         self.assertEqual(version, __version__)
+
+    def test_serve(self):
+        pass
+
+        # func = request.environ.get('werkzeug.server.shutdown')
+        # if func is None:
+        #     raise RuntimeError('Not running with the Werkzeug Server')
+        # raise RuntimeError('Running Werkzeug Server')
+        # func()
+
+        # def func():
+        #     while True:
+        #         time.sleep(1)
+        #
+        # thread = threading.Thread(target=func)
+        # thread.start()
+        #
+        # time.sleep(10)
+        #
+        # if not 'werkzeug.server.shutdown' in environ:
+        #     raise RuntimeError('Not running the development server')
+        # environ['werkzeug.server.shutdown']()
 
 
 if __name__ == "__main__":

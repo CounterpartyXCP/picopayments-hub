@@ -52,9 +52,6 @@ def create_hub_connection(asset, client_pubkey, hub2client_spend_secret_hash,
     # current terms and asset
     data = {"asset": asset}
     current_terms = terms().get(asset)
-    if current_terms is None:
-        raise err.AssetNotInTerms(asset)
-
     data.update(current_terms)
 
     # new hub key
@@ -386,8 +383,12 @@ def process_payment(payer_handle, cursor, payment):
 
     # load payer
     payer = load_channel_data(payer_handle, cursor)
+
+    # check if connection expired
     if payer["client2hub_expired"]:
-        raise err.DepositExpired(payer_handle, "client2hub")
+        raise err.DepositExpired(payer_handle, "client")
+    if payer["hub2client_expired"]:
+        raise err.DepositExpired(payer_handle, "hub")  # pragma: no cover
 
     # check payer has enough funds or can revoke sends until enough available
     if payment["amount"] > payer["sendable_amount"]:
@@ -403,8 +404,14 @@ def process_payment(payer_handle, cursor, payment):
             raise err.AssetMissmatch(
                 payer["connection"]["asset"], payee["connection"]["asset"]
             )
+
+        # check if connection expired
         if payee["hub2client_expired"]:
-            raise err.DepositExpired(payee_handle, "hub2client")
+            raise err.DepositExpired(payee_handle, "hub")
+        if payee["client2hub_expired"]:
+            raise err.DepositExpired(
+                payee_handle, "client")  # pragma: no cover
+
         if payment["amount"] > payee["receivable_amount"]:
             raise err.PaymentExceedsReceivable(
                 payment["amount"], payee["receivable_amount"], payment["token"]
