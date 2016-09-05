@@ -6,7 +6,6 @@ import tempfile
 from picopayments import srv
 from picopayments import etc
 from picopayments import rpc
-from picopayments import lib
 from picopayments import Client
 from counterpartylib.lib.micropayments import util
 
@@ -33,8 +32,7 @@ class TestUsrClientBlockSend(unittest.TestCase):
         shutil.rmtree(self.tempdir)
 
     def test_standard_usage(self):
-        url = "https://127.0.0.1:15000/api/"
-        client = Client(url, verify_ssl_cert=False)
+        client = Client(verify_ssl_cert=False)
         src_wif = self.data["funded"]["gamma"]["wif"]
         asset = self.data["funded"]["gamma"]["asset"]
         dest_address = util.wif2address(util.random_wif(netcode=etc.netcode))

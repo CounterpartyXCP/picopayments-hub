@@ -33,11 +33,9 @@ class TestUsrClientConnect(unittest.TestCase):
 
     def test_standard_usage(self):
         verify_ssl_cert = False
-        url = "https://127.0.0.1:15000/api/"
         auth_wif = self.data["funded"]["alpha"]["wif"]
         asset = self.data["funded"]["alpha"]["asset"]
-        client = Client(url, auth_wif=auth_wif,
-                        verify_ssl_cert=verify_ssl_cert)
+        client = Client(auth_wif=auth_wif, verify_ssl_cert=verify_ssl_cert)
         txid = client.connect(1337, 65535, asset=asset, publish_tx=False)
         self.assertIsNotNone(txid)
 

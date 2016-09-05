@@ -173,7 +173,6 @@ class TestMpcHubSync(unittest.TestCase):
             auth_wif = self.data["funded"]["epsilon"]["wif"]
             asset = self.data["funded"]["epsilon"]["asset"]
             alice = Client(
-                "https://127.0.0.1:15000/api/",
                 auth_wif=auth_wif,
                 verify_ssl_cert=False
             )

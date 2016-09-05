@@ -15,8 +15,12 @@ from picopayments import __version__
 
 @Request.application
 def application(request):
-    response = JSONRPCResponseManager.handle(request.data, dispatcher)
-    return Response(response.json, mimetype='application/json')
+    response = JSONRPCResponseManager.handle(
+        request.data, dispatcher
+    )  # pragma: no cover
+    return Response(
+        response.json, mimetype='application/json'
+    )  # pragma: no cover
 
 
 def main(args, serve=True):
@@ -46,10 +50,12 @@ def main(args, serve=True):
 
     if serve:
 
-        # setup ssl
-        ssl_context = 'adhoc'  # automatically create ssl context
-        if parsed["ssl_cert_file"] and parsed["ssl_pkey_file"]:
-            ssl_context = (parsed["ssl_cert_file"], parsed["ssl_pkey_file"])
+        # setup ssl (generate pkey and self signed cert if none given)
+        ssl_context = 'adhoc'  # pragma: no cover
+        cert = parsed["ssl_cert_file"]  # pragma: no cover
+        pkey = parsed["ssl_pkey_file"]  # pragma: no cover
+        if cert and pkey:  # pragma: no cover
+            ssl_context = (cert, pkey)  # pragma: no cover
 
         # start server
         run_simple(
@@ -57,4 +63,4 @@ def main(args, serve=True):
             application,
             processes=1,  # ensure db integrety, avoid race conditions
             ssl_context=ssl_context
-        )
+        )  # pragma: no cover

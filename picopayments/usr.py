@@ -97,11 +97,11 @@ class Client(object):
         })
         return token
 
-    def sync(self):
-        """TODO doc string"""
-
-        assert(self.connected())
-        pass  # FIXME implement
+    # def sync(self):
+    #     """TODO doc string"""
+    #
+    #     assert(self.connected())
+    #     pass  # FIXME implement
 
     def connected(self):
         """Returns True if connected to a hub"""
