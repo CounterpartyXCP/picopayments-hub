@@ -8,8 +8,8 @@ PicoPayments
 .. |BuildLink| image:: https://travis-ci.org/StorjRND/picopayments.svg
 .. _BuildLink: https://travis-ci.org/StorjRND/picopayments
 
-.. |CoverageLink| image:: https://coveralls.io/repos/Storj/picopayments/badge.svg
-.. _CoverageLink: https://coveralls.io/r/Storj/picopayments
+.. |CoverageLink| image:: https://coveralls.io/repos/StorjRND/picopayments/badge.svg
+.. _CoverageLink: https://coveralls.io/r/StorjRND/picopayments
 
 .. |LicenseLink| image:: https://img.shields.io/badge/license-MIT-blue.svg
 .. _LicenseLink: https://raw.githubusercontent.com/F483/picopayments/master/LICENSE
