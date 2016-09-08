@@ -84,6 +84,7 @@ def is_url(url):
 
 
 def client2hub_commit(handle, commit_rawtx, commit_script):
+    hub_connection(handle)
     netcode = "XTN" if etc.testnet else "BTC"
     client2hub_channel = db.receive_channel(handle=handle)
     deposit_utxos = rpc.cp_call(
@@ -96,7 +97,7 @@ def client2hub_commit(handle, commit_rawtx, commit_script):
     )
 
 
-def channel_client(handle, pubkey):
+def _channel_client(handle, pubkey):
 
     # check channel exists
     client2hub_channel = db.receive_channel(handle=handle)
@@ -136,24 +137,35 @@ def request_input(asset, pubkey, spend_secret_hash, hub_rpc_url):
         raise err.AssetNotInTerms(asset)
 
 
+def hub_connection(handle):
+    validate.is_hex(handle)
+    connection = db.hub_connection(handle=handle)
+    if not connection:
+        raise err.HandleNotFound(handle)
+    return connection
+
+
 def deposit_input(handle, deposit_script,
                   next_revoke_secret_hash, client_pubkey):
-    validate.is_hex(handle)
+
+    connection = hub_connection(handle)
+    if connection["complete"]:
+        raise err.DepositAlreadyGiven(handle)
+
+    # FIXME validate terms["expire_max"] >= expire time >= terms["expire_min"]
     validate.hash160(next_revoke_secret_hash)
-    client2hub_channel = channel_client(handle, client_pubkey)
+    client2hub_channel = _channel_client(handle, client_pubkey)
     expected_payee_pubkey = client2hub_channel["payee_pubkey"]
     expected_spend_secret_hash = client2hub_channel["spend_secret_hash"]
     validate.deposit_script(deposit_script, expected_payee_pubkey,
                             expected_spend_secret_hash)
-    if client2hub_channel["meta_complete"]:
-        raise err.DepositAlreadyGiven(handle)
 
 
 def sync_input(handle, next_revoke_secret_hash, client_pubkey,
                payments, commit, revokes):
-    validate.is_hex(handle)
+    hub_connection(handle)
     validate.hash160(next_revoke_secret_hash)
-    channel_client(handle, client_pubkey)
+    _channel_client(handle, client_pubkey)
 
     handles = []
     if payments:

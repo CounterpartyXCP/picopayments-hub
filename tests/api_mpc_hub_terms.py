@@ -4,7 +4,6 @@ import shutil
 import unittest
 import tempfile
 from picopayments import api
-from picopayments import lib
 from picopayments import srv
 
 
@@ -35,25 +34,28 @@ class TestMpcHubTerms(unittest.TestCase):
         terms = api.mpc_hub_terms()
         self.assertEqual(terms, {
             "BTC": {
+                "deposit_max": 0,
+                "deposit_min": 0,
                 "deposit_ratio": 1.0,
-                "timeout_limit": 0,
-                "sync_fee": 1,
-                "setup_ttl": 2,
-                "deposit_limit": 0
+                "expire_max": 0,
+                "expire_min": 0,
+                "sync_fee": 1
             },
             "XCP": {
+                "deposit_max": 0,
+                "deposit_min": 0,
                 "deposit_ratio": 1.0,
-                "timeout_limit": 0,
-                "sync_fee": 1,
-                "setup_ttl": 2,
-                "deposit_limit": 0
+                "expire_max": 0,
+                "expire_min": 0,
+                "sync_fee": 1
             },
             "A14456548018133352000": {
+                "deposit_max": 0,
+                "deposit_min": 0,
                 "deposit_ratio": 1.0,
-                "timeout_limit": 0,
-                "sync_fee": 1,
-                "setup_ttl": 2,
-                "deposit_limit": 0
+                "expire_max": 0,
+                "expire_min": 0,
+                "sync_fee": 1
             }
         })
 
@@ -61,12 +63,13 @@ class TestMpcHubTerms(unittest.TestCase):
         terms = api.mpc_hub_terms(assets=["XCP"])
         self.assertEqual(terms, {
             "XCP": {
+                "deposit_max": 0,
+                "deposit_min": 0,
                 "deposit_ratio": 1.0,
-                "timeout_limit": 0,
-                "sync_fee": 1,
-                "setup_ttl": 2,
-                "deposit_limit": 0
-            }
+                "expire_max": 0,
+                "expire_min": 0,
+                "sync_fee": 1
+            },
         })
 
 

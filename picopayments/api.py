@@ -100,6 +100,7 @@ def create_send(**kwargs):
 getrawtransaction = _add_cp_call("getrawtransaction")
 getrawtransaction_batch = _add_cp_call("getrawtransaction_batch")
 get_unspent_txouts = _add_cp_call("get_unspent_txouts")
+get_balances = _add_cp_call("get_balances")
 sendrawtransaction = _add_cp_call("sendrawtransaction")
 mpc_make_deposit = _add_cp_call("mpc_make_deposit")
 mpc_set_deposit = _add_cp_call("mpc_set_deposit")

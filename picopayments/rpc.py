@@ -11,9 +11,6 @@ from picopayments import err
 from picopayments import etc
 
 
-CALL_LOCAL_PROCESS = False
-
-
 def _http_call(url, method, params={}, username=None,
                password=None, verify_ssl_cert=True):
     payload = {"method": method, "params": params, "jsonrpc": "2.0", "id": 0}
@@ -37,7 +34,7 @@ def call(url, method, params={}, username=None, password=None,
     if auth_wif:
         params = auth.sign_json(params, auth_wif)
 
-    if CALL_LOCAL_PROCESS:
+    if etc.call_local_process:
         from picopayments import api
         result = getattr(api, method)(**params)
     else:

@@ -32,7 +32,7 @@ class TestLIB(unittest.TestCase):
 
     def test_get_funding_addresses(self):
         assets = ["XCP"]
-        result = lib.create_funding_addresses(assets)
+        result = lib.get_funding_addresses(assets)
         assert(assets == list(result.keys()))
         self.assertTrue(all([
             is_address_valid(a, allowable_netcodes=["XTN"])

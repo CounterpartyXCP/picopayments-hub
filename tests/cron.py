@@ -5,14 +5,15 @@ import unittest
 import tempfile
 from picopayments import srv
 from picopayments import etc
-from picopayments import log
+from picopayments import cron
 
 
 etc.call_local_process = True
-CP_URL = "http://139.59.214.74:14000/api/"
+CP_URL = "http://127.0.0.1:14000/api/"
+# CP_URL = "http://139.59.214.74:14000/api/"
 
 
-class TestLog(unittest.TestCase):
+class TestCron(unittest.TestCase):
 
     def setUp(self):
         self.tempdir = tempfile.mkdtemp(prefix="picopayments_test_")
@@ -29,14 +30,6 @@ class TestLog(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tempdir)
 
-    def tests_log(self):
-        log.debug("test debug coverage")
-        log.info("test info coverage")
-        log.warn("test warn coverage")
-        log.error("test error coverage")
-        log.critical("test critical coverage")
-        log.fatal("test fatal coverage")
-
-
-if __name__ == "__main__":
-    unittest.main()
+    def test_fund_deposits(self):
+        txids = cron.fund_deposits(publish_tx=False)
+        self.assertTrue(bool(txids))

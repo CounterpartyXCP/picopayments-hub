@@ -13,6 +13,8 @@ from picopayments import sql
 # old version -> migrate sql
 _MIGRATIONS = {
     0: sql.load("migration_0"),
+    1: sql.load("migration_1"),
+    2: sql.load("migration_2"),
 }
 _HANDLE_EXISTS = "SELECT EXISTS(SELECT * FROM HubConnection WHERE handle = ?);"
 _COMMITS_REQUESTED = sql.load("commits_requested")
@@ -25,23 +27,25 @@ _ADD_COMMIT_REQUESTED = sql.load("add_commit_requested")
 _ADD_COMMIT_ACTIVE = sql.load("add_commit_active")
 _ADD_COMMIT_REVOKED = sql.load("add_commit_revoked")
 _RM_COMMITS = sql.load("rm_commits")
-_COMPLETE_HUB_CHANNELS = sql.load("complete_hub_channels")
+_COMPLETE_CONNECTION = sql.load("complete_connection")
 _SET_PAYMENT_NOTIFIED = sql.load("set_payment_notified")
 _SET_REVOKE_NOTIFIED = sql.load("set_revoke_notified")
 _SET_NEXT_REVOKE_SECRET_HASH = sql.load("set_next_revoke_secret_hash")
 
 
 key = sql.make_fetchone("key")
+keys = sql.make_fetchall("keys")
 terms = sql.make_fetchone("terms")
 channel_payer_key = sql.make_fetchone("channel_payer_key")
 receive_channel = sql.make_fetchone("receive_channel")
 unnotified_commit = sql.make_fetchone("unnotified_commit")
 hub_connections = sql.make_fetchall("hub_connections")
+hub_connections_complete = sql.make_fetchall("hub_connections_complete")
+hub_connection = sql.make_fetchone("hub_connection")
 set_commit_notified = sql.make_execute("set_commit_notified")
 unnotified_revokes = sql.make_fetchall("unnotified_revokes")
 add_payment = sql.make_execute("add_payment")
 unnotified_payments = sql.make_fetchall("unnotified_payments")
-hub_connection = sql.make_fetchone("hub_connection")
 micropayment_channel = sql.make_fetchone("micropayment_channel")
 hub2client_payments_sum = sql.make_fetchone("hub2client_payments_sum", True)
 client2hub_payments_sum = sql.make_fetchone("client2hub_payments_sum", True)
@@ -120,7 +124,7 @@ def complete_hub_connection(data, cursor=None):
     cursor = cursor or sql.get_cursor()
     cursor.execute("BEGIN TRANSACTION")
     sql.execute(_SET_NEXT_REVOKE_SECRET_HASH, data, cursor=cursor)
-    sql.execute(_COMPLETE_HUB_CHANNELS, data, cursor=cursor)
+    sql.execute(_COMPLETE_CONNECTION, data, cursor=cursor)
     add_revoke_secret_args = {
         "secret_hash": data["secret_hash"],
         "secret_value": data["secret_value"],

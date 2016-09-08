@@ -68,6 +68,27 @@ class Client(object):
         """TODO doc string"""
         return self.rpc.getrawtransaction(tx_hash=txid)
 
+    def balance(self):
+        """TODO doc string"""
+
+        assert(self.connected())
+        # TODO return {"btc": value, "asset": value}
+        # TODO implement
+
+    def balances(self, address, assets=None):
+        """TODO doc string"""
+
+        # FIXME include BTC balance
+        entries = self.rpc.get_balances(filters=[
+            {"field": "address", "op": "==", "value": address},
+        ])
+        result = {}
+        for entrie in entries:
+            if assets and entrie["asset"] not in assets:
+                continue
+            result[entrie["asset"]] = entrie["quantity"]
+        return result
+
     def block_send(self, publish_tx=True, **kwargs):
         """TODO doc string"""
 
@@ -80,9 +101,17 @@ class Client(object):
         return self.sign_and_publish(unsigned_rawtx, wif,
                                      publish_tx=publish_tx)
 
+    def sign(self, unsigned_rawtx, wif):
+        """TODO doc string"""
+
+        return sign_deposit(self.get_tx, wif, unsigned_rawtx)
+
     def sign_and_publish(self, unsigned_rawtx, wif, publish_tx=True):
-        signed_rawtx = sign_deposit(self.get_tx, wif, unsigned_rawtx)
-        return self._publish(signed_rawtx, publish_tx)
+        """TODO doc string"""
+
+        # FIXME remove this method
+        signed_rawtx = self.sign(unsigned_rawtx, wif)
+        return self.publish(signed_rawtx, publish_tx=publish_tx)
 
     def micro_send(self, handle, quantity, token=None):
         """TODO doc string"""
@@ -109,6 +138,8 @@ class Client(object):
 
     def create_commit(self, quantity):
         """TODO doc string"""
+
+        assert(self.connected())
         result = self.rpc.mpc_create_commit(
             state=self.c2h_state,
             quantity=quantity,
@@ -198,22 +229,20 @@ class Client(object):
         self.c2h_state = result["state"]
         return result["topublish"]
 
-    def _publish(self, rawtx, publish_tx=True):
-        if publish_tx:
-            return self.rpc.sendrawtransaction(
-                tx_hex=rawtx
-            )  # pragma: no cover
-        else:
+    def publish(self, rawtx, publish_tx=True):
+        # FIXME publish_tx -> dryrun
+        if not publish_tx:
             return util.gettxid(rawtx)
+        return self.rpc.sendrawtransaction(tx_hex=rawtx)  # pragma: no cover
 
     def _validate_matches_terms(self):
-        timeout_limit = self.channel_terms["timeout_limit"]
+        expire_max = self.channel_terms["expire_max"]
         assert(
-            timeout_limit == 0 or self.c2h_deposit_expire_time <= timeout_limit
+            expire_max == 0 or self.c2h_deposit_expire_time <= expire_max
         )
-        deposit_limit = self.channel_terms["deposit_limit"]
+        deposit_max = self.channel_terms["deposit_max"]
         assert(
-            deposit_limit == 0 or self.c2h_deposit_quantity <= deposit_limit
+            deposit_max == 0 or self.c2h_deposit_quantity <= deposit_max
         )
 
     def _set_initial_h2c_state(self, h2c_deposit_script):

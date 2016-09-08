@@ -14,6 +14,7 @@ from counterpartylib.lib.micropayments.scripts import (
     get_deposit_payer_pubkey, get_deposit_payee_pubkey,
     get_deposit_expire_time, compile_deposit_script
 )
+from counterpartylib.lib.micropayments.scripts import sign_deposit
 from picopayments import rpc
 from picopayments import db
 from picopayments import auth
@@ -88,7 +89,7 @@ def create_hub_connection(asset, client_pubkey, hub2client_spend_secret_hash,
     )
 
 
-def _load_complete_connection(handle, client2hub_deposit_script):
+def _load_incomplete_connection(handle, client2hub_deposit_script):
 
     client2hub_ds_bin = h2b(client2hub_deposit_script)
     client_pubkey = get_deposit_payer_pubkey(client2hub_ds_bin)
@@ -97,28 +98,25 @@ def _load_complete_connection(handle, client2hub_deposit_script):
 
     hub_conn = db.hub_connection(handle=handle)
     assert(hub_conn is not None)
+    assert(not hub_conn["complete"])
 
     hub2client = db.micropayment_channel(id=hub_conn["hub2client_channel_id"])
     assert(hub2client["payer_pubkey"] == hub_pubkey)
     assert(hub2client["payee_pubkey"] == client_pubkey)
-    assert(not hub2client["meta_complete"])
 
     client2hub = db.micropayment_channel(id=hub_conn["client2hub_channel_id"])
     assert(client2hub["payer_pubkey"] == client_pubkey)
     assert(client2hub["payee_pubkey"] == hub_pubkey)
-    assert(not client2hub["meta_complete"])
 
     hub_key = db.key(pubkey=hub_pubkey)
 
     return hub_conn, hub2client, expire_time, hub_key
 
 
-def complete_connection(
-        handle,
-        client2hub_deposit_script,
-        next_revoke_secret_hash):
+def complete_connection(handle, client2hub_deposit_script,
+                        next_revoke_secret_hash):
 
-    hub_conn, hub2client, expire_time, hub_key = _load_complete_connection(
+    hub_conn, hub2client, expire_time, hub_key = _load_incomplete_connection(
         handle, client2hub_deposit_script
     )
 
@@ -156,7 +154,26 @@ def complete_connection(
     )
 
 
-def create_funding_addresses(assets):
+def find_key_with_funds(asset, asset_quantity, btc_quantity):
+    btc_quantity = btc_quantity + util.get_fee_multaple(
+        factor=1, fee_per_kb=etc.fee_per_kb,
+        regular_dust_size=etc.regular_dust_size
+    )
+    nearest = {"key": None, "available": 2100000000000000}
+    for key in db.keys(asset=asset):
+        address = key["address"]
+        if has_unconfirmed_transactions(address):
+            continue  # ignore if unconfirmed inputs/outputs
+        available = balance(address, asset)
+        # FIXME check btc quantity
+        if available < asset_quantity:
+            continue  # not enough funds
+        if nearest["available"] > available:
+            nearest = {"key": key, "available": available}
+    return nearest["key"]
+
+
+def get_funding_addresses(assets):
     addresses = {}
     for asset in assets:
         key = create_key(asset, netcode=etc.netcode)
@@ -292,7 +309,7 @@ def sync_hub_connection(handle, next_revoke_secret_hash,
     )
 
 
-def _balance(address, asset):
+def balance(address, asset):
     results = rpc.cp_call(
         method="get_balances",
         params={
@@ -305,42 +322,86 @@ def _balance(address, asset):
     return results[0]["quantity"] if results else 0
 
 
-def _deposit_address(state):
+def deposit_address(state):
     return util.script2address(
         util.h2b(state["deposit_script"]), netcode=etc.netcode
     )
 
 
-def _transferred(state):
+def transferred(state):
     return rpc.cp_call(
         method="mpc_transferred_amount",
         params={"state": state}
     )
 
 
-def _expired(state):
+def expired(state, clearance):
     return rpc.cp_call(
         method="mpc_deposit_expired",
-        params={"state": state, "clearance": 1}
+        params={"state": state, "clearance": clearance}
     )
 
 
-def load_channel_data(handle, cursor):
+def get_tx(txid):
+    return rpc.cp_call(method="getrawtransaction", params={"tx_hash": txid})
+
+
+def send(destination, asset, quantity, publish_tx=True):
+    extra_btc = util.get_fee_multaple(
+        factor=3, fee_per_kb=etc.fee_per_kb,
+        regular_dust_size=etc.regular_dust_size
+    )
+    key = find_key_with_funds(asset, quantity, extra_btc)
+    if key is None:
+        raise err.InsufficientFunds(asset, quantity)
+    unsigned_rawtx = rpc.cp_call(
+        method="create_send",
+        params={
+            "source": key["address"],
+            "destination": destination,
+            "asset": asset,
+            "regular_dust_size": extra_btc,
+            "disable_utxo_locks": True,
+            "quantity": quantity
+        }
+    )
+    signed_rawtx = sign_deposit(get_tx, key["wif"], unsigned_rawtx)
+    if not publish_tx:
+        return util.gettxid(signed_rawtx)
+    return rpc.cp_call(
+        method="sendrawtransaction",
+        params={"tx_hex": signed_rawtx}
+    )  # pragma: no cover
+
+
+def has_unconfirmed_transactions(address):
+    transactions = rpc.cp_call(
+        method="search_raw_transactions",
+        params={"address": address, "unconfirmed": True}
+    )
+    for transaction in transactions:
+        if transaction.get("confirmations", 0) == 0:
+            return True
+    return False
+
+
+def load_connection_data(handle, cursor):
     connection = db.hub_connection(handle=handle, cursor=cursor)
+    terms = db.terms(id=connection["terms_id"], cursor=cursor)
     hub2client_state = db.load_channel_state(
         connection["hub2client_channel_id"], connection["asset"], cursor=cursor
     )
-    hub2client_deposit_address = _deposit_address(hub2client_state)
+    hub2client_deposit_address = deposit_address(hub2client_state)
     client2hub_state = db.load_channel_state(
         connection["client2hub_channel_id"], connection["asset"], cursor=cursor
     )
-    client2hub_deposit_address = _deposit_address(client2hub_state)
-    hub2client_transferred = _transferred(hub2client_state)
-    hub2client_deposit_amount = _balance(hub2client_deposit_address,
-                                         connection["asset"])
-    client2hub_transferred = _transferred(client2hub_state)
-    client2hub_deposit_amount = _balance(
-        client2hub_deposit_address, connection["asset"])
+    client2hub_deposit_address = deposit_address(client2hub_state)
+    hub2client_transferred = transferred(hub2client_state)
+    hub2client_deposit_amount = balance(hub2client_deposit_address,
+                                        connection["asset"])
+    client2hub_transferred = transferred(client2hub_state)
+    client2hub_deposit_amount = balance(client2hub_deposit_address,
+                                        connection["asset"])
     unnotified_commit = db.unnotified_commit(
         channel_id=connection["hub2client_channel_id"], cursor=cursor
     )
@@ -362,12 +423,12 @@ def load_channel_data(handle, cursor):
     return {
         "connection": connection,
         "hub2client_state": hub2client_state,
-        "hub2client_expired": _expired(hub2client_state),
+        "hub2client_expired": expired(hub2client_state, etc.expire_clearance),
         "hub2client_transferred_amount": hub2client_transferred,
         "hub2client_payments_sum": hub2client_payments_sum,
         "hub2client_deposit_amount": hub2client_deposit_amount,
         "client2hub_state": client2hub_state,
-        "client2hub_expired": _expired(client2hub_state),
+        "client2hub_expired": expired(client2hub_state, etc.expire_clearance),
         "client2hub_transferred_amount": client2hub_transferred,
         "client2hub_payments_sum": client2hub_payments_sum,
         "client2hub_deposit_amount": client2hub_deposit_amount,
@@ -376,13 +437,14 @@ def load_channel_data(handle, cursor):
         "unnotified_commit": unnotified_commit,
         "sendable_amount": sendable_amount,
         "receivable_amount": receivable_amount,
+        "terms": terms,
     }
 
 
 def process_payment(payer_handle, cursor, payment):
 
     # load payer
-    payer = load_channel_data(payer_handle, cursor)
+    payer = load_connection_data(payer_handle, cursor)
 
     # check if connection expired
     if payer["client2hub_expired"]:
@@ -399,7 +461,7 @@ def process_payment(payer_handle, cursor, payment):
     # load payee
     payee_handle = payment["payee_handle"]
     if payee_handle:
-        payee = load_channel_data(payee_handle, cursor)
+        payee = load_connection_data(payee_handle, cursor)
         if payer["connection"]["asset"] != payee["connection"]["asset"]:
             raise err.AssetMissmatch(
                 payer["connection"]["asset"], payee["connection"]["asset"]

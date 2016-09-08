@@ -4,12 +4,11 @@ import shutil
 import unittest
 import tempfile
 from picopayments import srv
-from picopayments import rpc
-from picopayments import lib
+from picopayments import etc
 from picopayments import Client
 
 
-rpc.CALL_LOCAL_PROCESS = True
+etc.call_local_process = True
 CP_URL = "http://139.59.214.74:14000/api/"
 
 

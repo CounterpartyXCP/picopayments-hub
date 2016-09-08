@@ -5,12 +5,11 @@ import unittest
 import tempfile
 from picopayments import srv
 from picopayments import etc
-from picopayments import rpc
 from picopayments import Client
 from counterpartylib.lib.micropayments import util
 
 
-rpc.CALL_LOCAL_PROCESS = True
+etc.call_local_process = True
 CP_URL = "http://139.59.214.74:14000/api/"
 
 

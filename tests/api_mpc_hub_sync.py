@@ -10,12 +10,11 @@ from picopayments import lib
 from picopayments import etc
 from picopayments import srv
 from picopayments import err
-from picopayments import rpc
 from picopayments import Client
 from counterpartylib.lib.micropayments import util
 
 
-rpc.CALL_LOCAL_PROCESS = True
+etc.call_local_process = True
 CP_URL = "http://139.59.214.74:14000/api/"
 
 
@@ -210,7 +209,7 @@ class TestMpcHubSync(unittest.TestCase):
             alice = Client.deserialize(self.data["connections"]["beta"])
 
             # load bob A14456548018133352000 connection
-            quantity = 5
+            quantity = 1338
             bob = Client.deserialize(self.data["connections"]["alpha"])
             sync_fee = bob.channel_terms["sync_fee"]
             commit = bob.create_commit(quantity + sync_fee)

@@ -1,18 +1,30 @@
 -- insert current terms if they do not the latest saved
 INSERT INTO Terms (
-    asset, setup_ttl, deposit_limit, deposit_ratio,
-    timeout_limit, sync_fee
+    asset, 
+    deposit_max,
+    deposit_min,
+    deposit_ratio,
+    expire_max,
+    expire_min,
+    sync_fee
 )
 SELECT
-    :asset, :setup_ttl, :deposit_limit, :deposit_ratio,
-    :timeout_limit, :sync_fee
+    :asset, 
+    :deposit_max,
+    :deposit_min,
+    :deposit_ratio,
+    :expire_max,
+    :expire_min,
+    :sync_fee
+
 WHERE NOT EXISTS(
     SELECT id FROM Terms WHERE
         asset = :asset and
-        setup_ttl = :setup_ttl and
-        deposit_limit = :deposit_limit and
+        deposit_max = :deposit_max and
+        deposit_min = :deposit_min and
         deposit_ratio = :deposit_ratio and
-        timeout_limit = :timeout_limit and
+        expire_max = :expire_max and
+        expire_min = :expire_min and
         sync_fee = :sync_fee -- FIXME just check if newest matches
 );
 
@@ -59,11 +71,12 @@ INSERT INTO HubConnection(
         -- terms at the time of the request
         SELECT id FROM Terms WHERE
             asset = :asset and
-            setup_ttl = :setup_ttl and
-            deposit_limit = :deposit_limit and
+            deposit_max = :deposit_max and
+            deposit_min = :deposit_min and
             deposit_ratio = :deposit_ratio and
-            timeout_limit = :timeout_limit and
-            sync_fee = :sync_fee  -- FIXME select newest
+            expire_max = :expire_max and
+            expire_min = :expire_min and
+            sync_fee = :sync_fee -- FIXME select newest
     ),
     :hub_rpc_url
 );

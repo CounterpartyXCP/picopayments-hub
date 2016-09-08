@@ -4,7 +4,6 @@ import unittest
 import shutil
 import tempfile
 from pycoin.serialize import b2h
-from picopayments import lib
 from picopayments import srv
 from picopayments import db
 
@@ -34,11 +33,14 @@ class TestDB(unittest.TestCase):
         def _create_connection(handle):
             db.add_hub_connection({
                 "asset": b2h(os.urandom(32)),
-                "setup_ttl": b2h(os.urandom(32)),
-                "deposit_limit": b2h(os.urandom(32)),
-                "deposit_ratio": b2h(os.urandom(32)),
-                "timeout_limit": b2h(os.urandom(32)),
-                "sync_fee": b2h(os.urandom(32)),
+
+                "deposit_max": 0,
+                "deposit_min": 0,
+                "deposit_ratio": 1.0,
+                "expire_max": 0,
+                "expire_min": 0,
+                "sync_fee": 1,
+
                 "hub_wif": b2h(os.urandom(32)),
                 "hub_pubkey": b2h(os.urandom(32)),
                 "hub_address": b2h(os.urandom(32)),

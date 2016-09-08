@@ -34,6 +34,18 @@ database_connection = None  # set in db.setup
 database_lock = RLock()
 
 
+# rpc
+call_local_process = False
+
+
+# blockchain
+confirms = 1
+expire_clearance = 1  # expired with x blocks clearance before expiration
+fund_clearance = 6  # only fund with x blocks clearance before expiration
+fee_per_kb = 25000  # FIXME get from bitcoind
+regular_dust_size = 5430  # FIXME get from bitcoind
+
+
 def load(args):
     testnet = args["testnet"]
     basedir = args["basedir"]

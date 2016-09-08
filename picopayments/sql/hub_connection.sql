@@ -1,1 +1,1 @@
-SELECT * FROM HubConnection where handle = :handle;
+SELECT * FROM HubConnection WHERE handle = :handle;

@@ -109,3 +109,10 @@ class DepositExpired(Exception):
     def __init__(self, handle, side):
         msg = "Deposit expired for connection {0} side {1}"
         super(DepositExpired, self).__init__(msg.format(handle, side))
+
+
+class InsufficientFunds(Exception):
+
+    def __init__(self, asset, quantity):
+        msg = "No keypair for {0} with {1} funds."
+        super(InsufficientFunds, self).__init__(msg.format(asset, quantity))

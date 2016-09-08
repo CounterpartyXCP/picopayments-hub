@@ -67,10 +67,11 @@ setup: virtualenv
 	$(PIP) install $(WHEEL_INSTALL_ARGS) -r requirements.txt
 	$(PIP) install $(WHEEL_INSTALL_ARGS) -r requirements_tests.txt
 	$(PIP) install $(WHEEL_INSTALL_ARGS) -r requirements_develop.txt
+	$(PY) setup.py develop
 
 
-install: setup
-	$(PY) setup.py install
+sandbox: setup
+	$(PY) tools/sandbox.py
 
 
 shell: install

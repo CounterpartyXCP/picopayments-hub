@@ -1,5 +1,7 @@
 BEGIN TRANSACTION;
 
+-- setup initial db schema
+
 CREATE TABLE Terms(
     id                          INTEGER NOT NULL PRIMARY KEY,
     asset                       TEXT NOT NULL,

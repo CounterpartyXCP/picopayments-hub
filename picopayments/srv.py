@@ -44,7 +44,7 @@ def main(args, serve=True):
     # show funding address for assets
     if parsed["funding"]:
         assets = lib.terms().keys()
-        addresses = lib.create_funding_addresses(assets)
+        addresses = lib.get_funding_addresses(assets)
         print(json.dumps(addresses, indent=2, sort_keys=True))
         return addresses
 
