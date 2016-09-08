@@ -323,9 +323,11 @@ def balance(address, asset):
 
 
 def deposit_address(state):
-    return util.script2address(
-        util.h2b(state["deposit_script"]), netcode=etc.netcode
-    )
+    return get_script_address(state["deposit_script"])
+
+
+def get_script_address(script):
+    return util.script2address(util.h2b(script), netcode=etc.netcode)
 
 
 def transferred(state):
@@ -374,11 +376,28 @@ def send(destination, asset, quantity, publish_tx=True):
     )  # pragma: no cover
 
 
-def has_unconfirmed_transactions(address):
-    transactions = rpc.cp_call(
+def get_transactions(address):
+    return rpc.cp_call(
         method="search_raw_transactions",
         params={"address": address, "unconfirmed": True}
     )
+
+
+def commit_published(state):
+    deposit_transactions = get_transactions(deposit_address(state))
+    deposit_txids = [tx["txid"] for tx in deposit_transactions]
+    commits = state["commits_active"] + state["commits_revoked"]
+    commit_scripts = [commit["script"] for commit in commits]
+    commit_addresses = [get_script_address(s) for s in commit_scripts]
+    for commit_address in commit_addresses:
+        for commit_transaction in get_transactions(commit_address):
+            if commit_transaction["txid"] in deposit_txids:
+                return True  # spend from deposit -> commit
+    return False
+
+
+def has_unconfirmed_transactions(address):
+    transactions = get_transactions(address)
     for transaction in transactions:
         if transaction.get("confirmations", 0) == 0:
             return True

@@ -14,7 +14,7 @@ from counterpartylib.lib.micropayments import util
 def fund_deposits(publish_tx=True):
     """Fund or top off open channels."""
     with etc.database_lock:
-        txids = []
+        deposits = []
         cursor = sql.get_cursor()
         for hub_connection in db.hub_connections_complete(cursor=cursor):
 
@@ -56,15 +56,52 @@ def fund_deposits(publish_tx=True):
             if quantity > 0:
                 txid = lib.send(h2c_deposit_address, asset,
                                 quantity, publish_tx=publish_tx)
-                txids.append(txid)
+                deposits.append({
+                    "txid": txid,
+                    "asset": asset,
+                    "address": h2c_deposit_address,
+                    "quantity": quantity,
+                    "handle": hub_connection["handle"]
+                })
 
-        return txids
+        return deposits
 
 
-def close_connections():
+def close_connections(publish_tx=True):
     """Close connections almost expired and partially closed by client."""
     with etc.database_lock:
-        pass
+        closed_connections = []
+        cursor = sql.get_cursor()
+        for hub_connection in db.hub_connections_complete(cursor=cursor):
+            asset = hub_connection["asset"]
+            c2h_mpc_id = hub_connection["client2hub_channel_id"]
+            c2h_state = db.load_channel_state(c2h_mpc_id, asset, cursor=cursor)
+            h2c_mpc_id = hub_connection["hub2client_channel_id"]
+            h2c_state = db.load_channel_state(h2c_mpc_id, asset, cursor=cursor)
+
+            # connection expired
+            c2h_expired = lib.expired(c2h_state, etc.fund_clearance)
+            h2c_expired = lib.expired(h2c_state, etc.fund_clearance)
+            if c2h_expired or h2c_expired:
+                # FIXME update hub connections closed flag
+                # FIXME sign and publish heighest c2h commit
+                closed_connections.append({
+                    "handle": hub_connection["handle"],
+                    "commit_txid": None
+                })
+                continue
+
+            # check if commit published
+            if lib.commit_published(h2c_state):
+                # FIXME update hub connections closed flag
+                # FIXME sign and publish heighest c2h commit
+                closed_connections.append({
+                    "handle": hub_connection["handle"],
+                    "commit_txid": None
+                })
+                continue
+
+        return closed_connections
 
 
 def recover_funds():
