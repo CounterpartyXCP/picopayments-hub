@@ -14,7 +14,7 @@ from pycoin.serialize import b2h
 from counterpartylib.lib.micropayments.scripts import compile_deposit_script
 
 
-CP_URL = "http://139.59.214.74:14000/api/"
+CP_URL = os.environ.get("COUNTERPARTY_URL", "http://139.59.214.74:14000/api/")
 
 
 DEPOSIT_RESULT_SCHEMA = {

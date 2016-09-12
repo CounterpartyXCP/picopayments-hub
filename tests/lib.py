@@ -10,7 +10,7 @@ from picopayments import rpc
 from picopayments import err
 
 
-CP_URL = "http://139.59.214.74:14000/api/"
+CP_URL = os.environ.get("COUNTERPARTY_URL", "http://139.59.214.74:14000/api/")
 
 
 class TestLIB(unittest.TestCase):

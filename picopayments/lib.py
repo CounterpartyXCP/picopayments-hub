@@ -15,6 +15,8 @@ from counterpartylib.lib.micropayments.scripts import (
     get_deposit_expire_time, compile_deposit_script
 )
 from counterpartylib.lib.micropayments.scripts import sign_deposit
+from counterpartylib.lib.micropayments.scripts import sign_finalize_commit
+from counterpartylib.lib.micropayments.scripts import get_commit_payee_pubkey
 from picopayments import rpc
 from picopayments import db
 from picopayments import auth
@@ -348,6 +350,26 @@ def get_tx(txid):
     return rpc.cp_call(method="getrawtransaction", params={"tx_hash": txid})
 
 
+def publish(rawtx, publish_tx=True):
+    if not publish_tx:
+        return util.gettxid(rawtx)
+    return rpc.cp_call(
+        method="sendrawtransaction", params={"tx_hex": rawtx}
+    )  # pragma: no cover
+
+
+def publish_highest_commit(state, publish_tx=True):
+    commit = rpc.cp_call(method="mpc_highest_commit", params={"state": state})
+    if commit is None:
+        return None
+    script = util.h2b(commit["script"])
+    rawtx = commit["rawtx"]
+    pubkey = get_commit_payee_pubkey(script)
+    key = db.key(pubkey=util.b2h(pubkey))
+    signed_rawtx = sign_finalize_commit(get_tx, key["wif"], rawtx, script)
+    return publish(signed_rawtx, publish_tx=publish_tx)
+
+
 def send(destination, asset, quantity, publish_tx=True):
     extra_btc = util.get_fee_multaple(
         factor=3, fee_per_kb=etc.fee_per_kb,
@@ -368,12 +390,7 @@ def send(destination, asset, quantity, publish_tx=True):
         }
     )
     signed_rawtx = sign_deposit(get_tx, key["wif"], unsigned_rawtx)
-    if not publish_tx:
-        return util.gettxid(signed_rawtx)
-    return rpc.cp_call(
-        method="sendrawtransaction",
-        params={"tx_hex": signed_rawtx}
-    )  # pragma: no cover
+    return publish(signed_rawtx, publish_tx=publish_tx)
 
 
 def get_transactions(address):
@@ -384,6 +401,7 @@ def get_transactions(address):
 
 
 def commit_published(state):
+    # FIXME this should be a counterpartylib call mpc_is_commit_published
     deposit_transactions = get_transactions(deposit_address(state))
     deposit_txids = [tx["txid"] for tx in deposit_transactions]
     commits = state["commits_active"] + state["commits_revoked"]
@@ -391,9 +409,10 @@ def commit_published(state):
     commit_addresses = [get_script_address(s) for s in commit_scripts]
     for commit_address in commit_addresses:
         for commit_transaction in get_transactions(commit_address):
-            if commit_transaction["txid"] in deposit_txids:
-                return True  # spend from deposit -> commit
-    return False
+            txid = commit_transaction["txid"]
+            if txid in deposit_txids:
+                return txid  # spend from deposit -> commit
+    return None
 
 
 def has_unconfirmed_transactions(address):

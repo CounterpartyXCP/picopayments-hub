@@ -79,32 +79,24 @@ def close_connections(publish_tx=True):
             h2c_mpc_id = hub_connection["hub2client_channel_id"]
             h2c_state = db.load_channel_state(h2c_mpc_id, asset, cursor=cursor)
 
-            # connection expired
+            # connection expired or  commit published
             c2h_expired = lib.expired(c2h_state, etc.fund_clearance)
             h2c_expired = lib.expired(h2c_state, etc.fund_clearance)
-            if c2h_expired or h2c_expired:
-                # FIXME update hub connections closed flag
-                # FIXME sign and publish heighest c2h commit
+            if c2h_expired or h2c_expired or lib.commit_published(h2c_state):
+                db.set_connection_closed(handle=hub_connection["handle"])
+                commit_txid = lib.publish_highest_commit(
+                    c2h_state, publish_tx=publish_tx
+                )
                 closed_connections.append({
                     "handle": hub_connection["handle"],
-                    "commit_txid": None
-                })
-                continue
-
-            # check if commit published
-            if lib.commit_published(h2c_state):
-                # FIXME update hub connections closed flag
-                # FIXME sign and publish heighest c2h commit
-                closed_connections.append({
-                    "handle": hub_connection["handle"],
-                    "commit_txid": None
+                    "commit_txid": commit_txid
                 })
                 continue
 
         return closed_connections
 
 
-def recover_funds():
+def recover_funds(publish_tx=True):
     """Recover funds where possible"""
     with etc.database_lock:
         pass
@@ -116,9 +108,9 @@ def collect_garbage():
         pass
 
 
-def run():
+def run(publish_tx=True):
     with etc.database_lock:
-        close_connections()
-        recover_funds()
+        close_connections(publish_tx=publish_tx)
+        recover_funds(publish_tx=publish_tx)
+        fund_deposits(publish_tx=publish_tx)
         collect_garbage()
-        fund_deposits()
