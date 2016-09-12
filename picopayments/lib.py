@@ -400,21 +400,6 @@ def get_transactions(address):
     )
 
 
-def commit_published(state):
-    # FIXME this should be a counterpartylib call mpc_is_commit_published
-    deposit_transactions = get_transactions(deposit_address(state))
-    deposit_txids = [tx["txid"] for tx in deposit_transactions]
-    commits = state["commits_active"] + state["commits_revoked"]
-    commit_scripts = [commit["script"] for commit in commits]
-    commit_addresses = [get_script_address(s) for s in commit_scripts]
-    for commit_address in commit_addresses:
-        for commit_transaction in get_transactions(commit_address):
-            txid = commit_transaction["txid"]
-            if txid in deposit_txids:
-                return txid  # spend from deposit -> commit
-    return None
-
-
 def has_unconfirmed_transactions(address):
     transactions = get_transactions(address)
     for transaction in transactions:

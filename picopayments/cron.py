@@ -82,7 +82,10 @@ def close_connections(publish_tx=True):
             # connection expired or  commit published
             c2h_expired = lib.expired(c2h_state, etc.fund_clearance)
             h2c_expired = lib.expired(h2c_state, etc.fund_clearance)
-            if c2h_expired or h2c_expired or lib.commit_published(h2c_state):
+            commit_published = rpc.cp_call(
+                method="mpc_get_published_commit", params={"state": h2c_state}
+            )
+            if c2h_expired or h2c_expired or commit_published:
                 db.set_connection_closed(handle=hub_connection["handle"])
                 commit_txid = lib.publish_highest_commit(
                     c2h_state, publish_tx=publish_tx
