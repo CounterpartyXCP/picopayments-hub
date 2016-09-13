@@ -10,13 +10,7 @@ import pkg_resources
 from pycoin.key.BIP32Node import BIP32Node
 from pycoin.serialize import b2h, h2b
 from counterpartylib.lib.micropayments import util
-from counterpartylib.lib.micropayments.scripts import (
-    get_deposit_payer_pubkey, get_deposit_payee_pubkey,
-    get_deposit_expire_time, compile_deposit_script
-)
-from counterpartylib.lib.micropayments.scripts import sign_deposit
-from counterpartylib.lib.micropayments.scripts import sign_finalize_commit
-from counterpartylib.lib.micropayments.scripts import get_commit_payee_pubkey
+from counterpartylib.lib.micropayments import scripts
 from picopayments import rpc
 from picopayments import db
 from picopayments import auth
@@ -94,9 +88,9 @@ def create_hub_connection(asset, client_pubkey, hub2client_spend_secret_hash,
 def _load_incomplete_connection(handle, client2hub_deposit_script):
 
     client2hub_ds_bin = h2b(client2hub_deposit_script)
-    client_pubkey = get_deposit_payer_pubkey(client2hub_ds_bin)
-    hub_pubkey = get_deposit_payee_pubkey(client2hub_ds_bin)
-    expire_time = get_deposit_expire_time(client2hub_ds_bin)
+    client_pubkey = scripts.get_deposit_payer_pubkey(client2hub_ds_bin)
+    hub_pubkey = scripts.get_deposit_payee_pubkey(client2hub_ds_bin)
+    expire_time = scripts.get_deposit_expire_time(client2hub_ds_bin)
 
     hub_conn = db.hub_connection(handle=handle)
     assert(hub_conn is not None)
@@ -122,7 +116,7 @@ def complete_connection(handle, client2hub_deposit_script,
         handle, client2hub_deposit_script
     )
 
-    hub2client_deposit_script = b2h(compile_deposit_script(
+    hub2client_deposit_script = b2h(scripts.compile_deposit_script(
         hub2client["payer_pubkey"], hub2client["payee_pubkey"],
         hub2client["spend_secret_hash"], expire_time
     ))
@@ -358,19 +352,62 @@ def publish(rawtx, publish_tx=True):
     )  # pragma: no cover
 
 
-def publish_highest_commit(state, publish_tx=True):
+def recover_payout(payout_rawtx, commit_script, publish_tx=True):
+    script = util.h2b(commit_script)
+    pubkey = scripts.get_commit_payee_pubkey(script)
+    key = db.key(pubkey=util.b2h(pubkey))
+    signed_rawtx = scripts.sign_payout_recover(
+        get_tx, wif, payout_rawtx, script, spend_secret
+    )
+    return publish(signed_rawtx, publish_tx=publish_tx)
+
+
+def recover_revoked(revoke_rawtx, commit_script,
+                    revoke_secret, publish_tx=True):
+    script = util.h2b(commit_script)
+    pubkey = scripts.get_commit_payer_pubkey(script)
+    key = db.key(pubkey=util.b2h(pubkey))
+    signed_rawtx = sign_revoke_recover(
+        get_tx, key["wif"], revoke_rawtx, script, revoke_secret
+    )
+    return publish(signed_rawtx, publish_tx=publish_tx)
+
+
+def recover_change(change_rawtx, deposit_script,
+                   spend_secret, publish_tx=True):
+    script = util.h2b(deposit_script)
+    pubkey = scripts.get_deposit_payer_pubkey(script)
+    key = db.key(pubkey=util.b2h(pubkey))
+    signed_rawtx = scripts.sign_change_recover(
+        get_tx, key["wif"], change_rawtx, script, spend_secret
+    )
+    return publish(signed_rawtx, publish_tx=publish_tx)
+
+
+def recover_expired(expire_rawtx, deposit_script, publish_tx=True):
+    script = util.h2b(deposit_script)
+    pubkey = scripts.get_deposit_payer_pubkey(script)
+    key = db.key(pubkey=util.b2h(pubkey))
+    signed_rawtx = scripts.sign_expire_recover(
+        get_tx, key["wif"], expire_rawtx, script
+    )
+    return publish(signed_rawtx, publish_tx=publish_tx)
+
+
+def finalize_commit(state, publish_tx=True):
     commit = rpc.cp_call(method="mpc_highest_commit", params={"state": state})
     if commit is None:
         return None
     script = util.h2b(commit["script"])
     rawtx = commit["rawtx"]
-    pubkey = get_commit_payee_pubkey(script)
+    pubkey = scripts.get_commit_payee_pubkey(script)
     key = db.key(pubkey=util.b2h(pubkey))
-    signed_rawtx = sign_finalize_commit(get_tx, key["wif"], rawtx, script)
+    signed_rawtx = scripts.sign_finalize_commit(get_tx, key["wif"],
+                                                rawtx, script)
     return publish(signed_rawtx, publish_tx=publish_tx)
 
 
-def send(destination, asset, quantity, publish_tx=True):
+def send_funds(destination, asset, quantity, publish_tx=True):
     extra_btc = util.get_fee_multaple(
         factor=3, fee_per_kb=etc.fee_per_kb,
         regular_dust_size=etc.regular_dust_size
@@ -389,7 +426,7 @@ def send(destination, asset, quantity, publish_tx=True):
             "quantity": quantity
         }
     )
-    signed_rawtx = sign_deposit(get_tx, key["wif"], unsigned_rawtx)
+    signed_rawtx = scripts.sign_deposit(get_tx, key["wif"], unsigned_rawtx)
     return publish(signed_rawtx, publish_tx=publish_tx)
 
 
