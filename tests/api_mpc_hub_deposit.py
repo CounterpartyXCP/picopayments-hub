@@ -55,28 +55,28 @@ class TestMpcHubDeposit(unittest.TestCase):
         client_key = lib.create_key(asset, netcode="XTN")
         client_pubkey = client_key["pubkey"]
 
-        hub2client_spend_secret = util.b2h(os.urandom(32))
-        hub2client_spend_secret_hash = util.hash160hex(hub2client_spend_secret)
+        h2c_spend_secret = util.b2h(os.urandom(32))
+        h2c_spend_secret_hash = util.hash160hex(h2c_spend_secret)
 
         params = {
             "asset": asset,
-            "spend_secret_hash": hub2client_spend_secret_hash
+            "spend_secret_hash": h2c_spend_secret_hash
         }
         params = auth.sign_json(params, client_key["wif"])
         result = api.mpc_hub_request(**params)
 
         handle = result["handle"]
         hub_pubkey = result["pubkey"]
-        client2hub_spend_secret_hash = result["spend_secret_hash"]
+        c2h_spend_secret_hash = result["spend_secret_hash"]
 
-        client2hub_deposit_script = b2h(compile_deposit_script(
-            client_pubkey, hub_pubkey, client2hub_spend_secret_hash, 1337
+        c2h_deposit_script = b2h(compile_deposit_script(
+            client_pubkey, hub_pubkey, c2h_spend_secret_hash, 1337
         ))
 
         next_revoke_secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
         params = {
             "handle": handle,
-            "deposit_script": client2hub_deposit_script,
+            "deposit_script": c2h_deposit_script,
             "next_revoke_secret_hash": next_revoke_secret_hash
         }
         params = auth.sign_json(params, client_key["wif"])
@@ -93,24 +93,24 @@ class TestMpcHubDeposit(unittest.TestCase):
             client_key = lib.create_key(asset, netcode="XTN")
             client_pubkey = client_key["pubkey"]
 
-            hub2client_spend_secret = util.b2h(os.urandom(32))
-            hub2client_spend_secret_hash = util.hash160hex(
-                hub2client_spend_secret
+            h2c_spend_secret = util.b2h(os.urandom(32))
+            h2c_spend_secret_hash = util.hash160hex(
+                h2c_spend_secret
             )
 
             params = {
                 "asset": asset,
-                "spend_secret_hash": hub2client_spend_secret_hash
+                "spend_secret_hash": h2c_spend_secret_hash
             }
             params = auth.sign_json(params, client_key["wif"])
             result = api.mpc_hub_request(**params)
 
             handle = result["handle"]
             hub_pubkey = result["pubkey"]
-            client2hub_spend_secret_hash = result["spend_secret_hash"]
+            c2h_spend_secret_hash = result["spend_secret_hash"]
 
-            client2hub_deposit_script = b2h(compile_deposit_script(
-                client_pubkey, hub_pubkey, client2hub_spend_secret_hash, 1337
+            c2h_deposit_script = b2h(compile_deposit_script(
+                client_pubkey, hub_pubkey, c2h_spend_secret_hash, 1337
             ))
 
             # submit deposit
@@ -118,7 +118,7 @@ class TestMpcHubDeposit(unittest.TestCase):
 
             params = {
                 "handle": handle,
-                "deposit_script": client2hub_deposit_script,
+                "deposit_script": c2h_deposit_script,
                 "next_revoke_secret_hash": next_revoke_secret_hash
             }
             params = auth.sign_json(params, client_key["wif"])
@@ -129,7 +129,7 @@ class TestMpcHubDeposit(unittest.TestCase):
             next_revoke_secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
             params = {
                 "handle": handle,
-                "deposit_script": client2hub_deposit_script,
+                "deposit_script": c2h_deposit_script,
                 "next_revoke_secret_hash": next_revoke_secret_hash
             }
             params = auth.sign_json(params, client_key["wif"])
@@ -144,11 +144,11 @@ class TestMpcHubDeposit(unittest.TestCase):
             asset = "XCP"
             client_key = lib.create_key(asset, netcode="XTN")
             next_revoke_secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
-            client2hub_deposit_script = util.b2h(os.urandom(32)),
+            c2h_deposit_script = util.b2h(os.urandom(32)),
 
             params = {
                 "handle": "deadbeef",
-                "deposit_script": client2hub_deposit_script,
+                "deposit_script": c2h_deposit_script,
                 "next_revoke_secret_hash": next_revoke_secret_hash
             }
             params = auth.sign_json(params, client_key["wif"])

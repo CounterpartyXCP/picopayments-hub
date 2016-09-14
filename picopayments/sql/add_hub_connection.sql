@@ -41,7 +41,7 @@ INSERT INTO MicropaymentChannel (
     payee_address, payer_address, expire_time, spend_secret_hash
 ) VALUES (
     NULL, NULL, :client_pubkey, :hub_pubkey, :client_address,
-    :hub_address, NULL, :hub2client_spend_secret_hash
+    :hub_address, NULL, :h2c_spend_secret_hash
 );
 
 -- insert receive micropayment channel
@@ -50,13 +50,12 @@ INSERT INTO MicropaymentChannel (
     payee_address, payer_address, expire_time, spend_secret_hash
 ) VALUES (
     NULL, NULL, :hub_pubkey, :client_pubkey, :hub_address,
-    :client_address, :client2hub_expire_time, :secret_hash
+    :client_address, :c2h_expire_time, :secret_hash
 );
 
 -- insert hub connection
 INSERT INTO HubConnection(
-    handle, asset, hub2client_channel_id,
-    client2hub_channel_id, terms_id, hub_rpc_url
+    handle, asset, h2c_channel_id, c2h_channel_id, terms_id, hub_rpc_url
 ) VALUES (
     :handle, :asset,
     (

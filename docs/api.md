@@ -15,8 +15,8 @@ Optionally the entries can be limited to a set of provided clients and assets.
         "asset": "asset",
         "handle": "handle",
         "client_url": "url" or null,
-        "client2hub_deposit_script": "hex",
-        "hub2client_deposit_script": "hex",
+        "c2h_deposit_script": "hex",
+        "h2c_deposit_script": "hex",
         "pubkey": "hub pubkey hex",
         "signature": "hub signature hex"
     }]

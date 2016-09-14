@@ -15,6 +15,7 @@ _MIGRATIONS = {
     0: sql.load("migration_0"),
     1: sql.load("migration_1"),
     2: sql.load("migration_2"),
+    3: sql.load("migration_3"),
 }
 _HANDLE_EXISTS = "SELECT EXISTS(SELECT * FROM HubConnection WHERE handle = ?);"
 _COMMITS_REQUESTED = sql.load("commits_requested")
@@ -52,8 +53,8 @@ unnotified_revokes = sql.make_fetchall("unnotified_revokes")
 add_payment = sql.make_execute("add_payment")
 unnotified_payments = sql.make_fetchall("unnotified_payments")
 micropayment_channel = sql.make_fetchone("micropayment_channel")
-hub2client_payments_sum = sql.make_fetchone("hub2client_payments_sum", True)
-client2hub_payments_sum = sql.make_fetchone("client2hub_payments_sum", True)
+h2c_payments_sum = sql.make_fetchone("h2c_payments_sum", True)
+c2h_payments_sum = sql.make_fetchone("c2h_payments_sum", True)
 
 
 def setup():
@@ -137,7 +138,7 @@ def complete_hub_connection(data, cursor=None):
     add_revoke_secret_args = {
         "secret_hash": data["secret_hash"],
         "secret_value": data["secret_value"],
-        "channel_id": data["client2hub_channel_id"],
+        "channel_id": data["c2h_channel_id"],
     }
     sql.execute(_ADD_REVOKE_SECRET, args=add_revoke_secret_args, cursor=cursor)
     cursor.execute("COMMIT")

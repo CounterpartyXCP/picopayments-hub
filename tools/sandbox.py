@@ -93,8 +93,8 @@ class TestSandbox(unittest.TestCase):
                 handle = hub_connection["handle"]
                 data = lib.load_connection_data(handle, cursor)
                 print("handle:", handle)
-                print("hub deposit:", data["hub2client_deposit_amount"])
-                print("client deposit:", data["client2hub_deposit_amount"])
+                print("hub deposit:", data["h2c_deposit_amount"])
+                print("client deposit:", data["c2h_deposit_amount"])
 
 
 if __name__ == "__main__":

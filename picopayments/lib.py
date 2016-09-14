@@ -43,7 +43,7 @@ def create_secret():
     }
 
 
-def create_hub_connection(asset, client_pubkey, hub2client_spend_secret_hash,
+def create_hub_connection(asset, client_pubkey, h2c_spend_secret_hash,
                           hub_rpc_url):
 
     # current terms and asset
@@ -66,7 +66,7 @@ def create_hub_connection(asset, client_pubkey, hub2client_spend_secret_hash,
     data.update(create_secret())
 
     # send micropayment channel
-    data["hub2client_spend_secret_hash"] = hub2client_spend_secret_hash
+    data["h2c_spend_secret_hash"] = h2c_spend_secret_hash
 
     # connection
     handle = util.b2h(os.urandom(32))
@@ -85,54 +85,54 @@ def create_hub_connection(asset, client_pubkey, hub2client_spend_secret_hash,
     )
 
 
-def _load_incomplete_connection(handle, client2hub_deposit_script):
+def _load_incomplete_connection(handle, c2h_deposit_script):
 
-    client2hub_ds_bin = h2b(client2hub_deposit_script)
-    client_pubkey = scripts.get_deposit_payer_pubkey(client2hub_ds_bin)
-    hub_pubkey = scripts.get_deposit_payee_pubkey(client2hub_ds_bin)
-    expire_time = scripts.get_deposit_expire_time(client2hub_ds_bin)
+    c2h_ds_bin = h2b(c2h_deposit_script)
+    client_pubkey = scripts.get_deposit_payer_pubkey(c2h_ds_bin)
+    hub_pubkey = scripts.get_deposit_payee_pubkey(c2h_ds_bin)
+    expire_time = scripts.get_deposit_expire_time(c2h_ds_bin)
 
     hub_conn = db.hub_connection(handle=handle)
     assert(hub_conn is not None)
     assert(not hub_conn["complete"])
 
-    hub2client = db.micropayment_channel(id=hub_conn["hub2client_channel_id"])
-    assert(hub2client["payer_pubkey"] == hub_pubkey)
-    assert(hub2client["payee_pubkey"] == client_pubkey)
+    h2c = db.micropayment_channel(id=hub_conn["h2c_channel_id"])
+    assert(h2c["payer_pubkey"] == hub_pubkey)
+    assert(h2c["payee_pubkey"] == client_pubkey)
 
-    client2hub = db.micropayment_channel(id=hub_conn["client2hub_channel_id"])
-    assert(client2hub["payer_pubkey"] == client_pubkey)
-    assert(client2hub["payee_pubkey"] == hub_pubkey)
+    c2h = db.micropayment_channel(id=hub_conn["c2h_channel_id"])
+    assert(c2h["payer_pubkey"] == client_pubkey)
+    assert(c2h["payee_pubkey"] == hub_pubkey)
 
     hub_key = db.key(pubkey=hub_pubkey)
 
-    return hub_conn, hub2client, expire_time, hub_key
+    return hub_conn, h2c, expire_time, hub_key
 
 
-def complete_connection(handle, client2hub_deposit_script,
+def complete_connection(handle, c2h_deposit_script,
                         next_revoke_secret_hash):
 
-    hub_conn, hub2client, expire_time, hub_key = _load_incomplete_connection(
-        handle, client2hub_deposit_script
+    hub_conn, h2c, expire_time, hub_key = _load_incomplete_connection(
+        handle, c2h_deposit_script
     )
 
-    hub2client_deposit_script = b2h(scripts.compile_deposit_script(
-        hub2client["payer_pubkey"], hub2client["payee_pubkey"],
-        hub2client["spend_secret_hash"], expire_time
+    h2c_deposit_script = b2h(scripts.compile_deposit_script(
+        h2c["payer_pubkey"], h2c["payee_pubkey"],
+        h2c["spend_secret_hash"], expire_time
     ))
 
     data = {
         "handle": handle,
         "expire_time": expire_time,
-        "client2hub_channel_id": hub_conn["client2hub_channel_id"],
-        "client2hub_deposit_script": client2hub_deposit_script,
-        "client2hub_deposit_address": util.script2address(
-            h2b(client2hub_deposit_script), netcode=etc.netcode
+        "c2h_channel_id": hub_conn["c2h_channel_id"],
+        "c2h_deposit_script": c2h_deposit_script,
+        "c2h_deposit_address": util.script2address(
+            h2b(c2h_deposit_script), netcode=etc.netcode
         ),
-        "hub2client_channel_id": hub_conn["hub2client_channel_id"],
-        "hub2client_deposit_script": hub2client_deposit_script,
-        "hub2client_deposit_address": util.script2address(
-            h2b(hub2client_deposit_script), netcode=etc.netcode
+        "h2c_channel_id": hub_conn["h2c_channel_id"],
+        "h2c_deposit_script": h2c_deposit_script,
+        "h2c_deposit_address": util.script2address(
+            h2b(h2c_deposit_script), netcode=etc.netcode
         ),
         "next_revoke_secret_hash": next_revoke_secret_hash,
     }
@@ -143,7 +143,7 @@ def complete_connection(handle, client2hub_deposit_script,
     log.info("Completed connection {0}".format(handle))
     return (
         {
-            "deposit_script": hub2client_deposit_script,
+            "deposit_script": h2c_deposit_script,
             "next_revoke_secret_hash": data["secret_hash"]
         },
         hub_key["wif"]
@@ -226,8 +226,8 @@ def update_channel_state(channel_id, asset, commit=None,
 
 
 def _save_sync_data(cursor, handle, next_revoke_secret_hash,
-                    receive_payments, hub2client_commit_id, hub2client_revokes,
-                    client2hub_id, next_revoke_secret):
+                    receive_payments, h2c_commit_id, h2c_revokes,
+                    c2h_id, next_revoke_secret):
 
     cursor.execute("BEGIN TRANSACTION;")
 
@@ -241,15 +241,15 @@ def _save_sync_data(cursor, handle, next_revoke_secret_hash,
     db.set_payments_notified(payment_ids, cursor=cursor)
 
     # mark sent commit as received
-    if hub2client_commit_id:
-        db.set_commit_notified(id=hub2client_commit_id, cursor=cursor)
+    if h2c_commit_id:
+        db.set_commit_notified(id=h2c_commit_id, cursor=cursor)
 
     # mark sent revokes as received
-    revoke_ids = [p.pop("id") for p in hub2client_revokes]
+    revoke_ids = [p.pop("id") for p in h2c_revokes]
     db.set_revokes_notified(revoke_ids, cursor=cursor)
 
     # save next spend secret
-    db.add_revoke_secret(client2hub_id, next_revoke_secret["secret_hash"],
+    db.add_revoke_secret(c2h_id, next_revoke_secret["secret_hash"],
                          next_revoke_secret["secret_value"], cursor=cursor)
 
     cursor.execute("COMMIT;")
@@ -264,12 +264,12 @@ def sync_hub_connection(handle, next_revoke_secret_hash,
     hub_connection = db.hub_connection(handle=handle, cursor=cursor)
     connection_terms = db.terms(id=hub_connection["terms_id"])
     asset = hub_connection["asset"]
-    client2hub_id = hub_connection["client2hub_channel_id"]
-    hub2client_id = hub_connection["hub2client_channel_id"]
+    c2h_id = hub_connection["c2h_channel_id"]
+    h2c_id = hub_connection["h2c_channel_id"]
 
     # update channels state
-    update_channel_state(client2hub_id, asset, commit=commit, cursor=cursor)
-    update_channel_state(hub2client_id, asset, revokes=revokes, cursor=cursor)
+    update_channel_state(c2h_id, asset, commit=commit, cursor=cursor)
+    update_channel_state(h2c_id, asset, revokes=revokes, cursor=cursor)
 
     # add sync fee payment
     sends.insert(0, {
@@ -286,26 +286,26 @@ def sync_hub_connection(handle, next_revoke_secret_hash,
     next_revoke_secret = create_secret()
 
     # load unnotified
-    hub2client_commit = db.unnotified_commit(channel_id=hub2client_id)
-    client2hub_revokes = db.unnotified_revokes(channel_id=client2hub_id)
+    h2c_commit = db.unnotified_commit(channel_id=h2c_id)
+    c2h_revokes = db.unnotified_revokes(channel_id=c2h_id)
     receive_payments = db.unnotified_payments(payee_handle=handle)
 
     # save sync data
-    hub2client_commit_id = None
-    if hub2client_commit:
-        hub2client_commit_id = hub2client_commit.pop("id")
+    h2c_commit_id = None
+    if h2c_commit:
+        h2c_commit_id = h2c_commit.pop("id")
     _save_sync_data(
         cursor, handle, next_revoke_secret_hash, receive_payments,
-        hub2client_commit_id, client2hub_revokes, client2hub_id,
+        h2c_commit_id, c2h_revokes, c2h_id,
         next_revoke_secret
     )
 
-    hub_key = db.channel_payer_key(id=hub2client_id)
+    hub_key = db.channel_payer_key(id=h2c_id)
     return (
         {
             "receive": receive_payments,
-            "commit": hub2client_commit,
-            "revokes": [r["revoke_secret"] for r in client2hub_revokes],
+            "commit": h2c_commit,
+            "revokes": [r["revoke_secret"] for r in c2h_revokes],
             "next_revoke_secret_hash": next_revoke_secret["secret_hash"]
         },
         hub_key["wif"]
@@ -455,58 +455,58 @@ def has_unconfirmed_transactions(address):
 def load_connection_data(handle, cursor):
     connection = db.hub_connection(handle=handle, cursor=cursor)
     terms = db.terms(id=connection["terms_id"], cursor=cursor)
-    hub2client_state = db.load_channel_state(
-        connection["hub2client_channel_id"], connection["asset"], cursor=cursor
+    h2c_state = db.load_channel_state(
+        connection["h2c_channel_id"], connection["asset"], cursor=cursor
     )
-    hub2client_deposit_address = deposit_address(hub2client_state)
-    client2hub_state = db.load_channel_state(
-        connection["client2hub_channel_id"], connection["asset"], cursor=cursor
+    h2c_deposit_address = deposit_address(h2c_state)
+    c2h_state = db.load_channel_state(
+        connection["c2h_channel_id"], connection["asset"], cursor=cursor
     )
-    client2hub_deposit_address = deposit_address(client2hub_state)
-    hub2client_transferred = transferred(hub2client_state)
-    hub2client_deposit_amount = balance(hub2client_deposit_address,
-                                        connection["asset"])
-    client2hub_transferred = transferred(client2hub_state)
-    client2hub_deposit_amount = balance(client2hub_deposit_address,
-                                        connection["asset"])
+    c2h_deposit_address = deposit_address(c2h_state)
+    h2c_transferred = transferred(h2c_state)
+    h2c_deposit_amount = balance(h2c_deposit_address,
+                                 connection["asset"])
+    c2h_transferred = transferred(c2h_state)
+    c2h_deposit_amount = balance(c2h_deposit_address,
+                                 connection["asset"])
     unnotified_commit = db.unnotified_commit(
-        channel_id=connection["hub2client_channel_id"], cursor=cursor
+        channel_id=connection["h2c_channel_id"], cursor=cursor
     )
-    hub2client_payments_sum = db.hub2client_payments_sum(handle=handle,
-                                                         cursor=cursor)
-    client2hub_payments_sum = db.client2hub_payments_sum(handle=handle,
-                                                         cursor=cursor)
-    transferred_amount = client2hub_transferred - hub2client_transferred
-    payments_sum = hub2client_payments_sum - client2hub_payments_sum
+    h2c_payments_sum = db.h2c_payments_sum(handle=handle,
+                                           cursor=cursor)
+    c2h_payments_sum = db.c2h_payments_sum(handle=handle,
+                                           cursor=cursor)
+    transferred_amount = c2h_transferred - h2c_transferred
+    payments_sum = h2c_payments_sum - c2h_payments_sum
 
     # sendable (what this channel can send to another)
     sendable_amount = transferred_amount - payments_sum
 
     # receivable (what this channel can receive from another)
-    receivable_potential = hub2client_deposit_amount + client2hub_transferred
+    receivable_potential = h2c_deposit_amount + c2h_transferred
     receivable_owed = (abs(payments_sum) if payments_sum < 0 else 0)
     receivable_amount = receivable_potential - receivable_owed
 
     return {
         "connection": connection,
-        "hub2client_state": hub2client_state,
-        "hub2client_expired": expired(
-            hub2client_state,
+        "h2c_state": h2c_state,
+        "h2c_expired": expired(
+            h2c_state,
             etc.expire_clearance),
-        "hub2client_transferred_amount": hub2client_transferred,
-        "hub2client_payments_sum": hub2client_payments_sum,
-        "hub2client_deposit_amount": hub2client_deposit_amount,
-        "hub2client_transferrable_amount": hub2client_deposit_amount -
-        hub2client_transferred,
-        "client2hub_state": client2hub_state,
-        "client2hub_expired": expired(
-            client2hub_state,
+        "h2c_transferred_amount": h2c_transferred,
+        "h2c_payments_sum": h2c_payments_sum,
+        "h2c_deposit_amount": h2c_deposit_amount,
+        "h2c_transferrable_amount": h2c_deposit_amount -
+        h2c_transferred,
+        "c2h_state": c2h_state,
+        "c2h_expired": expired(
+            c2h_state,
             etc.expire_clearance),
-        "client2hub_transferred_amount": client2hub_transferred,
-        "client2hub_payments_sum": client2hub_payments_sum,
-        "client2hub_deposit_amount": client2hub_deposit_amount,
-        "client2hub_transferrable_amount": client2hub_deposit_amount -
-        client2hub_transferred,
+        "c2h_transferred_amount": c2h_transferred,
+        "c2h_payments_sum": c2h_payments_sum,
+        "c2h_deposit_amount": c2h_deposit_amount,
+        "c2h_transferrable_amount": c2h_deposit_amount -
+        c2h_transferred,
         "transferred_amount": transferred_amount,
         "payments_sum": payments_sum,
         "unnotified_commit": unnotified_commit,  # FIXME rename h2c_uno...
@@ -517,9 +517,9 @@ def load_connection_data(handle, cursor):
 
 
 def _send_client_funds(connection_data, quantity, token):
-    c2h_state = connection_data["client2hub_state"]
-    h2c_state = connection_data["hub2client_state"]
-    c2h_transferred_before = connection_data["client2hub_transferred_amount"]
+    c2h_state = connection_data["c2h_state"]
+    h2c_state = connection_data["h2c_state"]
+    c2h_transferred_before = connection_data["c2h_transferred_amount"]
     h2c_unnotified_commit = None
 
     # revoke what we can to maximize liquidity
@@ -552,7 +552,7 @@ def _send_client_funds(connection_data, quantity, token):
     c2h_revoked_quantity = c2h_transferred_before - c2h_transferred_after
     send_quantity = quantity - c2h_revoked_quantity
     h2c_transferrable_amount = connection_data[
-        "hub2client_transferrable_amount"]
+        "h2c_transferrable_amount"]
     if send_quantity > h2c_transferrable_amount:
         raise err.PaymentExceedsReceivable(
             send_quantity, h2c_transferrable_amount, token
@@ -614,9 +614,9 @@ def process_payment(payer_handle, cursor, payment):
     payer = load_connection_data(payer_handle, cursor)
 
     # check if connection expired
-    if payer["client2hub_expired"]:
+    if payer["c2h_expired"]:
         raise err.DepositExpired(payer_handle, "client")
-    if payer["hub2client_expired"]:
+    if payer["h2c_expired"]:
         raise err.DepositExpired(payer_handle, "hub")
 
     # check payer has enough funds or can revoke sends until enough available
@@ -635,9 +635,9 @@ def process_payment(payer_handle, cursor, payment):
             )
 
         # check if connection expired
-        if payee["hub2client_expired"]:
+        if payee["h2c_expired"]:
             raise err.DepositExpired(payee_handle, "hub")
-        if payee["client2hub_expired"]:
+        if payee["c2h_expired"]:
             raise err.DepositExpired(payee_handle, "client")
 
         if payment["amount"] > payee["receivable_amount"]:
@@ -646,19 +646,19 @@ def process_payment(payer_handle, cursor, payment):
             )
 
         c2h_unnotified_revokes = db.unnotified_revokes(
-            channel_id=payee["connection"]["client2hub_channel_id"]
+            channel_id=payee["connection"]["c2h_channel_id"]
         )
         result = _send_client_funds(payee, payment["amount"], payment["token"])
 
         cursor.execute("BEGIN TRANSACTION;")
 
         c2h_unnotified_revokes += result["c2h_revoke_secrets"]
-        db.save_channel_state(payee["connection"]["client2hub_channel_id"],
+        db.save_channel_state(payee["connection"]["c2h_channel_id"],
                               result["c2h_state"],
                               unnotified_revoke_secrets=c2h_unnotified_revokes,
                               cursor=cursor)
         db.save_channel_state(
-            payee["connection"]["hub2client_channel_id"],
+            payee["connection"]["h2c_channel_id"],
             result["h2c_state"],
             unnotified_commit=result["h2c_unnotified_commit"],
             cursor=cursor

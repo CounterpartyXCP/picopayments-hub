@@ -8,7 +8,6 @@ from picopayments import db
 from picopayments import lib
 from picopayments import sql
 from picopayments import rpc
-from counterpartylib.lib.micropayments import util
 
 
 def fund_deposits(publish_tx=True):
@@ -22,7 +21,7 @@ def fund_deposits(publish_tx=True):
             terms = db.terms(id=hub_connection["terms_id"], cursor=cursor)
 
             # load client to hub data
-            c2h_mpc_id = hub_connection["client2hub_channel_id"]
+            c2h_mpc_id = hub_connection["c2h_channel_id"]
             c2h_state = db.load_channel_state(c2h_mpc_id, asset, cursor=cursor)
             c2h_deposit_address = lib.deposit_address(c2h_state)
             c2h_deposit_balance = lib.balance(c2h_deposit_address, asset)
@@ -35,7 +34,7 @@ def fund_deposits(publish_tx=True):
                 continue  # ignore if unconfirmed transaction inputs/outputs
 
             # load hub to client data
-            h2c_mpc_id = hub_connection["hub2client_channel_id"]
+            h2c_mpc_id = hub_connection["h2c_channel_id"]
             h2c_state = db.load_channel_state(h2c_mpc_id, asset, cursor=cursor)
             h2c_deposit_address = lib.deposit_address(h2c_state)
             h2c_deposit_balance = lib.balance(h2c_deposit_address, asset)
@@ -74,9 +73,9 @@ def close_connections(publish_tx=True):
         cursor = sql.get_cursor()
         for hub_connection in db.hub_connections_complete(cursor=cursor):
             asset = hub_connection["asset"]
-            c2h_mpc_id = hub_connection["client2hub_channel_id"]
+            c2h_mpc_id = hub_connection["c2h_channel_id"]
             c2h_state = db.load_channel_state(c2h_mpc_id, asset, cursor=cursor)
-            h2c_mpc_id = hub_connection["hub2client_channel_id"]
+            h2c_mpc_id = hub_connection["h2c_channel_id"]
             h2c_state = db.load_channel_state(h2c_mpc_id, asset, cursor=cursor)
 
             # connection expired or  commit published
@@ -107,9 +106,9 @@ def recover_funds(publish_tx=True):
         cursor = sql.get_cursor()
         for hub_connection in db.hub_connections_recoverable(cursor=cursor):
             asset = hub_connection["asset"]
-            c2h_mpc_id = hub_connection["client2hub_channel_id"]
+            c2h_mpc_id = hub_connection["c2h_channel_id"]
             c2h_state = db.load_channel_state(c2h_mpc_id, asset, cursor=cursor)
-            h2c_mpc_id = hub_connection["hub2client_channel_id"]
+            h2c_mpc_id = hub_connection["h2c_channel_id"]
             h2c_state = db.load_channel_state(h2c_mpc_id, asset, cursor=cursor)
             ptx = rpc.cp_call(method="mpc_payouts",
                               params={"state": c2h_state})

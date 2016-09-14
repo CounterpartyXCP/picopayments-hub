@@ -48,7 +48,7 @@ class TestDB(unittest.TestCase):
                 "client_address": b2h(os.urandom(32)),
                 "secret_hash": b2h(os.urandom(32)),
                 "secret_value": b2h(os.urandom(32)),
-                "hub2client_spend_secret_hash": b2h(os.urandom(32)),
+                "h2c_spend_secret_hash": b2h(os.urandom(32)),
                 "handle": handle,
                 "hub_rpc_url": b2h(os.urandom(32)),
             })

@@ -17,15 +17,15 @@ CONNECTION_RESULT_SCHEMA = {
     "properties": {
         "asset": {"type": "string"},
         "handle": {"type": "string"},
-        "client2hub_deposit_script": {"type": "string"},
-        "hub2client_deposit_script": {"type": "string"},
+        "c2h_deposit_script": {"type": "string"},
+        "h2c_deposit_script": {"type": "string"},
         "pubkey": {"type": "string"},
         "signature": {"type": "string"},
         "client_url": {"type": ["string", "null"]},
     },
     "required": [
         "asset", "handle", "client_url",
-        "client2hub_deposit_script", "hub2client_deposit_script",
+        "c2h_deposit_script", "h2c_deposit_script",
         "pubkey", "signature"
     ],
     "additionalProperties": False

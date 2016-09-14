@@ -83,33 +83,33 @@ def is_url(url):
         raise err.InvalidUrl(url)
 
 
-def client2hub_commit(handle, commit_rawtx, commit_script):
+def c2h_commit(handle, commit_rawtx, commit_script):
     hub_connection(handle)
     netcode = "XTN" if etc.testnet else "BTC"
-    client2hub_channel = db.receive_channel(handle=handle)
+    c2h_channel = db.receive_channel(handle=handle)
     deposit_utxos = rpc.cp_call(
         method="get_unspent_txouts",
-        params={"address": client2hub_channel["deposit_address"]}
+        params={"address": c2h_channel["deposit_address"]}
     )
     validate.commit_rawtx(
-        deposit_utxos, commit_rawtx, client2hub_channel["asset"],
-        client2hub_channel["deposit_script"], commit_script, netcode
+        deposit_utxos, commit_rawtx, c2h_channel["asset"],
+        c2h_channel["deposit_script"], commit_script, netcode
     )
 
 
 def _channel_client(handle, pubkey):
 
     # check channel exists
-    client2hub_channel = db.receive_channel(handle=handle)
-    if not client2hub_channel:
+    c2h_channel = db.receive_channel(handle=handle)
+    if not c2h_channel:
         raise err.HandleNotFound(handle)
 
     # signature was done by correct client
-    expected_pubkey = client2hub_channel["payer_pubkey"]
+    expected_pubkey = c2h_channel["payer_pubkey"]
     if expected_pubkey != pubkey:
         raise err.ClientPubkeyMissmatch(expected_pubkey, pubkey)
 
-    return client2hub_channel
+    return c2h_channel
 
 
 def terms_input(assets):
@@ -154,9 +154,9 @@ def deposit_input(handle, deposit_script,
 
     # FIXME validate terms["expire_max"] >= expire time >= terms["expire_min"]
     validate.hash160(next_revoke_secret_hash)
-    client2hub_channel = _channel_client(handle, client_pubkey)
-    expected_payee_pubkey = client2hub_channel["payee_pubkey"]
-    expected_spend_secret_hash = client2hub_channel["spend_secret_hash"]
+    c2h_channel = _channel_client(handle, client_pubkey)
+    expected_payee_pubkey = c2h_channel["payee_pubkey"]
+    expected_spend_secret_hash = c2h_channel["spend_secret_hash"]
     validate.deposit_script(deposit_script, expected_payee_pubkey,
                             expected_spend_secret_hash)
 
@@ -184,4 +184,4 @@ def sync_input(handle, next_revoke_secret_hash, client_pubkey,
 
     if commit:
         jsonschema.validate(commit, COMMIT_SCHEMA)
-        client2hub_commit(handle, commit["rawtx"], commit["script"])
+        c2h_commit(handle, commit["rawtx"], commit["script"])
