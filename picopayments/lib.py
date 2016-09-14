@@ -37,14 +37,11 @@ def create_key(asset, netcode="BTC"):
 
 def create_secret():
     secret = util.b2h(os.urandom(32))
-    return {
-        "secret_value": secret,
-        "secret_hash": util.hash160hex(secret)
-    }
+    return {"secret_value": secret, "secret_hash": util.hash160hex(secret)}
 
 
-def create_hub_connection(asset, client_pubkey, h2c_spend_secret_hash,
-                          hub_rpc_url):
+def create_hub_connection(asset, client_pubkey,
+                          h2c_spend_secret_hash, hub_rpc_url):
 
     # current terms and asset
     data = {"asset": asset}
@@ -200,22 +197,16 @@ def update_channel_state(channel_id, asset, commit=None,
     unnotified_revoke_secrets = [x["revoke_secret"]
                                  for x in unnotified_revokes]
     if commit is not None:
-        state = rpc.cp_call(
-            method="mpc_add_commit",
-            params={
-                "state": state,
-                "commit_rawtx": commit["rawtx"],
-                "commit_script": commit["script"]
-            }
+        state = rpc.cplib.mpc_add_commit(
+            state=state,
+            commit_rawtx=commit["rawtx"],
+            commit_script=commit["script"]
         )
     if revokes is not None:
         # FIXME will not set revokes as unnotified
         #       currently not a problem as its only used for hub to client
         #       but its begging to be missused!!
-        state = rpc.cp_call(
-            method="mpc_revoke_all",
-            params={"state": state, "secrets": revokes}
-        )
+        state = rpc.cplib.mpc_revoke_all(state=state, secrets=revokes)
     cursor.execute("BEGIN TRANSACTION;")
     db.save_channel_state(
         channel_id, state, unnotified_commit=unnotified_commit,
@@ -296,8 +287,7 @@ def sync_hub_connection(handle, next_revoke_secret_hash,
         h2c_commit_id = h2c_commit.pop("id")
     _save_sync_data(
         cursor, handle, next_revoke_secret_hash, receive_payments,
-        h2c_commit_id, c2h_revokes, c2h_id,
-        next_revoke_secret
+        h2c_commit_id, c2h_revokes, c2h_id, next_revoke_secret
     )
 
     hub_key = db.channel_payer_key(id=h2c_id)
@@ -313,15 +303,10 @@ def sync_hub_connection(handle, next_revoke_secret_hash,
 
 
 def balance(address, asset):
-    results = rpc.cp_call(
-        method="get_balances",
-        params={
-            "filters": [
-                {'field': 'address', 'op': '==', 'value': address},
-                {'field': 'asset', 'op': '==', 'value': asset},
-            ]
-        }
-    )
+    results = rpc.cplib.get_balances(filters=[
+        {'field': 'address', 'op': '==', 'value': address},
+        {'field': 'asset', 'op': '==', 'value': asset},
+    ])
     return results[0]["quantity"] if results else 0
 
 
@@ -334,37 +319,30 @@ def get_script_address(script):
 
 
 def transferred(state):
-    return rpc.cp_call(
-        method="mpc_transferred_amount",
-        params={"state": state}
-    )
+    return rpc.cplib.mpc_transferred_amount(state=state)
 
 
 def expired(state, clearance):
-    return rpc.cp_call(
-        method="mpc_deposit_expired",
-        params={"state": state, "clearance": clearance}
-    )
+    return rpc.cplib.mpc_deposit_expired(state=state, clearance=clearance)
 
 
 def get_tx(txid):
-    return rpc.cp_call(method="getrawtransaction", params={"tx_hash": txid})
+    return rpc.cplib.getrawtransaction(tx_hash=txid)
 
 
 def publish(rawtx, publish_tx=True):
     if not publish_tx:
         return util.gettxid(rawtx)
-    return rpc.cp_call(
-        method="sendrawtransaction", params={"tx_hex": rawtx}
-    )  # pragma: no cover
+    return rpc.cplib.sendrawtransaction(tx_hex=rawtx)  # pragma: no cover
 
 
 def recover_payout(payout_rawtx, commit_script, publish_tx=True):
     script = util.h2b(commit_script)
     pubkey = scripts.get_commit_payee_pubkey(script)
     key = db.key(pubkey=util.b2h(pubkey))
+    spend_secret = None  # FIXME load spend secret from db
     signed_rawtx = scripts.sign_payout_recover(
-        get_tx, wif, payout_rawtx, script, spend_secret
+        get_tx, key["wif"], payout_rawtx, script, spend_secret
     )
     return publish(signed_rawtx, publish_tx=publish_tx)
 
@@ -374,7 +352,7 @@ def recover_revoked(revoke_rawtx, commit_script,
     script = util.h2b(commit_script)
     pubkey = scripts.get_commit_payer_pubkey(script)
     key = db.key(pubkey=util.b2h(pubkey))
-    signed_rawtx = sign_revoke_recover(
+    signed_rawtx = scripts.sign_revoke_recover(
         get_tx, key["wif"], revoke_rawtx, script, revoke_secret
     )
     return publish(signed_rawtx, publish_tx=publish_tx)
@@ -402,7 +380,7 @@ def recover_expired(expire_rawtx, deposit_script, publish_tx=True):
 
 
 def finalize_commit(state, publish_tx=True):
-    commit = rpc.cp_call(method="mpc_highest_commit", params={"state": state})
+    commit = rpc.cplib.mpc_highest_commit(state=state)
     if commit is None:
         return None
     script = util.h2b(commit["script"])
@@ -422,26 +400,16 @@ def send_funds(destination, asset, quantity, publish_tx=True):
     key = find_key_with_funds(asset, quantity, extra_btc)
     if key is None:
         raise err.InsufficientFunds(asset, quantity)
-    unsigned_rawtx = rpc.cp_call(
-        method="create_send",
-        params={
-            "source": key["address"],
-            "destination": destination,
-            "asset": asset,
-            "regular_dust_size": extra_btc,
-            "disable_utxo_locks": True,
-            "quantity": quantity
-        }
+    unsigned_rawtx = rpc.cplib.create_send(
+        source=key["address"], destination=destination, asset=asset,
+        regular_dust_size=extra_btc, disable_utxo_locks=True, quantity=quantity
     )
     signed_rawtx = scripts.sign_deposit(get_tx, key["wif"], unsigned_rawtx)
     return publish(signed_rawtx, publish_tx=publish_tx)
 
 
 def get_transactions(address):
-    return rpc.cp_call(
-        method="search_raw_transactions",
-        params={"address": address, "unconfirmed": True}
-    )
+    return rpc.cplib.search_raw_transactions(address=address, unconfirmed=True)
 
 
 def has_unconfirmed_transactions(address):
@@ -464,18 +432,14 @@ def load_connection_data(handle, cursor):
     )
     c2h_deposit_address = deposit_address(c2h_state)
     h2c_transferred = transferred(h2c_state)
-    h2c_deposit_amount = balance(h2c_deposit_address,
-                                 connection["asset"])
+    h2c_deposit_amount = balance(h2c_deposit_address, connection["asset"])
     c2h_transferred = transferred(c2h_state)
-    c2h_deposit_amount = balance(c2h_deposit_address,
-                                 connection["asset"])
+    c2h_deposit_amount = balance(c2h_deposit_address, connection["asset"])
     unnotified_commit = db.unnotified_commit(
         channel_id=connection["h2c_channel_id"], cursor=cursor
     )
-    h2c_payments_sum = db.h2c_payments_sum(handle=handle,
-                                           cursor=cursor)
-    c2h_payments_sum = db.c2h_payments_sum(handle=handle,
-                                           cursor=cursor)
+    h2c_payments_sum = db.h2c_payments_sum(handle=handle, cursor=cursor)
+    c2h_payments_sum = db.c2h_payments_sum(handle=handle, cursor=cursor)
     transferred_amount = c2h_transferred - h2c_transferred
     payments_sum = h2c_payments_sum - c2h_payments_sum
 
@@ -490,23 +454,17 @@ def load_connection_data(handle, cursor):
     return {
         "connection": connection,
         "h2c_state": h2c_state,
-        "h2c_expired": expired(
-            h2c_state,
-            etc.expire_clearance),
+        "h2c_expired": expired(h2c_state, etc.expire_clearance),
         "h2c_transferred_amount": h2c_transferred,
         "h2c_payments_sum": h2c_payments_sum,
         "h2c_deposit_amount": h2c_deposit_amount,
-        "h2c_transferrable_amount": h2c_deposit_amount -
-        h2c_transferred,
+        "h2c_transferrable_amount": h2c_deposit_amount - h2c_transferred,
         "c2h_state": c2h_state,
-        "c2h_expired": expired(
-            c2h_state,
-            etc.expire_clearance),
+        "c2h_expired": expired(c2h_state, etc.expire_clearance),
         "c2h_transferred_amount": c2h_transferred,
         "c2h_payments_sum": c2h_payments_sum,
         "c2h_deposit_amount": c2h_deposit_amount,
-        "c2h_transferrable_amount": c2h_deposit_amount -
-        c2h_transferred,
+        "c2h_transferrable_amount": c2h_deposit_amount - c2h_transferred,
         "transferred_amount": transferred_amount,
         "payments_sum": payments_sum,
         "unnotified_commit": unnotified_commit,  # FIXME rename h2c_uno...
@@ -528,13 +486,9 @@ def _send_client_funds(connection_data, quantity, token):
     if revoke_quantity > 0:
 
         # get hashes of secrets to publish
-        revoke_secret_hashes = rpc.cp_call(
-            method="mpc_revoke_hashes_until",
-            params={
-                "state": c2h_state,
-                "quantity": revoke_quantity,
-                "surpass": False  # never revoke past the given quantity!!!
-            }
+        revoke_secret_hashes = rpc.cplib.mpc_revoke_hashes_until(
+            state=c2h_state, quantity=revoke_quantity,
+            surpass=False  # never revoke past the given quantity!!!
         )
 
         # get secrets to publish
@@ -542,9 +496,8 @@ def _send_client_funds(connection_data, quantity, token):
             c2h_revoke_secrets.append(db.get_secret(hash=secret_hash)["value"])
 
         # revoke commits for secrets that will be published
-        c2h_state = rpc.cp_call(
-            method="mpc_revoke_all",
-            params={"state": c2h_state, "secrets": c2h_revoke_secrets}
+        c2h_state = rpc.cplib.mpc_revoke_all(
+            state=c2h_state, secrets=c2h_revoke_secrets
         )
 
     # make sure enough funds still available to be transferred
@@ -573,14 +526,9 @@ def _send_client_funds(connection_data, quantity, token):
         handle = connection_data["connection"]["handle"]
         result = db.get_next_revoke_secret_hash(handle=handle)
         next_revoke_secret_hash = result["next_revoke_secret_hash"]
-        result = rpc.cp_call(
-            method="mpc_create_commit",
-            params={
-                "state": h2c_state,
-                "revoke_secret_hash": next_revoke_secret_hash,
-                "delay_time": etc.delay_time,
-                "quantity": send_quantity
-            }
+        result = rpc.cplib.mpc_create_commit(
+            state=h2c_state, revoke_secret_hash=next_revoke_secret_hash,
+            delay_time=etc.delay_time, quantity=send_quantity
         )
         h2c_state = result["state"]
         unsigned_rawtx = result["tosign"]["commit_rawtx"]
@@ -653,15 +601,13 @@ def process_payment(payer_handle, cursor, payment):
         cursor.execute("BEGIN TRANSACTION;")
 
         c2h_unnotified_revokes += result["c2h_revoke_secrets"]
-        db.save_channel_state(payee["connection"]["c2h_channel_id"],
-                              result["c2h_state"],
-                              unnotified_revoke_secrets=c2h_unnotified_revokes,
-                              cursor=cursor)
         db.save_channel_state(
-            payee["connection"]["h2c_channel_id"],
-            result["h2c_state"],
-            unnotified_commit=result["h2c_unnotified_commit"],
-            cursor=cursor
+            payee["connection"]["c2h_channel_id"], result["c2h_state"],
+            unnotified_revoke_secrets=c2h_unnotified_revokes, cursor=cursor
+        )
+        db.save_channel_state(
+            payee["connection"]["h2c_channel_id"], result["h2c_state"],
+            unnotified_commit=result["h2c_unnotified_commit"], cursor=cursor
         )
 
     # fee payment

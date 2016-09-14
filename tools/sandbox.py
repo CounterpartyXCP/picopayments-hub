@@ -62,9 +62,7 @@ class TestSandbox(unittest.TestCase):
     def test_burn(self):
         wif = "cTvCnpvQJE3TvNejkWbnFA1z6jLJjB2xXXapFabGsazCz2QNYFQb"
         address = util.wif2address(wif)
-        unsigned_rawtx = rpc.cp_call(
-            "create_burn", params={"source": address, "quantity": 100000000}
-        )
+        unsigned_rawtx = rpc.cplib.create_burn(source=address, quantity=100000000)
         txid = self.client.sign_and_publish(unsigned_rawtx, wif)
         print("TXID:", txid)
 

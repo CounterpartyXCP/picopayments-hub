@@ -48,12 +48,24 @@ def call(url, method, params={}, username=None, password=None,
     return result
 
 
-def cp_call(method, params={}):
+def cplib_call(method, params={}):
     return _http_call(
         etc.counterparty_url, method, params=params,
         username=etc.counterparty_username,
         password=etc.counterparty_password
     )
+
+
+class _CPLIB(object):
+
+    def __getattribute__(self, name):
+
+        def wrapper(**kwargs):
+            return cplib_call(method=name, params=kwargs)
+        return wrapper
+
+
+cplib = _CPLIB()  # FIXME rename to cplib
 
 
 class RPC(object):

@@ -81,9 +81,8 @@ def close_connections(publish_tx=True):
             # connection expired or  commit published
             c2h_expired = lib.expired(c2h_state, etc.fund_clearance)
             h2c_expired = lib.expired(h2c_state, etc.fund_clearance)
-            commit_published = rpc.cp_call(
-                method="mpc_get_published_commit", params={"state": h2c_state}
-            )
+            commit_published = rpc.cplib.mpc_get_published_commit(
+                state=h2c_state)
             if c2h_expired or h2c_expired or commit_published:
                 db.set_connection_closed(handle=hub_connection["handle"])
                 commit_txid = lib.finalize_commit(
@@ -110,10 +109,8 @@ def recover_funds(publish_tx=True):
             c2h_state = db.load_channel_state(c2h_mpc_id, asset, cursor=cursor)
             h2c_mpc_id = hub_connection["h2c_channel_id"]
             h2c_state = db.load_channel_state(h2c_mpc_id, asset, cursor=cursor)
-            ptx = rpc.cp_call(method="mpc_payouts",
-                              params={"state": c2h_state})
-            rtxs = rpc.cp_call(method="mpc_recoverables",
-                               params={"state": h2c_state})
+            ptx = rpc.cplib.mpc_payouts(state=c2h_state)
+            rtxs = rpc.cplib.mpc_recoverables(state=h2c_state)
             rtx = rtxs["revoke"]
             ctx = rtxs["change"]
             etx = rtxs["expire"]

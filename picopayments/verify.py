@@ -62,8 +62,7 @@ REVOKES_SCHEMA = {
 
 def asset_exists(asset):
     validate.is_string(asset)
-    # assets = rpc.cp_call(method="get_asset_names")
-    assets = [e["asset_name"] for e in rpc.cp_call(method="get_assets")]
+    assets = [e["asset_name"] for e in rpc.cplib.get_assets()]
     if asset not in assets:
         raise err.AssetDoesNotExist(asset)
 
@@ -87,9 +86,8 @@ def c2h_commit(handle, commit_rawtx, commit_script):
     hub_connection(handle)
     netcode = "XTN" if etc.testnet else "BTC"
     c2h_channel = db.receive_channel(handle=handle)
-    deposit_utxos = rpc.cp_call(
-        method="get_unspent_txouts",
-        params={"address": c2h_channel["deposit_address"]}
+    deposit_utxos = rpc.cplib.get_unspent_txouts(
+        address=c2h_channel["deposit_address"]
     )
     validate.commit_rawtx(
         deposit_utxos, commit_rawtx, c2h_channel["asset"],

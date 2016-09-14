@@ -42,7 +42,7 @@ class TestLIB(unittest.TestCase):
     def test_failed_rpc_call(self):
 
         def func():
-            rpc.cp_call(method="nonexistant", params={})
+            rpc.cplib.nonexistant()
         self.assertRaises(err.RpcCallFailed, func)
 
     def test_validate_read_unknown_asset(self):

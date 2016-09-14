@@ -86,7 +86,7 @@ def mpc_hub_sync(**kwargs):
 
 def _add_cp_call(method):
     def counterparty_method(**kwargs):
-        return rpc.cp_call(method=method, params=kwargs)
+        return rpc.cplib_call(method=method, params=kwargs)
     dispatcher[method] = counterparty_method
     return counterparty_method
 
@@ -94,7 +94,7 @@ def _add_cp_call(method):
 @dispatcher.add_method
 def create_send(**kwargs):
     kwargs["disable_utxo_locks"] = True  # always disable on public api
-    return rpc.cp_call(method="create_send", params=kwargs)
+    return rpc.cplib_call(method="create_send", params=kwargs)
 
 
 getrawtransaction = _add_cp_call("getrawtransaction")
