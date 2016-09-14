@@ -80,7 +80,7 @@ class RPC(object):
 
     def __getattribute__(self, name):
         props = ["url", "auth_wif", "username", "password", "verify_ssl_cert"]
-        auth_methods = ["mpc_hub_request", "mpc_hub_deposit", "mpc_hub_sync"]
+        auth_methods = ["mph_request", "mph_deposit", "mph_sync"]
 
         if name in props:
             return object.__getattribute__(self, name)

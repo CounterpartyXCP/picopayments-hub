@@ -54,7 +54,7 @@ class TestMpcHubRequest(unittest.TestCase):
         secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
         params = {"asset": asset, "spend_secret_hash": secret_hash}
         params = auth.sign_json(params, client_key["wif"])
-        result = api.mpc_hub_request(**params)
+        result = api.mph_request(**params)
 
         self.assertIsNotNone(result)
         jsonschema.validate(result, REQUEST_RESULT_SCHEMA)
@@ -67,7 +67,7 @@ class TestMpcHubRequest(unittest.TestCase):
             secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
             params = {"asset": asset, "spend_secret_hash": secret_hash}
             params = auth.sign_json(params, client_key["wif"])
-            api.mpc_hub_request(**params)
+            api.mph_request(**params)
 
         self.assertRaises(err.AssetNotInTerms, func)
 
@@ -79,7 +79,7 @@ class TestMpcHubRequest(unittest.TestCase):
             secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
             params = {"asset": asset, "spend_secret_hash": secret_hash}
             params = auth.sign_json(params, client_key["wif"])
-            api.mpc_hub_request(**params)
+            api.mph_request(**params)
 
         self.assertRaises(err.AssetDoesNotExist, func)
 
@@ -95,7 +95,7 @@ class TestMpcHubRequest(unittest.TestCase):
                 "hub_rpc_url": "?? invalid url ??",
             }
             params = auth.sign_json(params, client_key["wif"])
-            api.mpc_hub_request(**params)
+            api.mph_request(**params)
 
         self.assertRaises(err.InvalidUrl, func)
 

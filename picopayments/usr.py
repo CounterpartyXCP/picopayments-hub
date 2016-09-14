@@ -197,7 +197,7 @@ class Client(object):
         return h2c_next_revoke_secret_hash
 
     def _request_connection(self):
-        result = self.rpc.mpc_hub_request(
+        result = self.rpc.mph_request(
             asset=self.asset, url=self.own_url,
             spend_secret_hash=self.h2c_spend_secret_hash
         )
@@ -207,7 +207,7 @@ class Client(object):
         self.c2h_spend_secret_hash = result["spend_secret_hash"]
 
     def _exchange_deposit_scripts(self, h2c_next_revoke_secret_hash):
-        result = self.rpc.mpc_hub_deposit(
+        result = self.rpc.mph_deposit(
             handle=self.handle,
             asset=self.asset,
             deposit_script=self.c2h_state["deposit_script"],

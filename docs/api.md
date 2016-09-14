@@ -1,4 +1,4 @@
-# mpc_hub_connections
+# mph_connections
 
 Audit hubs liquidity to determan if a transfer is likely to succeed.
 
@@ -22,7 +22,7 @@ Optionally the entries can be limited to a set of provided clients and assets.
     }]
 
 
-# mpc_hub_terms
+# mph_terms
 
 Get current terms of the hub.
 
@@ -41,7 +41,7 @@ Get current terms of the hub.
     }
 
 
-# mpc_hub_request
+# mph_request
 
 Exchange spend secrets and pubkeys for channel.
 
@@ -70,7 +70,7 @@ Channel culled if deposit not made fast enough.
     }
 
 
-# mpc_hub_deposit
+# mph_deposit
 
 Exchange depsoit scripts. Hub waits with funding deposit until client deposit is confirmed.
 
@@ -94,7 +94,7 @@ Channel culled if client deposit not made fast enough.
     }
 
 
-# mpc_hub_sync
+# mph_sync
 
     Arguments: {
         "handle": "hex",

@@ -12,21 +12,21 @@ from picopayments import rpc
 
 
 @dispatcher.add_method
-def mpc_hub_terms(assets=None):
+def mph_terms(assets=None):
     with etc.database_lock:
         verify.terms_input(assets)
         return lib.terms(assets=assets)
 
 
 @dispatcher.add_method
-def mpc_hub_connections(handles=None, assets=None):
+def mph_connections(handles=None, assets=None):
     with etc.database_lock:
         verify.connections_input(handles, assets)
         return lib.hub_connections(handles, assets)
 
 
 @dispatcher.add_method
-def mpc_hub_request(**kwargs):
+def mph_request(**kwargs):
     with etc.database_lock:
         auth.verify_json(kwargs)
         verify.request_input(
@@ -45,7 +45,7 @@ def mpc_hub_request(**kwargs):
 
 
 @dispatcher.add_method
-def mpc_hub_deposit(**kwargs):
+def mph_deposit(**kwargs):
     with etc.database_lock:
         auth.verify_json(kwargs)
         verify.deposit_input(
@@ -63,7 +63,7 @@ def mpc_hub_deposit(**kwargs):
 
 
 @dispatcher.add_method
-def mpc_hub_sync(**kwargs):
+def mph_sync(**kwargs):
     with etc.database_lock:
         auth.verify_json(kwargs)
         verify.sync_input(

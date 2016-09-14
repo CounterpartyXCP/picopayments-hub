@@ -50,7 +50,7 @@ class TestMpcHubConnections(unittest.TestCase):
         shutil.rmtree(self.tempdir)
 
     def test_all(self):
-        connections = api.mpc_hub_connections()
+        connections = api.mph_connections()
         self.assertTrue(len(connections) == 7)
         for connection in connections:
             jsonschema.validate(connection, CONNECTION_RESULT_SCHEMA)
@@ -61,14 +61,14 @@ class TestMpcHubConnections(unittest.TestCase):
 
         connection = self.data["connections"]["alpha"]
         asset = connection["c2h_state"]["asset"]
-        connections = api.mpc_hub_connections(assets=[asset])
+        connections = api.mph_connections(assets=[asset])
         self.assertTrue(len(connections) == 7)
         for connection in connections:
             self.assertEqual(connection["asset"], asset)
 
         connection = self.data["connections"]["alpha"]
         asset = connection["c2h_state"]["asset"]
-        connections = api.mpc_hub_connections(assets=["XCP"])
+        connections = api.mph_connections(assets=["XCP"])
         self.assertTrue(len(connections) == 0)
 
     def test_filters_handles(self):
@@ -77,7 +77,7 @@ class TestMpcHubConnections(unittest.TestCase):
             self.data["connections"]["beta"]["handle"],
             self.data["connections"]["gamma"]["handle"]
         ]
-        connections = api.mpc_hub_connections(handles=handles)
+        connections = api.mph_connections(handles=handles)
         self.assertTrue(len(connections) == 3)
         for connection in connections:
             self.assertIn(connection["handle"], handles)

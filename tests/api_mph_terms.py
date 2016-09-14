@@ -31,7 +31,7 @@ class TestMpcHubTerms(unittest.TestCase):
         # TODO test input validation
 
         # test gets all
-        terms = api.mpc_hub_terms()
+        terms = api.mph_terms()
         self.assertEqual(terms, {
             "BTC": {
                 "deposit_max": 0,
@@ -60,7 +60,7 @@ class TestMpcHubTerms(unittest.TestCase):
         })
 
         # test limits to asset
-        terms = api.mpc_hub_terms(assets=["XCP"])
+        terms = api.mph_terms(assets=["XCP"])
         self.assertEqual(terms, {
             "XCP": {
                 "deposit_max": 0,

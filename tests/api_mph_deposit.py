@@ -63,7 +63,7 @@ class TestMpcHubDeposit(unittest.TestCase):
             "spend_secret_hash": h2c_spend_secret_hash
         }
         params = auth.sign_json(params, client_key["wif"])
-        result = api.mpc_hub_request(**params)
+        result = api.mph_request(**params)
 
         handle = result["handle"]
         hub_pubkey = result["pubkey"]
@@ -80,7 +80,7 @@ class TestMpcHubDeposit(unittest.TestCase):
             "next_revoke_secret_hash": next_revoke_secret_hash
         }
         params = auth.sign_json(params, client_key["wif"])
-        result = api.mpc_hub_deposit(**params)
+        result = api.mph_deposit(**params)
 
         self.assertIsNotNone(result)
         jsonschema.validate(result, DEPOSIT_RESULT_SCHEMA)
@@ -103,7 +103,7 @@ class TestMpcHubDeposit(unittest.TestCase):
                 "spend_secret_hash": h2c_spend_secret_hash
             }
             params = auth.sign_json(params, client_key["wif"])
-            result = api.mpc_hub_request(**params)
+            result = api.mph_request(**params)
 
             handle = result["handle"]
             hub_pubkey = result["pubkey"]
@@ -122,7 +122,7 @@ class TestMpcHubDeposit(unittest.TestCase):
                 "next_revoke_secret_hash": next_revoke_secret_hash
             }
             params = auth.sign_json(params, client_key["wif"])
-            result = api.mpc_hub_deposit(**params)
+            result = api.mph_deposit(**params)
             self.assertIsNotNone(result)
 
             # resubmit deposit
@@ -133,7 +133,7 @@ class TestMpcHubDeposit(unittest.TestCase):
                 "next_revoke_secret_hash": next_revoke_secret_hash
             }
             params = auth.sign_json(params, client_key["wif"])
-            result = api.mpc_hub_deposit(**params)
+            result = api.mph_deposit(**params)
 
         self.assertRaises(err.DepositAlreadyGiven, func)
 
@@ -152,7 +152,7 @@ class TestMpcHubDeposit(unittest.TestCase):
                 "next_revoke_secret_hash": next_revoke_secret_hash
             }
             params = auth.sign_json(params, client_key["wif"])
-            api.mpc_hub_deposit(**params)
+            api.mph_deposit(**params)
 
         self.assertRaises(err.HandleNotFound, func)
 

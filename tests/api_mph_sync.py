@@ -56,7 +56,7 @@ class TestMpcHubSync(unittest.TestCase):
                 "next_revoke_secret_hash": secret["secret_hash"]
             }
             params = auth.sign_json(params, wif)
-            api.mpc_hub_sync(**params)
+            api.mph_sync(**params)
 
         self.assertRaises(err.PaymentExceedsSpendable, func)
 
@@ -75,7 +75,7 @@ class TestMpcHubSync(unittest.TestCase):
                 "next_revoke_secret_hash": secret["secret_hash"]
             }
             params = auth.sign_json(params, wif)
-            api.mpc_hub_sync(**params)
+            api.mph_sync(**params)
 
         self.assertRaises(err.ClientPubkeyMissmatch, func)
 
@@ -98,7 +98,7 @@ class TestMpcHubSync(unittest.TestCase):
                 "next_revoke_secret_hash": secret["secret_hash"]
             }
             params = auth.sign_json(params, wif)
-            api.mpc_hub_sync(**params)
+            api.mph_sync(**params)
 
         self.assertRaises(err.HandlesNotFound, func)
 
@@ -117,7 +117,7 @@ class TestMpcHubSync(unittest.TestCase):
                 "next_revoke_secret_hash": secret["secret_hash"]
             }
             params = auth.sign_json(params, wif)
-            api.mpc_hub_sync(**params)
+            api.mph_sync(**params)
 
         self.assertRaises(jsonschema.exceptions.ValidationError, func)
 
@@ -136,7 +136,7 @@ class TestMpcHubSync(unittest.TestCase):
                 "next_revoke_secret_hash": secret["secret_hash"]
             }
             params = auth.sign_json(params, wif)
-            api.mpc_hub_sync(**params)
+            api.mph_sync(**params)
 
         self.assertRaises(jsonschema.exceptions.ValidationError, func)
 
@@ -161,7 +161,7 @@ class TestMpcHubSync(unittest.TestCase):
             "next_revoke_secret_hash": h2c_next_revoke_secret_hash
         }
         params = auth.sign_json(params, client.client_wif)
-        result = api.mpc_hub_sync(**params)
+        result = api.mph_sync(**params)
 
         self.assertEqual(result["receive"], [{
             "payer_handle": client.handle,
@@ -204,7 +204,7 @@ class TestMpcHubSync(unittest.TestCase):
                 "next_revoke_secret_hash": h2c_next_revoke_secret_hash
             }
             params = auth.sign_json(params, bob.client_wif)
-            api.mpc_hub_sync(**params)
+            api.mph_sync(**params)
 
         self.assertRaises(err.AssetMissmatch, func)
 
@@ -234,7 +234,7 @@ class TestMpcHubSync(unittest.TestCase):
                 "next_revoke_secret_hash": h2c_next_revoke_secret_hash
             }
             params = auth.sign_json(params, bob.client_wif)
-            api.mpc_hub_sync(**params)
+            api.mph_sync(**params)
 
         self.assertRaises(err.PaymentExceedsReceivable, func)
 
@@ -261,7 +261,7 @@ class TestMpcHubSync(unittest.TestCase):
                 "next_revoke_secret_hash": h2c_next_revoke_secret_hash
             }
             params = auth.sign_json(params, client.client_wif)
-            api.mpc_hub_sync(**params)
+            api.mph_sync(**params)
 
         self.assertRaises(err.DepositExpired, func)
 
@@ -289,7 +289,7 @@ class TestMpcHubSync(unittest.TestCase):
                 "next_revoke_secret_hash": h2c_next_revoke_secret_hash
             }
             params = auth.sign_json(params, alice.client_wif)
-            api.mpc_hub_sync(**params)
+            api.mph_sync(**params)
 
         self.assertRaises(err.DepositExpired, func)
 
