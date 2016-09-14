@@ -30,10 +30,10 @@ _RM_COMMITS = sql.load("rm_commits")
 _COMPLETE_CONNECTION = sql.load("complete_connection")
 _SET_PAYMENT_NOTIFIED = sql.load("set_payment_notified")
 _SET_REVOKE_NOTIFIED = sql.load("set_revoke_notified")
-_SET_NEXT_REVOKE_SECRET_HASH = sql.load("set_next_revoke_secret_hash")
 
 
 key = sql.make_fetchone("key")
+get_secret = sql.make_fetchone("get_secret")
 keys = sql.make_fetchall("keys")
 terms = sql.make_fetchone("terms")
 channel_payer_key = sql.make_fetchone("channel_payer_key")
@@ -46,6 +46,8 @@ hub_connections_closed = sql.make_fetchall("hub_connections_closed")
 hub_connection = sql.make_fetchone("hub_connection")
 set_commit_notified = sql.make_execute("set_commit_notified")
 set_connection_closed = sql.make_execute("set_connection_closed")
+set_next_revoke_secret_hash = sql.make_execute("set_next_revoke_secret_hash")
+get_next_revoke_secret_hash = sql.make_fetchone("get_next_revoke_secret_hash")
 unnotified_revokes = sql.make_fetchall("unnotified_revokes")
 add_payment = sql.make_execute("add_payment")
 unnotified_payments = sql.make_fetchall("unnotified_payments")
@@ -126,7 +128,11 @@ def add_hub_connection(data, cursor=None):
 def complete_hub_connection(data, cursor=None):
     cursor = cursor or sql.get_cursor()
     cursor.execute("BEGIN TRANSACTION")
-    sql.execute(_SET_NEXT_REVOKE_SECRET_HASH, data, cursor=cursor)
+    set_next_revoke_secret_hash(
+        handle=data["handle"],
+        next_revoke_secret_hash=data["next_revoke_secret_hash"],
+        cursor=cursor
+    )
     sql.execute(_COMPLETE_CONNECTION, data, cursor=cursor)
     add_revoke_secret_args = {
         "secret_hash": data["secret_hash"],
@@ -223,7 +229,8 @@ def _fmt_revoked(channel_id, commits_revoked,
                  unnotified_commit=None, unnotified_revokes=None):
 
     unnotified_revokes = unnotified_revokes or []
-    unnotified_secrets = [cr["revoke_secret"] for cr in unnotified_revokes]
+    unnotified_secrets = [ur["revoke_secret"] for ur in unnotified_revokes]
+    # FIXME pass unnotified revoke secrets instead
     revoked = []
     for commit_revoked in commits_revoked:
         script = commit_revoked["script"]
@@ -245,6 +252,7 @@ def _fmt_revoked(channel_id, commits_revoked,
 def save_channel_state(channel_id, state, unnotified_commit=None,
                        unnotified_revokes=None, cursor=None):
     cursor = cursor or sql.get_cursor()
+    # FIXME save unnotified commit and revokes correctly
 
     # reformat state data
     commits_requested = _fmt_requested(channel_id, state["commits_requested"])
@@ -263,10 +271,3 @@ def save_channel_state(channel_id, state, unnotified_commit=None,
     cursor.executemany(_ADD_COMMIT_ACTIVE, commits_active)
     cursor.executemany(_ADD_COMMIT_REVOKED, commits_revoked)
     cursor.execute("COMMIT;")
-
-
-def set_next_revoke_secret_hash(handle, next_revoke_secret_hash, cursor=None):
-    args = {
-        "handle": handle, "next_revoke_secret_hash": next_revoke_secret_hash
-    }
-    sql.execute(_SET_NEXT_REVOKE_SECRET_HASH, args, cursor=cursor)

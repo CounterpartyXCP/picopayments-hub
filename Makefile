@@ -12,7 +12,7 @@ else
   WHEEL_INSTALL_ARGS := --use-wheel --no-index --find-links=$(WHEEL_DIR)
 endif
 export VIRTUALENV_PATH=env/bin/
-# export COUNTERPARTY_URL=http://127.0.0.1:14000/api/
+export COUNTERPARTY_URL=http://127.0.0.1:14000/api/
 
 
 help:

@@ -1,4 +1,4 @@
-# coding: utf-8
+# G coding: utf-8
 # Copyright (c) 2016 Fabian Barkhau <f483@storj.io>
 # License: MIT (see LICENSE file)
 
@@ -209,9 +209,7 @@ def update_channel_state(channel_id, asset, commit=None,
     if revokes is not None:
         state = rpc.cp_call(
             method="mpc_revoke_all",
-            params={
-                "state": state, "secrets": revokes
-            }
+            params={"state": state, "secrets": revokes}
         )
     db.save_channel_state(
         channel_id, state, unnotified_commit=unnotified_commit,
@@ -227,7 +225,9 @@ def _save_sync_data(cursor, handle, next_revoke_secret_hash,
     cursor.execute("BEGIN TRANSACTION;")
 
     # set next revoke secret hash from client
-    db.set_next_revoke_secret_hash(handle, next_revoke_secret_hash)
+    db.set_next_revoke_secret_hash(
+        handle=handle, next_revoke_secret_hash=next_revoke_secret_hash
+    )
 
     # mark sent payments as received
     payment_ids = [{"id": p.pop("id")} for p in receive_payments]
@@ -483,21 +483,118 @@ def load_connection_data(handle, cursor):
     return {
         "connection": connection,
         "hub2client_state": hub2client_state,
-        "hub2client_expired": expired(hub2client_state, etc.expire_clearance),
+        "hub2client_expired": expired(
+            hub2client_state,
+            etc.expire_clearance),
         "hub2client_transferred_amount": hub2client_transferred,
         "hub2client_payments_sum": hub2client_payments_sum,
         "hub2client_deposit_amount": hub2client_deposit_amount,
+        "hub2client_transferrable_amount": hub2client_deposit_amount -
+        hub2client_transferred,
         "client2hub_state": client2hub_state,
-        "client2hub_expired": expired(client2hub_state, etc.expire_clearance),
+        "client2hub_expired": expired(
+            client2hub_state,
+            etc.expire_clearance),
         "client2hub_transferred_amount": client2hub_transferred,
         "client2hub_payments_sum": client2hub_payments_sum,
         "client2hub_deposit_amount": client2hub_deposit_amount,
+        "client2hub_transferrable_amount": client2hub_deposit_amount -
+        client2hub_transferred,
         "transferred_amount": transferred_amount,
         "payments_sum": payments_sum,
         "unnotified_commit": unnotified_commit,
         "sendable_amount": sendable_amount,
         "receivable_amount": receivable_amount,
         "terms": terms,
+    }
+
+
+def _send_client_funds(connection_data, quantity, token):
+    c2h_state = connection_data["client2hub_state"]
+    h2c_state = connection_data["hub2client_state"]
+    c2h_transferred_before = connection_data["client2hub_transferred_amount"]
+
+    # revoke what we can to maximize liquidity
+    revoke_secrets = []
+    revoke_quantity = max(c2h_transferred_before - quantity, 0)
+    if revoke_quantity > 0:
+
+        # get hashes of secrets to publish
+        revoke_secret_hashes = rpc.cp_call(
+            method="mpc_revoke_hashes_until",
+            params={
+                "state": c2h_state,
+                "quantity": revoke_quantity,
+                "surpass": False  # never revoke past the given quantity!!!
+            }
+        )
+
+        # get secrets to publish
+        for secret_hash in revoke_secret_hashes:
+            revoke_secrets.append(db.get_secret(hash=secret_hash)["value"])
+
+        # revoke commits for secrets that will be published
+        c2h_state = rpc.cp_call(
+            method="mpc_revoke_all",
+            params={"state": c2h_state, "secrets": revoke_secrets}
+        )
+
+    # make sure enough funds still available to be transferred
+    c2h_transferred_after = transferred(c2h_state)
+    c2h_revoked_quantity = c2h_transferred_before - c2h_transferred_after
+    send_quantity = quantity - c2h_revoked_quantity
+    h2c_transferrable_amount = connection_data[
+        "hub2client_transferrable_amount"]
+    if send_quantity > h2c_transferrable_amount:
+        raise err.PaymentExceedsReceivable(
+            send_quantity, h2c_transferrable_amount, token
+        )
+
+    # create commit
+    if send_quantity > 0:
+
+        # remove unnotified commit and use same revoke secret hash
+        # since client did not sync it will never know it missed a commit
+        prev_unnotified_commit = connection_data["unnotified_commit"]
+        if prev_unnotified_commit:
+            for i, commit in enumerate(h2c_state["commits_active"][:]):
+                if commit["rawtx"] == prev_unnotified_commit["rawtx"]:
+                    h2c_state["commits_active"].pop(i)
+                    break
+
+        handle = connection_data["connection"]["handle"]
+        result = db.get_next_revoke_secret_hash(handle=handle)
+        next_revoke_secret_hash = result["next_revoke_secret_hash"]
+        result = rpc.cp_call(
+            method="mpc_create_commit",
+            params={
+                "state": h2c_state,
+                "revoke_secret_hash": next_revoke_secret_hash,
+                "delay_time": etc.delay_time,
+                "quantity": send_quantity
+            }
+        )
+        h2c_state = result["state"]
+        unsigned_rawtx = result["tosign"]["commit_rawtx"]
+
+        # sign created commit rawtx
+        deposit_script = result["tosign"]["deposit_script"]
+        deposit_script_bin = util.h2b(result["tosign"]["deposit_script"])
+        hub_pubkey = scripts.get_deposit_payer_pubkey(deposit_script_bin)
+        key = db.key(pubkey=hub_pubkey)
+        signed_rawtx = scripts.sign_created_commit(
+            get_tx, key["wif"], unsigned_rawtx, deposit_script
+        )
+
+        # replace unsigned commit rawtx with signed rawtx
+        for commit in h2c_state["commits_active"]:
+            if commit["script"] == result["commit_script"]:
+                commit["rawtx"] = signed_rawtx
+
+    return {
+        "secrets": revoke_secrets,
+        "h2c_state": h2c_state,
+        "c2h_state": c2h_state
     }
 
 
@@ -510,7 +607,7 @@ def process_payment(payer_handle, cursor, payment):
     if payer["client2hub_expired"]:
         raise err.DepositExpired(payer_handle, "client")
     if payer["hub2client_expired"]:
-        raise err.DepositExpired(payer_handle, "hub")  # pragma: no cover
+        raise err.DepositExpired(payer_handle, "hub")
 
     # check payer has enough funds or can revoke sends until enough available
     if payment["amount"] > payer["sendable_amount"]:
@@ -531,16 +628,21 @@ def process_payment(payer_handle, cursor, payment):
         if payee["hub2client_expired"]:
             raise err.DepositExpired(payee_handle, "hub")
         if payee["client2hub_expired"]:
-            raise err.DepositExpired(
-                payee_handle, "client")  # pragma: no cover
+            raise err.DepositExpired(payee_handle, "client")
 
         if payment["amount"] > payee["receivable_amount"]:
             raise err.PaymentExceedsReceivable(
                 payment["amount"], payee["receivable_amount"], payment["token"]
             )
+
+        result = _send_client_funds(payee, payment["amount"], payment["token"])
+
         cursor.execute("BEGIN TRANSACTION;")
 
-        # FIXME adjust payee channel
+        # FIXME save c2h_state if updated
+        # FIXME save h2c_state if updated
+        # FIXME save secrets to be given to payee
+        # FIXME save commits to be given to payee
 
     # fee payment
     else:
