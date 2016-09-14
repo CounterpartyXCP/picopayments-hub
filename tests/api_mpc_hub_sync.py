@@ -163,7 +163,12 @@ class TestMpcHubSync(unittest.TestCase):
         params = auth.sign_json(params, client.client_wif)
         result = api.mpc_hub_sync(**params)
 
-        self.assertIsNotNone(result)
+        self.assertEqual(result["receive"], [{
+            "payer_handle": client.handle,
+            "token": "deadbeef",
+            "amount": 5
+        }])
+        self.assertIsNotNone(result["commit"])
 
     def test_asset_missmatch(self):
 

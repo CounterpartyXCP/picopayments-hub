@@ -226,10 +226,9 @@ def _fmt_active(channel_id, unnotified_commit, commits_active):
 
 
 def _fmt_revoked(channel_id, commits_revoked,
-                 unnotified_commit=None, unnotified_revokes=None):
+                 unnotified_commit=None, unnotified_revoke_secrets=None):
 
-    unnotified_revokes = unnotified_revokes or []
-    unnotified_secrets = [ur["revoke_secret"] for ur in unnotified_revokes]
+    unnotified_revoke_secrets = unnotified_revoke_secrets or []
     # FIXME pass unnotified revoke secrets instead
     revoked = []
     for commit_revoked in commits_revoked:
@@ -237,7 +236,7 @@ def _fmt_revoked(channel_id, commits_revoked,
         revoke_secret = commit_revoked["revoke_secret"]
         if unnotified_commit and unnotified_commit["script"] == script:
             continue  # drop revoke as client was not notified of commit
-        payee_notified = 0 if revoke_secret in unnotified_secrets else 1
+        payee_notified = 0 if revoke_secret in unnotified_revoke_secrets else 1
         data = {
             "channel_id": channel_id,
             "script": script,
@@ -250,9 +249,9 @@ def _fmt_revoked(channel_id, commits_revoked,
 
 
 def save_channel_state(channel_id, state, unnotified_commit=None,
-                       unnotified_revokes=None, cursor=None):
+                       unnotified_revoke_secrets=None, cursor=None):
+
     cursor = cursor or sql.get_cursor()
-    # FIXME save unnotified commit and revokes correctly
 
     # reformat state data
     commits_requested = _fmt_requested(channel_id, state["commits_requested"])
@@ -261,13 +260,11 @@ def save_channel_state(channel_id, state, unnotified_commit=None,
     commits_revoked = _fmt_revoked(
         channel_id, state["commits_revoked"],
         unnotified_commit=unnotified_commit,
-        unnotified_revokes=unnotified_revokes
+        unnotified_revoke_secrets=unnotified_revoke_secrets
     )
 
     # save state to db
-    cursor.execute("BEGIN TRANSACTION;")
     cursor.execute(_RM_COMMITS, {"channel_id": channel_id})
     cursor.executemany(_ADD_COMMIT_REQUESTED, commits_requested)
     cursor.executemany(_ADD_COMMIT_ACTIVE, commits_active)
     cursor.executemany(_ADD_COMMIT_REVOKED, commits_revoked)
-    cursor.execute("COMMIT;")

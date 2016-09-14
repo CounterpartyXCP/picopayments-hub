@@ -197,6 +197,8 @@ def update_channel_state(channel_id, asset, commit=None,
     unnotified_revokes = db.unnotified_revokes(channel_id=channel_id)
     unnotified_commit = db.unnotified_commit(channel_id=channel_id,
                                              cursor=cursor)
+    unnotified_revoke_secrets = [x["revoke_secret"]
+                                 for x in unnotified_revokes]
     if commit is not None:
         state = rpc.cp_call(
             method="mpc_add_commit",
@@ -207,14 +209,19 @@ def update_channel_state(channel_id, asset, commit=None,
             }
         )
     if revokes is not None:
+        # FIXME will not set revokes as unnotified
+        #       currently not a problem as its only used for hub to client
+        #       but its begging to be missused!!
         state = rpc.cp_call(
             method="mpc_revoke_all",
             params={"state": state, "secrets": revokes}
         )
+    cursor.execute("BEGIN TRANSACTION;")
     db.save_channel_state(
         channel_id, state, unnotified_commit=unnotified_commit,
-        unnotified_revokes=unnotified_revokes, cursor=cursor
+        unnotified_revoke_secrets=unnotified_revoke_secrets, cursor=cursor
     )
+    cursor.execute("COMMIT;")
     return state
 
 
@@ -280,7 +287,7 @@ def sync_hub_connection(handle, next_revoke_secret_hash,
 
     # load unnotified
     hub2client_commit = db.unnotified_commit(channel_id=hub2client_id)
-    hub2client_revokes = db.unnotified_revokes(channel_id=hub2client_id)
+    client2hub_revokes = db.unnotified_revokes(channel_id=client2hub_id)
     receive_payments = db.unnotified_payments(payee_handle=handle)
 
     # save sync data
@@ -289,7 +296,7 @@ def sync_hub_connection(handle, next_revoke_secret_hash,
         hub2client_commit_id = hub2client_commit.pop("id")
     _save_sync_data(
         cursor, handle, next_revoke_secret_hash, receive_payments,
-        hub2client_commit_id, hub2client_revokes, client2hub_id,
+        hub2client_commit_id, client2hub_revokes, client2hub_id,
         next_revoke_secret
     )
 
@@ -298,7 +305,7 @@ def sync_hub_connection(handle, next_revoke_secret_hash,
         {
             "receive": receive_payments,
             "commit": hub2client_commit,
-            "revokes": [r["revoke_secret"] for r in hub2client_revokes],
+            "revokes": [r["revoke_secret"] for r in client2hub_revokes],
             "next_revoke_secret_hash": next_revoke_secret["secret_hash"]
         },
         hub_key["wif"]
@@ -502,7 +509,7 @@ def load_connection_data(handle, cursor):
         client2hub_transferred,
         "transferred_amount": transferred_amount,
         "payments_sum": payments_sum,
-        "unnotified_commit": unnotified_commit,
+        "unnotified_commit": unnotified_commit,  # FIXME rename h2c_uno...
         "sendable_amount": sendable_amount,
         "receivable_amount": receivable_amount,
         "terms": terms,
@@ -513,9 +520,10 @@ def _send_client_funds(connection_data, quantity, token):
     c2h_state = connection_data["client2hub_state"]
     h2c_state = connection_data["hub2client_state"]
     c2h_transferred_before = connection_data["client2hub_transferred_amount"]
+    h2c_unnotified_commit = None
 
     # revoke what we can to maximize liquidity
-    revoke_secrets = []
+    c2h_revoke_secrets = []
     revoke_quantity = max(c2h_transferred_before - quantity, 0)
     if revoke_quantity > 0:
 
@@ -531,12 +539,12 @@ def _send_client_funds(connection_data, quantity, token):
 
         # get secrets to publish
         for secret_hash in revoke_secret_hashes:
-            revoke_secrets.append(db.get_secret(hash=secret_hash)["value"])
+            c2h_revoke_secrets.append(db.get_secret(hash=secret_hash)["value"])
 
         # revoke commits for secrets that will be published
         c2h_state = rpc.cp_call(
             method="mpc_revoke_all",
-            params={"state": c2h_state, "secrets": revoke_secrets}
+            params={"state": c2h_state, "secrets": c2h_revoke_secrets}
         )
 
     # make sure enough funds still available to be transferred
@@ -555,10 +563,10 @@ def _send_client_funds(connection_data, quantity, token):
 
         # remove unnotified commit and use same revoke secret hash
         # since client did not sync it will never know it missed a commit
-        prev_unnotified_commit = connection_data["unnotified_commit"]
-        if prev_unnotified_commit:
+        h2c_prev_unnotified_commit = connection_data["unnotified_commit"]
+        if h2c_prev_unnotified_commit:
             for i, commit in enumerate(h2c_state["commits_active"][:]):
-                if commit["rawtx"] == prev_unnotified_commit["rawtx"]:
+                if commit["rawtx"] == h2c_prev_unnotified_commit["rawtx"]:
                     h2c_state["commits_active"].pop(i)
                     break
 
@@ -590,9 +598,11 @@ def _send_client_funds(connection_data, quantity, token):
         for commit in h2c_state["commits_active"]:
             if commit["script"] == result["commit_script"]:
                 commit["rawtx"] = signed_rawtx
+                h2c_unnotified_commit = commit
 
     return {
-        "secrets": revoke_secrets,
+        "c2h_revoke_secrets": c2h_revoke_secrets,
+        "h2c_unnotified_commit": h2c_unnotified_commit,
         "h2c_state": h2c_state,
         "c2h_state": c2h_state
     }
@@ -635,14 +645,24 @@ def process_payment(payer_handle, cursor, payment):
                 payment["amount"], payee["receivable_amount"], payment["token"]
             )
 
+        c2h_unnotified_revokes = db.unnotified_revokes(
+            channel_id=payee["connection"]["client2hub_channel_id"]
+        )
         result = _send_client_funds(payee, payment["amount"], payment["token"])
 
         cursor.execute("BEGIN TRANSACTION;")
 
-        # FIXME save c2h_state if updated
-        # FIXME save h2c_state if updated
-        # FIXME save secrets to be given to payee
-        # FIXME save commits to be given to payee
+        c2h_unnotified_revokes += result["c2h_revoke_secrets"]
+        db.save_channel_state(payee["connection"]["client2hub_channel_id"],
+                              result["c2h_state"],
+                              unnotified_revoke_secrets=c2h_unnotified_revokes,
+                              cursor=cursor)
+        db.save_channel_state(
+            payee["connection"]["hub2client_channel_id"],
+            result["h2c_state"],
+            unnotified_commit=result["h2c_unnotified_commit"],
+            cursor=cursor
+        )
 
     # fee payment
     else:
