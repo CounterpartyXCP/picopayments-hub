@@ -28,10 +28,8 @@ def create_key(asset, netcode="BTC"):
     secure_random_data = os.urandom(32)
     key = BIP32Node.from_master_secret(secure_random_data, netcode=netcode)
     return {
-        "asset": asset,
-        "pubkey": b2h(key.sec()),
-        "wif": key.wif(),
-        "address": key.address(),
+        "asset": asset, "pubkey": b2h(key.sec()),
+        "wif": key.wif(), "address": key.address(),
     }
 
 
@@ -293,8 +291,7 @@ def sync_hub_connection(handle, next_revoke_secret_hash,
     hub_key = db.channel_payer_key(id=h2c_id)
     return (
         {
-            "receive": receive_payments,
-            "commit": h2c_commit,
+            "receive": receive_payments, "commit": h2c_commit,
             "revokes": [r["revoke_secret"] for r in c2h_revokes],
             "next_revoke_secret_hash": next_revoke_secret["secret_hash"]
         },
@@ -318,11 +315,11 @@ def get_script_address(script):
     return util.script2address(util.h2b(script), netcode=etc.netcode)
 
 
-def transferred(state):
+def get_transferred_quantity(state):
     return rpc.cplib.mpc_transferred_amount(state=state)
 
 
-def expired(state, clearance):
+def is_expired(state, clearance):
     return rpc.cplib.mpc_deposit_expired(state=state, clearance=clearance)
 
 
@@ -431,9 +428,9 @@ def load_connection_data(handle, cursor):
         connection["c2h_channel_id"], connection["asset"], cursor=cursor
     )
     c2h_deposit_address = deposit_address(c2h_state)
-    h2c_transferred = transferred(h2c_state)
+    h2c_transferred = get_transferred_quantity(h2c_state)
     h2c_deposit_amount = balance(h2c_deposit_address, connection["asset"])
-    c2h_transferred = transferred(c2h_state)
+    c2h_transferred = get_transferred_quantity(c2h_state)
     c2h_deposit_amount = balance(c2h_deposit_address, connection["asset"])
     unnotified_commit = db.unnotified_commit(
         channel_id=connection["h2c_channel_id"], cursor=cursor
@@ -454,13 +451,13 @@ def load_connection_data(handle, cursor):
     return {
         "connection": connection,
         "h2c_state": h2c_state,
-        "h2c_expired": expired(h2c_state, etc.expire_clearance),
+        "h2c_expired": is_expired(h2c_state, etc.expire_clearance),
         "h2c_transferred_amount": h2c_transferred,
         "h2c_payments_sum": h2c_payments_sum,
         "h2c_deposit_amount": h2c_deposit_amount,
         "h2c_transferrable_amount": h2c_deposit_amount - h2c_transferred,
         "c2h_state": c2h_state,
-        "c2h_expired": expired(c2h_state, etc.expire_clearance),
+        "c2h_expired": is_expired(c2h_state, etc.expire_clearance),
         "c2h_transferred_amount": c2h_transferred,
         "c2h_payments_sum": c2h_payments_sum,
         "c2h_deposit_amount": c2h_deposit_amount,
@@ -501,7 +498,7 @@ def _send_client_funds(connection_data, quantity, token):
         )
 
     # make sure enough funds still available to be transferred
-    c2h_transferred_after = transferred(c2h_state)
+    c2h_transferred_after = get_transferred_quantity(c2h_state)
     c2h_revoked_quantity = c2h_transferred_before - c2h_transferred_after
     send_quantity = quantity - c2h_revoked_quantity
     h2c_transferrable_amount = connection_data[

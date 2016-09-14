@@ -28,7 +28,7 @@ def fund_deposits(publish_tx=True):
 
             if c2h_deposit_balance < terms["deposit_min"]:
                 continue  # ignore if client deposit insufficient
-            if lib.expired(c2h_state, etc.fund_clearance):
+            if lib.is_expired(c2h_state, etc.fund_clearance):
                 continue  # ignore if expires soon
             if lib.has_unconfirmed_transactions(c2h_deposit_address):
                 continue  # ignore if unconfirmed transaction inputs/outputs
@@ -39,7 +39,7 @@ def fund_deposits(publish_tx=True):
             h2c_deposit_address = lib.deposit_address(h2c_state)
             h2c_deposit_balance = lib.balance(h2c_deposit_address, asset)
 
-            if lib.expired(h2c_state, etc.fund_clearance):
+            if lib.is_expired(h2c_state, etc.fund_clearance):
                 continue  # ignore if expires soon
             if lib.has_unconfirmed_transactions(h2c_deposit_address):
                 continue  # ignore if unconfirmed transaction inputs/outputs
@@ -79,8 +79,8 @@ def close_connections(publish_tx=True):
             h2c_state = db.load_channel_state(h2c_mpc_id, asset, cursor=cursor)
 
             # connection expired or  commit published
-            c2h_expired = lib.expired(c2h_state, etc.fund_clearance)
-            h2c_expired = lib.expired(h2c_state, etc.fund_clearance)
+            c2h_expired = lib.is_expired(c2h_state, etc.fund_clearance)
+            h2c_expired = lib.is_expired(h2c_state, etc.fund_clearance)
             commit_published = rpc.cplib.mpc_get_published_commit(
                 state=h2c_state
             )
