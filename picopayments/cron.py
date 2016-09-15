@@ -81,7 +81,7 @@ def close_connections(publish_tx=True):
             # connection expired or  commit published
             c2h_expired = lib.is_expired(c2h_state, etc.fund_clearance)
             h2c_expired = lib.is_expired(h2c_state, etc.fund_clearance)
-            commit_published = rpc.cplib.mpc_get_published_commit(
+            commit_published = rpc.cplib.mpc_get_published_commits(
                 state=h2c_state
             )
             if c2h_expired or h2c_expired or commit_published:

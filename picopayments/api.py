@@ -84,7 +84,7 @@ def mph_sync(**kwargs):
         return auth.sign_json(result, authwif)
 
 
-def _add_cp_call(method):
+def _add_cplib_call(method):
     def counterparty_method(**kwargs):
         return rpc.cplib_call(method=method, params=kwargs)
     dispatcher[method] = counterparty_method
@@ -97,20 +97,21 @@ def create_send(**kwargs):
     return rpc.cplib_call(method="create_send", params=kwargs)
 
 
-getrawtransaction = _add_cp_call("getrawtransaction")
-getrawtransaction_batch = _add_cp_call("getrawtransaction_batch")
-get_unspent_txouts = _add_cp_call("get_unspent_txouts")
-get_balances = _add_cp_call("get_balances")
-sendrawtransaction = _add_cp_call("sendrawtransaction")
-mpc_make_deposit = _add_cp_call("mpc_make_deposit")
-mpc_set_deposit = _add_cp_call("mpc_set_deposit")
-mpc_request_commit = _add_cp_call("mpc_request_commit")
-mpc_create_commit = _add_cp_call("mpc_create_commit")
-mpc_add_commit = _add_cp_call("mpc_add_commit")
-mpc_revoke_hashes_until = _add_cp_call("mpc_revoke_hashes_until")
-mpc_revoke_all = _add_cp_call("mpc_revoke_all")
-mpc_heighest_commit = _add_cp_call("mpc_heighest_commit")
-mpc_transferred_amount = _add_cp_call("mpc_transferred_amount")
-mpc_payouts = _add_cp_call("mpc_payouts")
-mpc_recoverables = _add_cp_call("mpc_recoverables")
-mpc_recoverables = _add_cp_call("mpc_deposit_expired")
+getrawtransaction = _add_cplib_call("getrawtransaction")
+getrawtransaction_batch = _add_cplib_call("getrawtransaction_batch")
+get_unspent_txouts = _add_cplib_call("get_unspent_txouts")
+get_balances = _add_cplib_call("get_balances")
+sendrawtransaction = _add_cplib_call("sendrawtransaction")
+mpc_make_deposit = _add_cplib_call("mpc_make_deposit")
+mpc_set_deposit = _add_cplib_call("mpc_set_deposit")
+mpc_request_commit = _add_cplib_call("mpc_request_commit")
+mpc_create_commit = _add_cplib_call("mpc_create_commit")
+mpc_add_commit = _add_cplib_call("mpc_add_commit")
+mpc_revoke_hashes_until = _add_cplib_call("mpc_revoke_hashes_until")
+mpc_revoke_all = _add_cplib_call("mpc_revoke_all")
+mpc_heighest_commit = _add_cplib_call("mpc_heighest_commit")
+mpc_transferred_amount = _add_cplib_call("mpc_transferred_amount")
+mpc_payouts = _add_cplib_call("mpc_payouts")
+mpc_recoverables = _add_cplib_call("mpc_recoverables")
+mpc_recoverables = _add_cplib_call("mpc_deposit_expired")
+mpc_get_published_commits = _add_cplib_call("mpc_get_published_commits")
