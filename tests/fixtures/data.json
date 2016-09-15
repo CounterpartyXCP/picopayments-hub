@@ -43,6 +43,7 @@
             "payments_sent": [],
             "payments_received": [],
             "payments_queued": [],
+            "asset": "A14456548018133352000",
             "c2h_state": {
                 "asset": "A14456548018133352000",
                 "commits_active": [],
@@ -90,6 +91,7 @@
             "payments_sent": [],
             "payments_received": [],
             "payments_queued": [],
+            "asset": "A14456548018133352000",
             "c2h_state": {
                 "asset": "A14456548018133352000",
                 "commits_active": [],
@@ -137,6 +139,7 @@
             "payments_sent": [],
             "payments_received": [],
             "payments_queued": [],
+            "asset": "A14456548018133352000",
             "c2h_state": {
                 "asset": "A14456548018133352000",
                 "commits_active": [],
@@ -184,6 +187,7 @@
             "payments_sent": [],
             "payments_received": [],
             "payments_queued": [],
+            "asset": "A14456548018133352000",
             "c2h_state": {
                 "asset": "A14456548018133352000",
                 "commits_active": [],
@@ -231,6 +235,7 @@
             "payments_sent": [],
             "payments_received": [],
             "payments_queued": [],
+            "asset": "A14456548018133352000",
             "c2h_state": {
                 "asset": "A14456548018133352000",
                 "commits_active": [],
@@ -278,6 +283,7 @@
             "payments_sent": [],
             "payments_received": [],
             "payments_queued": [],
+            "asset": "A14456548018133352000",
             "c2h_state": {
                 "asset": "A14456548018133352000",
                 "commits_active": [],
@@ -320,6 +326,7 @@
             "client_wif": "cUxowdV2dcN1trniMdwLc3GK43Wc4qHoYtbC1cdKzwXSbShBwbJy",
             "c2h_spend_secret_hash": "44f502ccfb551632e249df55a7c69982f8657952",
             "client_pubkey": "02abb2c75a553230885e47f28a2926d4abee19d588cf04da5992e9e72fda109d35",
+            "asset": "A14456548018133352000",
             "h2c_state": {
                 "asset": "A14456548018133352000",
                 "commits_requested": [],

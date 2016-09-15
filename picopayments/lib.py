@@ -12,6 +12,7 @@ from pycoin.serialize import b2h, h2b
 from counterpartylib.lib.micropayments import util
 from counterpartylib.lib.micropayments import scripts
 from picopayments import rpc
+from picopayments import usr
 from picopayments import db
 from picopayments import auth
 from picopayments import err
@@ -501,8 +502,7 @@ def _send_client_funds(connection_data, quantity, token):
     c2h_transferred_after = get_transferred_quantity(c2h_state)
     c2h_revoked_quantity = c2h_transferred_before - c2h_transferred_after
     send_quantity = quantity - c2h_revoked_quantity
-    h2c_transferrable_amount = connection_data[
-        "h2c_transferrable_amount"]
+    h2c_transferrable_amount = connection_data["h2c_transferrable_amount"]
     if send_quantity > h2c_transferrable_amount:
         raise err.PaymentExceedsReceivable(
             send_quantity, h2c_transferrable_amount, token
@@ -523,27 +523,16 @@ def _send_client_funds(connection_data, quantity, token):
         handle = connection_data["connection"]["handle"]
         result = db.get_next_revoke_secret_hash(handle=handle)
         next_revoke_secret_hash = result["next_revoke_secret_hash"]
-        result = rpc.cplib.mpc_create_commit(
-            state=h2c_state, revoke_secret_hash=next_revoke_secret_hash,
-            delay_time=etc.delay_time, quantity=send_quantity
+        deposit_script_bin = util.h2b(h2c_state["deposit_script"])
+        hub_pubkey = scripts.get_deposit_payer_pubkey(deposit_script_bin)
+        wif = db.key(pubkey=hub_pubkey)["wif"]
+
+        result = usr.Client().create_signed_commit(
+            wif, h2c_state, send_quantity,
+            next_revoke_secret_hash, etc.delay_time
         )
         h2c_state = result["state"]
-        unsigned_rawtx = result["tosign"]["commit_rawtx"]
-
-        # sign created commit rawtx
-        deposit_script = result["tosign"]["deposit_script"]
-        deposit_script_bin = util.h2b(result["tosign"]["deposit_script"])
-        hub_pubkey = scripts.get_deposit_payer_pubkey(deposit_script_bin)
-        key = db.key(pubkey=hub_pubkey)
-        signed_rawtx = scripts.sign_created_commit(
-            get_tx, key["wif"], unsigned_rawtx, deposit_script
-        )
-
-        # replace unsigned commit rawtx with signed rawtx
-        for commit in h2c_state["commits_active"]:
-            if commit["script"] == result["commit_script"]:
-                commit["rawtx"] = signed_rawtx
-                h2c_unnotified_commit = commit
+        h2c_unnotified_commit = result["commit"]
 
     return {
         "c2h_revoke_secrets": c2h_revoke_secrets,

@@ -50,6 +50,9 @@ def main(args, serve=True):
 
     if serve:
 
+        # so internal calls skip http call
+        etc.call_local_process = True
+
         # setup ssl (generate pkey and self signed cert if none given)
         ssl_context = 'adhoc'  # pragma: no cover
         cert = parsed["ssl_cert_file"]  # pragma: no cover

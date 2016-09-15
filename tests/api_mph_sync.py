@@ -144,7 +144,7 @@ class TestMpcHubSync(unittest.TestCase):
         quantity = 5
         client = Client.deserialize(self.data["connections"]["alpha"])
         sync_fee = client.channel_terms["sync_fee"]
-        commit = client.create_commit(quantity + sync_fee)
+        commit = client._c2h_create_commit(quantity + sync_fee)
         h2c_next_revoke_secret_value = util.b2h(os.urandom(32))
         h2c_next_revoke_secret_hash = util.hash160hex(
             h2c_next_revoke_secret_value
@@ -187,7 +187,7 @@ class TestMpcHubSync(unittest.TestCase):
             quantity = 5
             bob = Client.deserialize(self.data["connections"]["alpha"])
             sync_fee = bob.channel_terms["sync_fee"]
-            commit = bob.create_commit(quantity + sync_fee)
+            commit = bob._c2h_create_commit(quantity + sync_fee)
             h2c_next_revoke_secret_value = util.b2h(os.urandom(32))
             h2c_next_revoke_secret_hash = util.hash160hex(
                 h2c_next_revoke_secret_value
@@ -217,7 +217,7 @@ class TestMpcHubSync(unittest.TestCase):
             quantity = 1338
             bob = Client.deserialize(self.data["connections"]["alpha"])
             sync_fee = bob.channel_terms["sync_fee"]
-            commit = bob.create_commit(quantity + sync_fee)
+            commit = bob._c2h_create_commit(quantity + sync_fee)
             h2c_next_revoke_secret_value = util.b2h(os.urandom(32))
             h2c_next_revoke_secret_hash = util.hash160hex(
                 h2c_next_revoke_secret_value
@@ -244,7 +244,7 @@ class TestMpcHubSync(unittest.TestCase):
             quantity = 5
             client = Client.deserialize(self.data["connections"]["eta"])
             sync_fee = client.channel_terms["sync_fee"]
-            commit = client.create_commit(quantity + sync_fee)
+            commit = client._c2h_create_commit(quantity + sync_fee)
             h2c_next_revoke_secret_value = util.b2h(os.urandom(32))
             h2c_next_revoke_secret_hash = util.hash160hex(
                 h2c_next_revoke_secret_value
@@ -272,7 +272,7 @@ class TestMpcHubSync(unittest.TestCase):
             bob = Client.deserialize(self.data["connections"]["eta"])
             quantity = 5
             sync_fee = alice.channel_terms["sync_fee"]
-            commit = alice.create_commit(quantity + sync_fee)
+            commit = alice._c2h_create_commit(quantity + sync_fee)
             h2c_next_revoke_secret_value = util.b2h(os.urandom(32))
             h2c_next_revoke_secret_hash = util.hash160hex(
                 h2c_next_revoke_secret_value

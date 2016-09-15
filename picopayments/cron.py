@@ -28,7 +28,7 @@ def fund_deposits(publish_tx=True):
 
             if c2h_deposit_balance < terms["deposit_min"]:
                 continue  # ignore if client deposit insufficient
-            if lib.is_expired(c2h_state, etc.fund_clearance):
+            if lib.is_expired(c2h_state, etc.expire_clearance):
                 continue  # ignore if expires soon
             if lib.has_unconfirmed_transactions(c2h_deposit_address):
                 continue  # ignore if unconfirmed transaction inputs/outputs
@@ -39,7 +39,7 @@ def fund_deposits(publish_tx=True):
             h2c_deposit_address = lib.deposit_address(h2c_state)
             h2c_deposit_balance = lib.balance(h2c_deposit_address, asset)
 
-            if lib.is_expired(h2c_state, etc.fund_clearance):
+            if lib.is_expired(h2c_state, etc.expire_clearance):
                 continue  # ignore if expires soon
             if lib.has_unconfirmed_transactions(h2c_deposit_address):
                 continue  # ignore if unconfirmed transaction inputs/outputs
@@ -79,8 +79,8 @@ def close_connections(publish_tx=True):
             h2c_state = db.load_channel_state(h2c_mpc_id, asset, cursor=cursor)
 
             # connection expired or  commit published
-            c2h_expired = lib.is_expired(c2h_state, etc.fund_clearance)
-            h2c_expired = lib.is_expired(h2c_state, etc.fund_clearance)
+            c2h_expired = lib.is_expired(c2h_state, etc.expire_clearance)
+            h2c_expired = lib.is_expired(h2c_state, etc.expire_clearance)
             commit_published = rpc.cplib.mpc_get_published_commits(
                 state=h2c_state
             )
@@ -105,6 +105,8 @@ def recover_funds(publish_tx=True):
         txs = []
         cursor = sql.get_cursor()
         for hub_connection in db.hub_connections_recoverable(cursor=cursor):
+            # FIXME move recovering payouts, revokes, change, expire to client
+            #       as to avoid code duplication
             asset = hub_connection["asset"]
             c2h_mpc_id = hub_connection["c2h_channel_id"]
             c2h_state = db.load_channel_state(c2h_mpc_id, asset, cursor=cursor)
