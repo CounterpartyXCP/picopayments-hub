@@ -292,7 +292,8 @@ def sync_hub_connection(handle, next_revoke_secret_hash,
     hub_key = db.channel_payer_key(id=h2c_id)
     return (
         {
-            "receive": receive_payments, "commit": h2c_commit,
+            "receive": receive_payments,
+            "commit": h2c_commit,
             "revokes": [r["revoke_secret"] for r in c2h_revokes],
             "next_revoke_secret_hash": next_revoke_secret["secret_hash"]
         },

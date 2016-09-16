@@ -33,18 +33,52 @@ class TestUsr(unittest.TestCase):
 
     def test_standard_usage(self):
 
-        clients = {}
-        for name in ["alpha", "beta", "gamma", "delta", "epsilon", "zeta"]:
-            client = Client.deserialize(self.data["connections"]["alpha"])
-            self.assertTrue(client.is_connected())
-            self.assertFalse(client.is_expired())
-            print(
-                name,
-                "=",
-                json.dumps(client.get_status(), indent=2, sort_keys=True)
-            )
+        # setup
+        alpha = Client.deserialize(self.data["connections"]["alpha"])
+        beta = Client.deserialize(self.data["connections"]["beta"])
+        gamma = Client.deserialize(self.data["connections"]["gamma"])
+        delta = Client.deserialize(self.data["connections"]["delta"])
+        epsilon = Client.deserialize(self.data["connections"]["epsilon"])
+        zeta = Client.deserialize(self.data["connections"]["zeta"])
 
-            clients[name] = client
+        # after before status
+        alpha_before_status = alpha.get_status()
+        beta_before_status = beta.get_status()
+        gamma_before_status = gamma.get_status()
+        delta_before_status = delta.get_status()
+        epsilon_before_status = epsilon.get_status()
+        zeta_before_status = zeta.get_status()
+
+        # can send multiple payments
+        alpha.micro_send(beta.handle, 5, "0000")
+        alpha.micro_send(gamma.handle, 6, "0001")
+        self.assertEqual(alpha.sync(), [])
+        self.assertEqual(beta.sync(), [{
+            "payer_handle": alpha.handle,
+            "amount": 5,
+            "token": "0000"
+        }])
+        self.assertEqual(gamma.sync(), [{
+            "payer_handle": alpha.handle,
+            "amount": 6,
+            "token": "0001"
+        }])
+
+        # get after status
+        alpha_after_status = alpha.get_status()
+        beta_after_status = beta.get_status()
+        gamma_after_status = gamma.get_status()
+        delta_after_status = delta.get_status()
+        epsilon_after_status = epsilon.get_status()
+        zeta_after_status = zeta.get_status()
+
+        # compare statuses
+        alpha_after_status["balance"] == alpha_before_status["balance"] - 12
+        beta_after_status["balance"] == beta_before_status["balance"] + 4
+        gamma_after_status["balance"] == gamma_before_status["balance"] + 5
+        delta_after_status["balance"] == delta_before_status["balance"]
+        epsilon_after_status["balance"] == epsilon_before_status["balance"]
+        zeta_after_status["balance"] == zeta_before_status["balance"]
 
 
 if __name__ == "__main__":

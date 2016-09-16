@@ -165,6 +165,7 @@ class Client(MpcClient):
         signed_rawtx = self.sign(c2h_deposit_rawtx, self.client_wif)
         c2h_deposit_txid = self.publish(signed_rawtx, publish_tx=publish_tx)
         self._set_initial_h2c_state(h2c_deposit_script)
+        self._add_to_commits_requested(h2c_next_revoke_secret_hash)
         self.payments_sent = []
         self.payments_received = []
         self.payments_queued = []
@@ -184,55 +185,93 @@ class Client(MpcClient):
         })
         return token
 
-    def is_expired(self, clearance=6):
-        """Returns True if one of both channels is expired.
-
-        Args:
-            clearance=6: Commits clearance required between current block
-                         height and expire block height.
-        """
-
-        assert(self.is_connected())
-        return (
-            self.rpc.mpc_deposit_expired(state=self.h2c_state,
-                                         clearance=clearance) or
-            self.rpc.mpc_deposit_expired(state=self.c2h_state,
-                                         clearance=clearance)
-        )
-
-    def get_status(self):
+    def get_status(self, clearance=6):
         assert(self.is_connected())
         asset = self.asset
         netcode = util.wif2netcode(self.client_wif)
+        h2c_expired = self.rpc.mpc_deposit_expired(state=self.h2c_state,
+                                                   clearance=clearance)
+        c2h_expired = self.rpc.mpc_deposit_expired(state=self.c2h_state,
+                                                   clearance=clearance)
         c2h_deposit_address = util.script2address(
             util.h2b(self.c2h_state["deposit_script"]), netcode=netcode
         )
-        c2h_deposit_quantity = self.get_balances(c2h_deposit_address, [asset])[asset]
+        c2h_deposit = self.get_balances(c2h_deposit_address, [asset])[asset]
         h2c_deposit_address = util.script2address(
             util.h2b(self.h2c_state["deposit_script"]), netcode=netcode
         )
-        h2c_deposit_quantity = self.get_balances(h2c_deposit_address, [asset])[asset]
+        h2c_deposit = self.get_balances(h2c_deposit_address, [asset])[asset]
 
         c2h_transferred = self.rpc.mpc_transferred_amount(state=self.c2h_state)
         h2c_transferred = self.rpc.mpc_transferred_amount(state=self.h2c_state)
         return {
             "asset": asset,
             "netcode": netcode,
-            "expired": self.is_expired(),
-            "balance": c2h_deposit_quantity + h2c_transferred - c2h_transferred,
-            "c2h_deposit_quantity": c2h_deposit_quantity,
-            "h2c_deposit_quantity": h2c_deposit_quantity,
-            "c2h_transferred": c2h_transferred,
-            "h2c_transferred": h2c_transferred,
+            "c2h_expired": c2h_expired,
+            "h2c_expired": h2c_expired,
+            "balance": c2h_deposit + h2c_transferred - c2h_transferred,
+            "c2h_deposit_quantity": c2h_deposit,
+            "h2c_deposit_quantity": h2c_deposit,
+            "c2h_transferred_quantity": c2h_transferred,
+            "h2c_transferred_quantity": h2c_transferred,
         }
+
+    def _add_to_commits_requested(self, secret_hash):
+        # emulates mpc_request_commit api call
+        self.h2c_state["commits_requested"].append(secret_hash)
+
+    def _gen_secret(self):
+        secret_value = util.b2h(os.urandom(32))
+        secret_hash = util.hash160hex(secret_value)
+        self.secrets[secret_hash] = secret_value
+        return secret_hash
 
     def sync(self):
         """TODO doc string"""
 
         assert(self.is_connected())
-        # FIXME implement
+        payments = self.payments_queued
+        self.payments_queued = []
 
-    def _c2h_create_commit(self, quantity):
+        # create commit
+        sync_fee = self.channel_terms["sync_fee"]
+        quantity = sum([p["amount"] for p in payments]) + sync_fee
+        commit = self._create_commit(quantity)
+
+        # create nex revoke secret for h2c channel
+        h2c_next_revoke_secret_hash = self._gen_secret()
+        self._add_to_commits_requested(h2c_next_revoke_secret_hash)
+
+        # sync with hub
+        result = self.rpc.mph_sync(
+            handle=self.handle,
+            next_revoke_secret_hash=h2c_next_revoke_secret_hash,
+            sends=payments,
+            commit=commit,
+            revokes=[],  # FIXME revoke if possible to maximize liquidity
+        )
+        h2c_commit = result["commit"]
+        c2h_revokes = result["revokes"]
+        receive_payments = result["receive"]
+        self.c2h_next_revoke_secret_hash = result["next_revoke_secret_hash"]
+
+        # add commit to h2c channel
+        if h2c_commit:
+            self.h2c_state = self.rpc.mpc_add_commit(
+                state=self.h2c_state,
+                commit_rawtx=h2c_commit["rawtx"],
+                commit_script=h2c_commit["script"]
+            )
+
+        # add c2h revokes to channel
+        if c2h_revokes:
+            self.c2h_state = self.rpc.mpc_revoke_all(
+                state=self.c2h_state, secrets=c2h_revokes
+            )
+
+        return receive_payments
+
+    def _create_commit(self, quantity):
         result = self.create_signed_commit(
             self.client_wif, self.c2h_state, quantity,
             self.c2h_next_revoke_secret_hash, self.c2h_commit_delay_time
@@ -241,17 +280,9 @@ class Client(MpcClient):
         return result["commit"]
 
     def _create_initial_secrets(self):
-        h2c_spend_secret_value = util.b2h(os.urandom(32))
-        self.h2c_spend_secret_hash = util.hash160hex(h2c_spend_secret_value)
-        h2c_next_revoke_secret_value = util.b2h(os.urandom(32))
-        h2c_next_revoke_secret_hash = util.hash160hex(
-            h2c_next_revoke_secret_value
-        )
-        self.secrets = {
-            self.h2c_spend_secret_hash: h2c_spend_secret_value,
-            h2c_next_revoke_secret_hash: h2c_next_revoke_secret_value
-        }
-        return h2c_next_revoke_secret_hash
+        self.secrets = {}
+        self.h2c_spend_secret_hash = self._gen_secret()
+        return self._gen_secret()
 
     def _request_connection(self):
         result = self.rpc.mph_request(
