@@ -38,7 +38,7 @@ class MpcClient(object):
             result[entrie["asset"]] = entrie["quantity"]
         return result
 
-    def block_send(self, publish_tx=True, **kwargs):
+    def block_send(self, dryrun=False, **kwargs):
         """TODO doc string"""
 
         # replace source wif with address
@@ -48,16 +48,15 @@ class MpcClient(object):
         # create, sign and publish transaction
         unsigned_rawtx = self.rpc.create_send(**kwargs)
         signed_rawtx = self.sign(unsigned_rawtx, wif)
-        return self.publish(signed_rawtx, publish_tx=publish_tx)
+        return self.publish(signed_rawtx, dryrun=dryrun)
 
     def sign(self, unsigned_rawtx, wif):
         """TODO doc string"""
 
         return sign_deposit(self.get_rawtx, wif, unsigned_rawtx)
 
-    def publish(self, rawtx, publish_tx=True):
-        # FIXME publish_tx -> dryrun
-        if not publish_tx:
+    def publish(self, rawtx, dryrun=False):
+        if dryrun:
             return util.gettxid(rawtx)
         return self.rpc.sendrawtransaction(tx_hex=rawtx)  # pragma: no cover
 
@@ -145,7 +144,7 @@ class Client(MpcClient):
         return bool(self.handle)
 
     def connect(self, quantity, expire_time=1024, asset="XCP",
-                delay_time=2, own_url=None, publish_tx=True):
+                delay_time=2, own_url=None, dryrun=False):
         """TODO doc string"""
 
         assert(not self.is_connected())
@@ -155,17 +154,15 @@ class Client(MpcClient):
         self.client_pubkey = util.wif2pubkey(self.client_wif)
         self.c2h_deposit_expire_time = expire_time
         self.c2h_deposit_quantity = quantity
-        h2c_next_revoke_secret_hash = self._create_initial_secrets()
+        next_revoke_hash = self._create_initial_secrets()
         self._request_connection()
         self._validate_matches_terms()
         c2h_deposit_rawtx = self._make_deposit()
-        h2c_deposit_script = self._exchange_deposit_scripts(
-            h2c_next_revoke_secret_hash
-        )
+        h2c_deposit_script = self._exchange_deposit_scripts(next_revoke_hash)
         signed_rawtx = self.sign(c2h_deposit_rawtx, self.client_wif)
-        c2h_deposit_txid = self.publish(signed_rawtx, publish_tx=publish_tx)
+        c2h_deposit_txid = self.publish(signed_rawtx, dryrun=dryrun)
         self._set_initial_h2c_state(h2c_deposit_script)
-        self._add_to_commits_requested(h2c_next_revoke_secret_hash)
+        self._add_to_commits_requested(next_revoke_hash)
         self.payments_sent = []
         self.payments_received = []
         self.payments_queued = []
@@ -189,10 +186,12 @@ class Client(MpcClient):
         assert(self.is_connected())
         asset = self.asset
         netcode = util.wif2netcode(self.client_wif)
-        h2c_expired = self.rpc.mpc_deposit_expired(state=self.h2c_state,
-                                                   clearance=clearance)
-        c2h_expired = self.rpc.mpc_deposit_expired(state=self.c2h_state,
-                                                   clearance=clearance)
+        h2c_expired = self.rpc.mpc_deposit_expired(
+            state=self.h2c_state, clearance=clearance
+        )
+        c2h_expired = self.rpc.mpc_deposit_expired(
+            state=self.c2h_state, clearance=clearance
+        )
         c2h_deposit_address = util.script2address(
             util.h2b(self.c2h_state["deposit_script"]), netcode=netcode
         )
@@ -201,7 +200,6 @@ class Client(MpcClient):
             util.h2b(self.h2c_state["deposit_script"]), netcode=netcode
         )
         h2c_deposit = self.get_balances(h2c_deposit_address, [asset])[asset]
-
         c2h_transferred = self.rpc.mpc_transferred_amount(state=self.c2h_state)
         h2c_transferred = self.rpc.mpc_transferred_amount(state=self.h2c_state)
         return {
@@ -296,8 +294,7 @@ class Client(MpcClient):
 
     def _exchange_deposit_scripts(self, h2c_next_revoke_secret_hash):
         result = self.rpc.mph_deposit(
-            handle=self.handle,
-            asset=self.asset,
+            handle=self.handle, asset=self.asset,
             deposit_script=self.c2h_state["deposit_script"],
             next_revoke_secret_hash=h2c_next_revoke_secret_hash
         )
@@ -319,13 +316,11 @@ class Client(MpcClient):
 
     def _validate_matches_terms(self):
         expire_max = self.channel_terms["expire_max"]
-        assert(
-            expire_max == 0 or self.c2h_deposit_expire_time <= expire_max
-        )
         deposit_max = self.channel_terms["deposit_max"]
-        assert(
-            deposit_max == 0 or self.c2h_deposit_quantity <= deposit_max
-        )
+        expire_time = self.c2h_deposit_expire_time
+        quantity = self.c2h_deposit_quantity
+        assert(expire_max == 0 or expire_time <= expire_max)
+        assert(deposit_max == 0 or quantity <= deposit_max)
 
     def _set_initial_h2c_state(self, h2c_deposit_script):
         self.h2c_state = {

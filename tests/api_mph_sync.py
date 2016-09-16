@@ -179,7 +179,7 @@ class TestMpcHubSync(unittest.TestCase):
                 auth_wif=auth_wif,
                 verify_ssl_cert=False
             )
-            txid = alice.connect(1337, 65535, asset=asset, publish_tx=False)
+            txid = alice.connect(1337, 65535, asset=asset, dryrun=True)
             self.assertIsNotNone(txid)
 
             # load bob A14456548018133352000 connection

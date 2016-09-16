@@ -62,7 +62,8 @@ class TestSandbox(unittest.TestCase):
     def test_burn(self):
         wif = "cTvCnpvQJE3TvNejkWbnFA1z6jLJjB2xXXapFabGsazCz2QNYFQb"
         address = util.wif2address(wif)
-        unsigned_rawtx = rpc.cplib.create_burn(source=address, quantity=100000000)
+        unsigned_rawtx = rpc.cplib.create_burn(source=address,
+                                               quantity=100000000)
         txid = self.client.sign_and_publish(unsigned_rawtx, wif)
         print("TXID:", txid)
 
@@ -78,7 +79,7 @@ class TestSandbox(unittest.TestCase):
         auth_wif = ""
         client = Client(auth_wif=auth_wif, verify_ssl_cert=False)
         deposit_txid = client.connect(42, expire_time=1,
-                                      asset=asset, publish_tx=False)
+                                      asset=asset, dryrun=True)
         self.assertIsNotNone(deposit_txid)
         print(deposit_txid)
         print(json.dumps(client.serialize(), indent=2))

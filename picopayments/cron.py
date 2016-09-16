@@ -10,7 +10,7 @@ from picopayments import sql
 from picopayments import rpc
 
 
-def fund_deposits(publish_tx=True):
+def fund_deposits(dryrun=False):
     """Fund or top off open channels."""
     with etc.database_lock:
         deposits = []
@@ -54,7 +54,7 @@ def fund_deposits(publish_tx=True):
             quantity = target - h2c_deposit_balance
             if quantity > 0:
                 txid = lib.send_funds(h2c_deposit_address, asset,
-                                      quantity, publish_tx=publish_tx)
+                                      quantity, dryrun=dryrun)
                 deposits.append({
                     "txid": txid,
                     "asset": asset,
@@ -66,7 +66,7 @@ def fund_deposits(publish_tx=True):
         return deposits
 
 
-def close_connections(publish_tx=True):
+def close_connections(dryrun=False):
     """Close connections almost expired and partially closed by client."""
     with etc.database_lock:
         closed_connections = []
@@ -87,7 +87,7 @@ def close_connections(publish_tx=True):
             if c2h_expired or h2c_expired or commit_published:
                 db.set_connection_closed(handle=hub_connection["handle"])
                 commit_txid = lib.finalize_commit(
-                    c2h_state, publish_tx=publish_tx
+                    c2h_state, dryrun=dryrun
                 )
                 closed_connections.append({
                     "handle": hub_connection["handle"],
@@ -98,10 +98,9 @@ def close_connections(publish_tx=True):
         return closed_connections
 
 
-def recover_funds(publish_tx=True):
+def recover_funds(dryrun=False):
     """Recover funds where possible"""
     with etc.database_lock:
-        pub = publish_tx
         txs = []
         cursor = sql.get_cursor()
         for hub_connection in db.hub_connections_recoverable(cursor=cursor):
@@ -117,10 +116,10 @@ def recover_funds(publish_tx=True):
             rtx = rtxs["revoke"]
             ctx = rtxs["change"]
             etx = rtxs["expire"]
-            txs += [lib.recover_payout(publish_tx=pub, **p) for p in ptx]
-            txs += [lib.recover_revoked(publish_tx=pub, **r) for r in rtx]
-            txs += [lib.recover_change(publish_tx=pub, **c) for c in ctx]
-            txs += [lib.recover_expired(publish_tx=pub, **e) for e in etx]
+            txs += [lib.recover_payout(dryrun=dryrun, **p) for p in ptx]
+            txs += [lib.recover_revoked(dryrun=dryrun, **r) for r in rtx]
+            txs += [lib.recover_change(dryrun=dryrun, **c) for c in ctx]
+            txs += [lib.recover_expired(dryrun=dryrun, **e) for e in etx]
         return txs
 
 
@@ -130,9 +129,9 @@ def collect_garbage():
         pass
 
 
-def run(publish_tx=True):
+def run(dryrun=False):
     with etc.database_lock:
-        close_connections(publish_tx=publish_tx)
-        recover_funds(publish_tx=publish_tx)
-        fund_deposits(publish_tx=publish_tx)
+        close_connections(dryrun=dryrun)
+        recover_funds(dryrun=dryrun)
+        fund_deposits(dryrun=dryrun)
         collect_garbage()

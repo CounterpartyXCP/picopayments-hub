@@ -230,7 +230,6 @@ def _fmt_revoked(channel_id, commits_revoked,
                  unnotified_commit=None, unnotified_revoke_secrets=None):
 
     unnotified_revoke_secrets = unnotified_revoke_secrets or []
-    # FIXME pass unnotified revoke secrets instead
     revoked = []
     for commit_revoked in commits_revoked:
         script = commit_revoked["script"]

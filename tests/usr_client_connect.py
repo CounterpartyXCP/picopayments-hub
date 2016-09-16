@@ -36,7 +36,7 @@ class TestUsrClientConnect(unittest.TestCase):
         auth_wif = self.data["funded"]["alpha"]["wif"]
         asset = self.data["funded"]["alpha"]["asset"]
         client = Client(auth_wif=auth_wif, verify_ssl_cert=verify_ssl_cert)
-        txid = client.connect(1337, 65535, asset=asset, publish_tx=False)
+        txid = client.connect(1337, 65535, asset=asset, dryrun=True)
         self.assertIsNotNone(txid)
 
 

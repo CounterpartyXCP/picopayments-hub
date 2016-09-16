@@ -38,7 +38,7 @@ class TestUsrClientBlockSend(unittest.TestCase):
         quantity = 42
         txid = client.block_send(
             source=src_wif, destination=dest_address, asset=asset,
-            quantity=quantity, publish_tx=False
+            quantity=quantity, dryrun=True
         )
         self.assertIsNotNone(txid)
 

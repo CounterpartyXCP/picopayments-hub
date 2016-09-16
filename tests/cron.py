@@ -30,16 +30,16 @@ class TestCron(unittest.TestCase):
         shutil.rmtree(self.tempdir)
 
     def test_close_connections(self):
-        closed_connections = cron.close_connections(publish_tx=False)
+        closed_connections = cron.close_connections(dryrun=True)
         self.assertEqual(len(closed_connections), 1)
         self.assertTrue(bool(closed_connections))
 
     def test_fund_deposits(self):
-        deposits = cron.fund_deposits(publish_tx=False)
+        deposits = cron.fund_deposits(dryrun=True)
         self.assertEqual(len(deposits), 3)
         self.assertTrue(bool(deposits))
 
     def test_recover_funds(self):
-        transactions = cron.recover_funds(publish_tx=False)
+        transactions = cron.recover_funds(dryrun=True)
         self.assertEqual(len(transactions), 0)
         self.assertFalse(bool(transactions))
