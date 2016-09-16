@@ -527,7 +527,7 @@ def _send_client_funds(connection_data, quantity, token):
         hub_pubkey = scripts.get_deposit_payer_pubkey(deposit_script_bin)
         wif = db.key(pubkey=hub_pubkey)["wif"]
 
-        result = usr.Client().create_signed_commit(
+        result = usr.HubClient().create_signed_commit(
             wif, h2c_state, send_quantity,
             next_revoke_secret_hash, etc.delay_time
         )

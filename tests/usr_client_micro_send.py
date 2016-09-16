@@ -5,7 +5,7 @@ import unittest
 import tempfile
 from picopayments import srv
 from picopayments import etc
-from picopayments import Client
+from picopayments import HubClient
 
 
 etc.call_local_process = True
@@ -31,7 +31,7 @@ class TestUsrClientMicroSend(unittest.TestCase):
 
     def test_predefined_token(self):
         connection = self.data["connections"]["alpha"]
-        client = Client.deserialize(connection)
+        client = HubClient.deserialize(connection)
         self.assertEqual(client.payments_queued, [])
         token = client.micro_send("f483", 42, "deadbeef")
         self.assertEqual(token, "deadbeef")
@@ -43,7 +43,7 @@ class TestUsrClientMicroSend(unittest.TestCase):
 
     def test_generated_token(self):
         connection = self.data["connections"]["alpha"]
-        client = Client.deserialize(connection)
+        client = HubClient.deserialize(connection)
         self.assertEqual(client.payments_queued, [])
         token = client.micro_send("f483", 42)
         self.assertEqual(client.payments_queued, [{

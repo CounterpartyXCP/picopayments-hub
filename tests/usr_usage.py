@@ -5,7 +5,7 @@ import unittest
 import tempfile
 from picopayments import etc
 from picopayments import srv
-from picopayments import Client
+from picopayments import HubClient
 
 
 etc.call_local_process = True
@@ -13,8 +13,6 @@ CP_URL = os.environ.get("COUNTERPARTY_URL", "http://139.59.214.74:14000/api/")
 
 
 class TestUsr(unittest.TestCase):
-
-    # FIXME test fails if request made, deposit not made then sync
 
     def setUp(self):
         self.tempdir = tempfile.mkdtemp(prefix="picopayments_test_")
@@ -34,12 +32,12 @@ class TestUsr(unittest.TestCase):
     def test_standard_usage(self):
 
         # setup
-        alpha = Client.deserialize(self.data["connections"]["alpha"])
-        beta = Client.deserialize(self.data["connections"]["beta"])
-        gamma = Client.deserialize(self.data["connections"]["gamma"])
-        delta = Client.deserialize(self.data["connections"]["delta"])
-        epsilon = Client.deserialize(self.data["connections"]["epsilon"])
-        zeta = Client.deserialize(self.data["connections"]["zeta"])
+        alpha = HubClient.deserialize(self.data["connections"]["alpha"])
+        beta = HubClient.deserialize(self.data["connections"]["beta"])
+        gamma = HubClient.deserialize(self.data["connections"]["gamma"])
+        delta = HubClient.deserialize(self.data["connections"]["delta"])
+        epsilon = HubClient.deserialize(self.data["connections"]["epsilon"])
+        zeta = HubClient.deserialize(self.data["connections"]["zeta"])
 
         # after before status
         alpha_before_status = alpha.get_status()

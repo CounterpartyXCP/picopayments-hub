@@ -10,7 +10,7 @@ from picopayments import lib
 from picopayments import etc
 from picopayments import srv
 from picopayments import err
-from picopayments import Client
+from picopayments import HubClient
 from counterpartylib.lib.micropayments import util
 
 
@@ -142,7 +142,7 @@ class TestMpcHubSync(unittest.TestCase):
 
     def test_standard_commit(self):
         quantity = 5
-        client = Client.deserialize(self.data["connections"]["alpha"])
+        client = HubClient.deserialize(self.data["connections"]["alpha"])
         sync_fee = client.channel_terms["sync_fee"]
         commit = client._create_commit(quantity + sync_fee)
 
@@ -175,7 +175,7 @@ class TestMpcHubSync(unittest.TestCase):
             # create alice XCP connection
             auth_wif = self.data["funded"]["epsilon"]["wif"]
             asset = self.data["funded"]["epsilon"]["asset"]
-            alice = Client(
+            alice = HubClient(
                 auth_wif=auth_wif,
                 verify_ssl_cert=False
             )
@@ -184,7 +184,7 @@ class TestMpcHubSync(unittest.TestCase):
 
             # load bob A14456548018133352000 connection
             quantity = 5
-            bob = Client.deserialize(self.data["connections"]["alpha"])
+            bob = HubClient.deserialize(self.data["connections"]["alpha"])
             sync_fee = bob.channel_terms["sync_fee"]
             commit = bob._create_commit(quantity + sync_fee)
 
@@ -210,11 +210,11 @@ class TestMpcHubSync(unittest.TestCase):
     def test_payment_exceeds_receivable(self):
 
         def func():
-            alice = Client.deserialize(self.data["connections"]["beta"])
+            alice = HubClient.deserialize(self.data["connections"]["beta"])
 
             # load bob A14456548018133352000 connection
             quantity = 1338
-            bob = Client.deserialize(self.data["connections"]["alpha"])
+            bob = HubClient.deserialize(self.data["connections"]["alpha"])
             sync_fee = bob.channel_terms["sync_fee"]
             commit = bob._create_commit(quantity + sync_fee)
 
@@ -240,7 +240,7 @@ class TestMpcHubSync(unittest.TestCase):
 
         def func():
             quantity = 5
-            client = Client.deserialize(self.data["connections"]["eta"])
+            client = HubClient.deserialize(self.data["connections"]["eta"])
             sync_fee = client.channel_terms["sync_fee"]
             commit = client._create_commit(quantity + sync_fee)
             h2c_next_revoke_secret_hash = client._gen_secret()
@@ -264,8 +264,8 @@ class TestMpcHubSync(unittest.TestCase):
     def test_payee_deposit_expired(self):
 
         def func():
-            alice = Client.deserialize(self.data["connections"]["alpha"])
-            bob = Client.deserialize(self.data["connections"]["eta"])
+            alice = HubClient.deserialize(self.data["connections"]["alpha"])
+            bob = HubClient.deserialize(self.data["connections"]["eta"])
             quantity = 5
             sync_fee = alice.channel_terms["sync_fee"]
             commit = alice._create_commit(quantity + sync_fee)

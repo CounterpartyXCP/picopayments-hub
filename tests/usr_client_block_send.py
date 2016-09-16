@@ -5,7 +5,7 @@ import unittest
 import tempfile
 from picopayments import srv
 from picopayments import etc
-from picopayments import Client
+from picopayments import HubClient
 from counterpartylib.lib.micropayments import util
 
 
@@ -31,7 +31,7 @@ class TestUsrClientBlockSend(unittest.TestCase):
         shutil.rmtree(self.tempdir)
 
     def test_standard_usage(self):
-        client = Client(verify_ssl_cert=False)
+        client = HubClient(verify_ssl_cert=False)
         src_wif = self.data["funded"]["gamma"]["wif"]
         asset = self.data["funded"]["gamma"]["asset"]
         dest_address = util.wif2address(util.random_wif(netcode=etc.netcode))

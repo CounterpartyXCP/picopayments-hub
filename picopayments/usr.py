@@ -89,7 +89,7 @@ class MpcClient(object):
         }
 
 
-class Client(MpcClient):
+class HubClient(MpcClient):
 
     _SERIALIZABLE_ATTRS = [
         "asset",  # set once
@@ -112,7 +112,7 @@ class Client(MpcClient):
     ]
 
     def __init__(self, *args, **kwargs):
-        super(Client, self).__init__(*args, **kwargs)
+        super(HubClient, self).__init__(*args, **kwargs)
         for attr in self._SERIALIZABLE_ATTRS:
             setattr(self, attr, None)
 

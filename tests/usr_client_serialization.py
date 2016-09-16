@@ -5,7 +5,7 @@ import unittest
 import tempfile
 from picopayments import etc
 from picopayments import srv
-from picopayments import Client
+from picopayments import HubClient
 
 
 etc.call_local_process = True
@@ -31,7 +31,7 @@ class TestUsrClientSerialization(unittest.TestCase):
 
     def test_standard_usage(self):
         connection = self.data["connections"]["alpha"]
-        client = Client.deserialize(connection)
+        client = HubClient.deserialize(connection)
         self.assertEqual(connection, client.serialize())
 
 

@@ -5,7 +5,7 @@ import unittest
 import tempfile
 from picopayments import srv
 from picopayments import etc
-from picopayments import Client
+from picopayments import HubClient
 
 
 etc.call_local_process = True
@@ -35,7 +35,7 @@ class TestUsrClientConnect(unittest.TestCase):
         verify_ssl_cert = False
         auth_wif = self.data["funded"]["alpha"]["wif"]
         asset = self.data["funded"]["alpha"]["asset"]
-        client = Client(auth_wif=auth_wif, verify_ssl_cert=verify_ssl_cert)
+        client = HubClient(auth_wif=auth_wif, verify_ssl_cert=verify_ssl_cert)
         txid = client.connect(1337, 65535, asset=asset, dryrun=True)
         self.assertIsNotNone(txid)
 

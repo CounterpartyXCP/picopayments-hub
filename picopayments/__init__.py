@@ -5,4 +5,4 @@
 
 from .version import __version__  # NOQA
 from .rpc import RPC  # NOQA
-from .usr import Client  # NOQA
+from .usr import HubClient  # NOQA

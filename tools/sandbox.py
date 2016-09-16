@@ -10,7 +10,7 @@ from picopayments import lib
 from picopayments import rpc
 from picopayments import etc
 from counterpartylib.lib.micropayments import util
-from picopayments import Client
+from picopayments import HubClient
 
 
 etc.call_local_process = True
@@ -18,8 +18,6 @@ CP_URL = "http://139.59.214.74:14000/api/"
 
 
 class TestSandbox(unittest.TestCase):
-
-    # FIXME test fails if request made, deposit not made then sync
 
     def setUp(self):
         self.tempdir = tempfile.mkdtemp(prefix="picopayments_test_")
@@ -36,7 +34,7 @@ class TestSandbox(unittest.TestCase):
             self.data = json.load(fp)
 
         url = "https://127.0.0.1:15000/api/"
-        self.client = Client(url, verify_ssl_cert=False)
+        self.client = HubClient(url, verify_ssl_cert=False)
 
     def tearDown(self):
         shutil.rmtree(self.tempdir)
@@ -70,14 +68,14 @@ class TestSandbox(unittest.TestCase):
     @unittest.skip("it")
     def test_balance(self):
         address = "mzvuAKGL25Ms6iQyUQVbNyQLbPUGeSt6c2"
-        client = Client(verify_ssl_cert=False)
+        client = HubClient(verify_ssl_cert=False)
         print(json.dumps(client.balances(address), indent=2))
 
     @unittest.skip("it")
     def test_create_expired_deposit(self):
         asset = ""
         auth_wif = ""
-        client = Client(auth_wif=auth_wif, verify_ssl_cert=False)
+        client = HubClient(auth_wif=auth_wif, verify_ssl_cert=False)
         deposit_txid = client.connect(42, expire_time=1,
                                       asset=asset, dryrun=True)
         self.assertIsNotNone(deposit_txid)
