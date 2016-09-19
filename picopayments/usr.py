@@ -117,7 +117,6 @@ class MpcClient(object):
         recv_moved_after = self.rpc.mpc_transferred_amount(state=recv_state)
         recv_revoked_quantity = recv_moved_before - recv_moved_after
         send_quantity = quantity - recv_revoked_quantity
-
         if send_quantity > 0:
             result = self.create_signed_commit(
                 wif, send_state, send_quantity,
@@ -131,6 +130,83 @@ class MpcClient(object):
             "send_state": send_state, "recv_state": recv_state,
             "revokes": revokes, "commit": commit
         }
+
+    def recover_payout(self, get_wif_func, get_secret_func, payout_rawtx,
+                       commit_script, dryrun=False):
+        script = util.h2b(commit_script)
+        pubkey = scripts.get_commit_payee_pubkey(script)
+        wif = get_wif_func(pubkey=util.b2h(pubkey))
+        spend_secret_hash = scripts.get_commit_spend_secret_hash(script)
+        spend_secret = get_secret_func(spend_secret_hash)
+        signed_rawtx = scripts.sign_payout_recover(
+            self.get_rawtx, wif, payout_rawtx, script, spend_secret
+        )
+        return publish(signed_rawtx, dryrun=dryrun)
+
+    def recover_revoked(self, get_wif_func, revoke_rawtx, commit_script,
+                        revoke_secret, dryrun=False):
+        script = util.h2b(commit_script)
+        pubkey = scripts.get_commit_payer_pubkey(script)
+        wif = get_wif_func(pubkey=util.b2h(pubkey))
+        signed_rawtx = scripts.sign_revoke_recover(
+            self.get_rawtx, wif, revoke_rawtx, script, revoke_secret
+        )
+        return publish(signed_rawtx, dryrun=dryrun)
+
+    def recover_change(self, get_wif_func, change_rawtx, deposit_script,
+                       spend_secret, dryrun=False):
+        script = util.h2b(deposit_script)
+        pubkey = scripts.get_deposit_payer_pubkey(script)
+        wif = get_wif_func(pubkey=util.b2h(pubkey))
+        signed_rawtx = scripts.sign_change_recover(
+            self.get_rawtx, wif, change_rawtx, script, spend_secret
+        )
+        return publish(signed_rawtx, dryrun=dryrun)
+
+    def recover_expired(self, get_wif_func, expire_rawtx,
+                        deposit_script, dryrun=False):
+        script = util.h2b(deposit_script)
+        pubkey = scripts.get_deposit_payer_pubkey(script)
+        wif = get_wif_func(pubkey=util.b2h(pubkey))
+        signed_rawtx = scripts.sign_expire_recover(
+            self.get_rawtx, wif, expire_rawtx, script
+        )
+        return publish(self, signed_rawtx, dryrun=dryrun)
+
+    def finalize_commit(self, get_wif_func, state, dryrun=False):
+        commit = self.rpc.mpc_highest_commit(state=state)
+        if commit is None:
+            return None
+        script = util.h2b(commit["script"])
+        rawtx = commit["rawtx"]
+        pubkey = scripts.get_commit_payee_pubkey(script)
+        wif = get_wif_func(pubkey=util.b2h(pubkey))
+        signed_rawtx = scripts.sign_finalize_commit(self.get_rawtx, wif,
+                                                    rawtx, script)
+        return publish(signed_rawtx, dryrun=dryrun)
+
+    def full_duplex_recover_funds(self, get_wif_func, get_secret_func,
+                                  recv_state, send_state, dryrun=False):
+        txs = []
+        for ptx in self.rpc.mpc_payouts(state=recv_state):
+            txs += self.recover_payout(
+                get_wif_func=get_wif_func, get_secret_func=get_secret_func,
+                dryrun=dryrun, **ptx
+            )
+        rtxs = self.rpc.mpc_recoverables(state=send_state)
+        for rtx in rtxs["revoke"]:
+            txs += self.recover_revoke(
+                get_wif_func=get_wif_func, dryrun=dryrun, **ptx
+            )
+        for ctx in rtxs["change"]:
+            txs += self.recover_change(
+                get_wif_func=get_wif_func, dryrun=dryrun, **ptx
+            )
+        for etx in rtxs["expire"]:
+            txs += self.recover_expired(
+                get_wif_func=get_wif_func, dryrun=dryrun, **ptx
+            )
+        return txs
 
 
 class HubClient(MpcClient):
@@ -275,10 +351,9 @@ class HubClient(MpcClient):
         payments = self.payments_queued
         self.payments_queued = []
 
-        # create commit
+        # transfer payment funds (create commit/revokes)
         sync_fee = self.channel_terms["sync_fee"]
         quantity = sum([p["amount"] for p in payments]) + sync_fee
-
         result = self.full_duplex_transfer(
             self.client_wif, self.secrets.get, self.c2h_state,
             self.h2c_state, quantity, self.c2h_next_revoke_secret_hash,

@@ -25,6 +25,14 @@ _TERMS_FP = pkg_resources.resource_stream("picopayments", "terms.json")
 TERMS = json.loads(_TERMS_FP.read().decode("utf-8"))
 
 
+def get_secret(secret_hash):
+    return db.get_secret(hash=secret_hash)["value"]
+
+
+def get_wif(pubkey):
+    return db.key(pubkey=pubkey)["wif"]
+
+
 def create_key(asset, netcode="BTC"):
     secure_random_data = os.urandom(32)
     key = BIP32Node.from_master_secret(secure_random_data, netcode=netcode)
@@ -333,61 +341,6 @@ def publish(rawtx, dryrun=False):
     if dryrun:
         return util.gettxid(rawtx)
     return rpc.cplib.sendrawtransaction(tx_hex=rawtx)  # pragma: no cover
-
-
-def recover_payout(payout_rawtx, commit_script, dryrun=False):
-    script = util.h2b(commit_script)
-    pubkey = scripts.get_commit_payee_pubkey(script)
-    key = db.key(pubkey=util.b2h(pubkey))
-    spend_secret = None  # FIXME load spend secret from db
-    signed_rawtx = scripts.sign_payout_recover(
-        get_tx, key["wif"], payout_rawtx, script, spend_secret
-    )
-    return publish(signed_rawtx, dryrun=dryrun)
-
-
-def recover_revoked(revoke_rawtx, commit_script,
-                    revoke_secret, dryrun=False):
-    script = util.h2b(commit_script)
-    pubkey = scripts.get_commit_payer_pubkey(script)
-    key = db.key(pubkey=util.b2h(pubkey))
-    signed_rawtx = scripts.sign_revoke_recover(
-        get_tx, key["wif"], revoke_rawtx, script, revoke_secret
-    )
-    return publish(signed_rawtx, dryrun=dryrun)
-
-
-def recover_change(change_rawtx, deposit_script, spend_secret, dryrun=False):
-    script = util.h2b(deposit_script)
-    pubkey = scripts.get_deposit_payer_pubkey(script)
-    key = db.key(pubkey=util.b2h(pubkey))
-    signed_rawtx = scripts.sign_change_recover(
-        get_tx, key["wif"], change_rawtx, script, spend_secret
-    )
-    return publish(signed_rawtx, dryrun=dryrun)
-
-
-def recover_expired(expire_rawtx, deposit_script, dryrun=False):
-    script = util.h2b(deposit_script)
-    pubkey = scripts.get_deposit_payer_pubkey(script)
-    key = db.key(pubkey=util.b2h(pubkey))
-    signed_rawtx = scripts.sign_expire_recover(
-        get_tx, key["wif"], expire_rawtx, script
-    )
-    return publish(signed_rawtx, dryrun=dryrun)
-
-
-def finalize_commit(state, dryrun=False):
-    commit = rpc.cplib.mpc_highest_commit(state=state)
-    if commit is None:
-        return None
-    script = util.h2b(commit["script"])
-    rawtx = commit["rawtx"]
-    pubkey = scripts.get_commit_payee_pubkey(script)
-    key = db.key(pubkey=util.b2h(pubkey))
-    signed_rawtx = scripts.sign_finalize_commit(get_tx, key["wif"],
-                                                rawtx, script)
-    return publish(signed_rawtx, dryrun=dryrun)
 
 
 def send_funds(destination, asset, quantity, dryrun=False):

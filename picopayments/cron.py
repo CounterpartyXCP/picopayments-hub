@@ -8,6 +8,7 @@ from picopayments import db
 from picopayments import lib
 from picopayments import sql
 from picopayments import rpc
+from picopayments import usr
 
 
 def fund_deposits(dryrun=False):
@@ -86,8 +87,8 @@ def close_connections(dryrun=False):
             )
             if c2h_expired or h2c_expired or commit_published:
                 db.set_connection_closed(handle=hub_connection["handle"])
-                commit_txid = lib.finalize_commit(
-                    c2h_state, dryrun=dryrun
+                commit_txid = usr.MpcClient().finalize_commit(
+                    lib.get_wif, c2h_state, dryrun=dryrun
                 )
                 closed_connections.append({
                     "handle": hub_connection["handle"],
@@ -104,22 +105,16 @@ def recover_funds(dryrun=False):
         txs = []
         cursor = sql.get_cursor()
         for hub_connection in db.hub_connections_recoverable(cursor=cursor):
-            # FIXME move recovering payouts, revokes, change, expire to client
-            #       as to avoid code duplication
             asset = hub_connection["asset"]
             c2h_mpc_id = hub_connection["c2h_channel_id"]
             c2h_state = db.load_channel_state(c2h_mpc_id, asset, cursor=cursor)
             h2c_mpc_id = hub_connection["h2c_channel_id"]
             h2c_state = db.load_channel_state(h2c_mpc_id, asset, cursor=cursor)
-            ptx = rpc.cplib.mpc_payouts(state=c2h_state)
-            rtxs = rpc.cplib.mpc_recoverables(state=h2c_state)
-            rtx = rtxs["revoke"]
-            ctx = rtxs["change"]
-            etx = rtxs["expire"]
-            txs += [lib.recover_payout(dryrun=dryrun, **p) for p in ptx]
-            txs += [lib.recover_revoked(dryrun=dryrun, **r) for r in rtx]
-            txs += [lib.recover_change(dryrun=dryrun, **c) for c in ctx]
-            txs += [lib.recover_expired(dryrun=dryrun, **e) for e in etx]
+            txs += usr.MpcClient().full_duplex_recover_funds(
+                lib.get_wif, lib.get_secret,
+                c2h_state, h2c_state, dryrun=dryrun
+            )
+
         return txs
 
 
