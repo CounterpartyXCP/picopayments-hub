@@ -88,6 +88,50 @@ class MpcClient(object):
             "commit": {"rawtx": signed_rawtx, "script": commit_script}
         }
 
+    def full_duplex_transfer(self, wif, get_secret_func, send_state,
+                             recv_state, quantity,
+                             send_next_revoke_secret_hash,
+                             send_commit_delay_time):
+        commit = None
+        revokes = []
+
+        # revoke what we can to maximize liquidity
+        recv_moved_before = self.rpc.mpc_transferred_amount(state=recv_state)
+        if recv_moved_before > 0:
+            revoke_until_quantity = max(recv_moved_before - quantity, 0)
+
+            # get hashes of secrets to publish
+            revoke_hashes = self.rpc.mpc_revoke_hashes_until(
+                state=recv_state, quantity=revoke_until_quantity,
+                surpass=False  # never revoke past the given quantity!!!
+            )
+
+            # get secrets to publish
+            revokes += [get_secret_func(h) for h in revoke_hashes]
+
+            # revoke commits for secrets that will be published
+            recv_state = self.rpc.mpc_revoke_all(state=recv_state,
+                                                 secrets=revokes)
+
+        # create commit to send the rest
+        recv_moved_after = self.rpc.mpc_transferred_amount(state=recv_state)
+        recv_revoked_quantity = recv_moved_before - recv_moved_after
+        send_quantity = quantity - recv_revoked_quantity
+
+        if send_quantity > 0:
+            result = self.create_signed_commit(
+                wif, send_state, send_quantity,
+                send_next_revoke_secret_hash,
+                send_commit_delay_time
+            )
+            send_state = result["state"]
+            commit = result["commit"]
+
+        return {
+            "send_state": send_state, "recv_state": recv_state,
+            "revokes": revokes, "commit": commit
+        }
+
 
 class HubClient(MpcClient):
 
@@ -234,19 +278,25 @@ class HubClient(MpcClient):
         # create commit
         sync_fee = self.channel_terms["sync_fee"]
         quantity = sum([p["amount"] for p in payments]) + sync_fee
-        commit = self._create_commit(quantity)
 
-        # create nex revoke secret for h2c channel
+        result = self.full_duplex_transfer(
+            self.client_wif, self.secrets.get, self.c2h_state,
+            self.h2c_state, quantity, self.c2h_next_revoke_secret_hash,
+            self.c2h_commit_delay_time
+        )
+        commit = result["commit"]
+        revokes = result["revokes"]
+        self.h2c_state = result["recv_state"]
+        self.c2h_state = result["send_state"]
+
+        # create next revoke secret for h2c channel
         h2c_next_revoke_secret_hash = self._gen_secret()
         self._add_to_commits_requested(h2c_next_revoke_secret_hash)
 
         # sync with hub
         result = self.rpc.mph_sync(
-            handle=self.handle,
             next_revoke_secret_hash=h2c_next_revoke_secret_hash,
-            sends=payments,
-            commit=commit,
-            revokes=[],  # FIXME revoke if possible to maximize liquidity
+            handle=self.handle, sends=payments, commit=commit, revokes=revokes
         )
         h2c_commit = result["commit"]
         c2h_revokes = result["revokes"]
@@ -268,14 +318,6 @@ class HubClient(MpcClient):
             )
 
         return receive_payments
-
-    def _create_commit(self, quantity):
-        result = self.create_signed_commit(
-            self.client_wif, self.c2h_state, quantity,
-            self.c2h_next_revoke_secret_hash, self.c2h_commit_delay_time
-        )
-        self.c2h_state = result["state"]
-        return result["commit"]
 
     def _create_initial_secrets(self):
         self.secrets = {}

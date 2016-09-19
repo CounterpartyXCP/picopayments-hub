@@ -24,7 +24,7 @@ def fund_deposits(dryrun=False):
             c2h_mpc_id = hub_connection["c2h_channel_id"]
             c2h_state = db.load_channel_state(c2h_mpc_id, asset, cursor=cursor)
             c2h_deposit_address = lib.deposit_address(c2h_state)
-            c2h_deposit_balance = lib.balance(c2h_deposit_address, asset)
+            c2h_deposit_balance = lib.get_balance(c2h_deposit_address, asset)
 
             if c2h_deposit_balance < terms["deposit_min"]:
                 continue  # ignore if client deposit insufficient
@@ -37,7 +37,7 @@ def fund_deposits(dryrun=False):
             h2c_mpc_id = hub_connection["h2c_channel_id"]
             h2c_state = db.load_channel_state(h2c_mpc_id, asset, cursor=cursor)
             h2c_deposit_address = lib.deposit_address(h2c_state)
-            h2c_deposit_balance = lib.balance(h2c_deposit_address, asset)
+            h2c_deposit_balance = lib.get_balance(h2c_deposit_address, asset)
 
             if lib.is_expired(h2c_state, etc.expire_clearance):
                 continue  # ignore if expires soon

@@ -62,6 +62,15 @@ class TestUsr(unittest.TestCase):
             "token": "0001"
         }])
 
+        # sand more back so commits are revoked to maximize liquidity
+        beta.micro_send(alpha.handle, 42, "0003")
+        self.assertEqual(beta.sync(), [])
+        self.assertEqual(alpha.sync(), [{
+            "payer_handle": beta.handle,
+            "amount": 42,
+            "token": "0003"
+        }])
+
         # get after status
         alpha_after_status = alpha.get_status()
         beta_after_status = beta.get_status()
@@ -71,8 +80,8 @@ class TestUsr(unittest.TestCase):
         zeta_after_status = zeta.get_status()
 
         # compare statuses
-        alpha_after_status["balance"] == alpha_before_status["balance"] - 12
-        beta_after_status["balance"] == beta_before_status["balance"] + 4
+        alpha_after_status["balance"] == alpha_before_status["balance"] + 29
+        beta_after_status["balance"] == beta_before_status["balance"] - 39
         gamma_after_status["balance"] == gamma_before_status["balance"] + 5
         delta_after_status["balance"] == delta_before_status["balance"]
         epsilon_after_status["balance"] == epsilon_before_status["balance"]

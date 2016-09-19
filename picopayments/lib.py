@@ -1,4 +1,4 @@
-# G coding: utf-8
+# coding: utf-8
 # Copyright (c) 2016 Fabian Barkhau <f483@storj.io>
 # License: MIT (see LICENSE file)
 
@@ -156,7 +156,7 @@ def find_key_with_funds(asset, asset_quantity, btc_quantity):
         address = key["address"]
         if has_unconfirmed_transactions(address):
             continue  # ignore if unconfirmed inputs/outputs
-        available = balance(address, asset)
+        available = get_balance(address, asset)
         # FIXME check btc quantity
         if available < asset_quantity:
             continue  # not enough funds
@@ -301,7 +301,7 @@ def sync_hub_connection(handle, next_revoke_secret_hash,
     )
 
 
-def balance(address, asset):
+def get_balance(address, asset):
     results = rpc.cplib.get_balances(filters=[
         {'field': 'address', 'op': '==', 'value': address},
         {'field': 'asset', 'op': '==', 'value': asset},
@@ -430,19 +430,20 @@ def load_connection_data(handle, cursor):
     )
     c2h_deposit_address = deposit_address(c2h_state)
     h2c_transferred = get_transferred_quantity(h2c_state)
-    h2c_deposit_amount = balance(h2c_deposit_address, connection["asset"])
+    h2c_deposit_amount = get_balance(h2c_deposit_address, connection["asset"])
     c2h_transferred = get_transferred_quantity(c2h_state)
-    c2h_deposit_amount = balance(c2h_deposit_address, connection["asset"])
+    c2h_deposit_amount = get_balance(c2h_deposit_address, connection["asset"])
     unnotified_commit = db.unnotified_commit(
         channel_id=connection["h2c_channel_id"], cursor=cursor
     )
     h2c_payments_sum = db.h2c_payments_sum(handle=handle, cursor=cursor)
     c2h_payments_sum = db.c2h_payments_sum(handle=handle, cursor=cursor)
-    transferred_amount = c2h_transferred - h2c_transferred
     payments_sum = h2c_payments_sum - c2h_payments_sum
 
     # sendable (what this channel can send to another)
-    sendable_amount = transferred_amount - payments_sum
+    balance = (
+        c2h_deposit_amount + h2c_transferred - c2h_transferred - payments_sum
+    )
 
     # receivable (what this channel can receive from another)
     receivable_potential = h2c_deposit_amount + c2h_transferred
@@ -463,82 +464,39 @@ def load_connection_data(handle, cursor):
         "c2h_payments_sum": c2h_payments_sum,
         "c2h_deposit_amount": c2h_deposit_amount,
         "c2h_transferrable_amount": c2h_deposit_amount - c2h_transferred,
-        "transferred_amount": transferred_amount,
         "payments_sum": payments_sum,
         "unnotified_commit": unnotified_commit,  # FIXME rename h2c_uno...
-        "sendable_amount": sendable_amount,
+        "balance": balance,
         "receivable_amount": receivable_amount,
         "terms": terms,
     }
 
 
 def _send_client_funds(connection_data, quantity, token):
+
     c2h_state = connection_data["c2h_state"]
     h2c_state = connection_data["h2c_state"]
-    c2h_transferred_before = connection_data["c2h_transferred_amount"]
-    h2c_unnotified_commit = None
 
-    # revoke what we can to maximize liquidity
-    c2h_revoke_secrets = []
-    revoke_quantity = max(c2h_transferred_before - quantity, 0)
-    if revoke_quantity > 0:
+    handle = connection_data["connection"]["handle"]
+    result = db.get_next_revoke_secret_hash(handle=handle)
+    next_revoke_secret_hash = result["next_revoke_secret_hash"]
+    deposit_script_bin = util.h2b(h2c_state["deposit_script"])
+    hub_pubkey = scripts.get_deposit_payer_pubkey(deposit_script_bin)
+    wif = db.key(pubkey=hub_pubkey)["wif"]
 
-        # get hashes of secrets to publish
-        revoke_secret_hashes = rpc.cplib.mpc_revoke_hashes_until(
-            state=c2h_state, quantity=revoke_quantity,
-            surpass=False  # never revoke past the given quantity!!!
-        )
+    def get_secret_func(h):
+        return db.get_secret(hash=h)["value"]
 
-        # get secrets to publish
-        for secret_hash in revoke_secret_hashes:
-            c2h_revoke_secrets.append(db.get_secret(hash=secret_hash)["value"])
-
-        # revoke commits for secrets that will be published
-        c2h_state = rpc.cplib.mpc_revoke_all(
-            state=c2h_state, secrets=c2h_revoke_secrets
-        )
-
-    # make sure enough funds still available to be transferred
-    c2h_transferred_after = get_transferred_quantity(c2h_state)
-    c2h_revoked_quantity = c2h_transferred_before - c2h_transferred_after
-    send_quantity = quantity - c2h_revoked_quantity
-    h2c_transferrable_amount = connection_data["h2c_transferrable_amount"]
-    if send_quantity > h2c_transferrable_amount:
-        raise err.PaymentExceedsReceivable(
-            send_quantity, h2c_transferrable_amount, token
-        )
-
-    # create commit
-    if send_quantity > 0:
-
-        # remove unnotified commit and use same revoke secret hash
-        # since client did not sync it will never know it missed a commit
-        h2c_prev_unnotified_commit = connection_data["unnotified_commit"]
-        if h2c_prev_unnotified_commit:
-            for i, commit in enumerate(h2c_state["commits_active"][:]):
-                if commit["rawtx"] == h2c_prev_unnotified_commit["rawtx"]:
-                    h2c_state["commits_active"].pop(i)
-                    break
-
-        handle = connection_data["connection"]["handle"]
-        result = db.get_next_revoke_secret_hash(handle=handle)
-        next_revoke_secret_hash = result["next_revoke_secret_hash"]
-        deposit_script_bin = util.h2b(h2c_state["deposit_script"])
-        hub_pubkey = scripts.get_deposit_payer_pubkey(deposit_script_bin)
-        wif = db.key(pubkey=hub_pubkey)["wif"]
-
-        result = usr.HubClient().create_signed_commit(
-            wif, h2c_state, send_quantity,
-            next_revoke_secret_hash, etc.delay_time
-        )
-        h2c_state = result["state"]
-        h2c_unnotified_commit = result["commit"]
+    result = usr.MpcClient().full_duplex_transfer(
+        wif, get_secret_func, h2c_state, c2h_state, quantity,
+        next_revoke_secret_hash, etc.delay_time
+    )
 
     return {
-        "c2h_revoke_secrets": c2h_revoke_secrets,
-        "h2c_unnotified_commit": h2c_unnotified_commit,
-        "h2c_state": h2c_state,
-        "c2h_state": c2h_state
+        "c2h_revoke_secrets": result["revokes"],
+        "h2c_unnotified_commit": result["commit"],
+        "h2c_state": result["send_state"],
+        "c2h_state": result["recv_state"]
     }
 
 
@@ -554,9 +512,9 @@ def process_payment(payer_handle, cursor, payment):
         raise err.DepositExpired(payer_handle, "hub")
 
     # check payer has enough funds or can revoke sends until enough available
-    if payment["amount"] > payer["sendable_amount"]:
+    if payment["amount"] > payer["balance"]:
         raise err.PaymentExceedsSpendable(
-            payment["amount"], payer["sendable_amount"], payment["token"]
+            payment["amount"], payer["balance"], payment["token"]
         )
 
     # load payee
