@@ -7,8 +7,7 @@ import os
 from picopayments import etc
 from picopayments import RPC
 from counterpartylib.lib.micropayments import util
-from counterpartylib.lib.micropayments.scripts import sign_deposit
-from counterpartylib.lib.micropayments.scripts import sign_created_commit
+from counterpartylib.lib.micropayments import scripts
 
 
 class MpcClient(object):
@@ -53,7 +52,7 @@ class MpcClient(object):
     def sign(self, unsigned_rawtx, wif):
         """TODO doc string"""
 
-        return sign_deposit(self.get_rawtx, wif, unsigned_rawtx)
+        return scripts.sign_deposit(self.get_rawtx, wif, unsigned_rawtx)
 
     def publish(self, rawtx, dryrun=False):
         if dryrun:
@@ -74,7 +73,7 @@ class MpcClient(object):
         deposit_script_hex = result["tosign"]["deposit_script"]
 
         # sign commit
-        signed_rawtx = sign_created_commit(
+        signed_rawtx = scripts.sign_created_commit(
             self.get_rawtx, wif, unsigned_rawtx, deposit_script_hex
         )
 
@@ -133,80 +132,77 @@ class MpcClient(object):
 
     def recover_payout(self, get_wif_func, get_secret_func, payout_rawtx,
                        commit_script, dryrun=False):
-        script = util.h2b(commit_script)
-        pubkey = scripts.get_commit_payee_pubkey(script)
-        wif = get_wif_func(pubkey=util.b2h(pubkey))
-        spend_secret_hash = scripts.get_commit_spend_secret_hash(script)
+        pubkey = scripts.get_commit_payee_pubkey(commit_script)
+        wif = get_wif_func(pubkey=pubkey)
+        spend_secret_hash = scripts.get_commit_spend_secret_hash(commit_script)
         spend_secret = get_secret_func(spend_secret_hash)
         signed_rawtx = scripts.sign_payout_recover(
-            self.get_rawtx, wif, payout_rawtx, script, spend_secret
+            self.get_rawtx, wif, payout_rawtx, commit_script, spend_secret
         )
-        return publish(signed_rawtx, dryrun=dryrun)
+        return self.publish(signed_rawtx, dryrun=dryrun)
 
     def recover_revoked(self, get_wif_func, revoke_rawtx, commit_script,
                         revoke_secret, dryrun=False):
-        script = util.h2b(commit_script)
-        pubkey = scripts.get_commit_payer_pubkey(script)
-        wif = get_wif_func(pubkey=util.b2h(pubkey))
+        pubkey = scripts.get_commit_payer_pubkey(commit_script)
+        wif = get_wif_func(pubkey=pubkey)
         signed_rawtx = scripts.sign_revoke_recover(
-            self.get_rawtx, wif, revoke_rawtx, script, revoke_secret
+            self.get_rawtx, wif, revoke_rawtx, commit_script, revoke_secret
         )
-        return publish(signed_rawtx, dryrun=dryrun)
+        return self.publish(signed_rawtx, dryrun=dryrun)
 
     def recover_change(self, get_wif_func, change_rawtx, deposit_script,
                        spend_secret, dryrun=False):
-        script = util.h2b(deposit_script)
-        pubkey = scripts.get_deposit_payer_pubkey(script)
-        wif = get_wif_func(pubkey=util.b2h(pubkey))
+        pubkey = scripts.get_deposit_payer_pubkey(deposit_script)
+        wif = get_wif_func(pubkey=pubkey)
         signed_rawtx = scripts.sign_change_recover(
-            self.get_rawtx, wif, change_rawtx, script, spend_secret
+            self.get_rawtx, wif, change_rawtx, deposit_script, spend_secret
         )
-        return publish(signed_rawtx, dryrun=dryrun)
+        return self.publish(signed_rawtx, dryrun=dryrun)
 
     def recover_expired(self, get_wif_func, expire_rawtx,
                         deposit_script, dryrun=False):
-        script = util.h2b(deposit_script)
-        pubkey = scripts.get_deposit_payer_pubkey(script)
-        wif = get_wif_func(pubkey=util.b2h(pubkey))
+        pubkey = scripts.get_deposit_payer_pubkey(deposit_script)
+        wif = get_wif_func(pubkey=pubkey)
         signed_rawtx = scripts.sign_expire_recover(
-            self.get_rawtx, wif, expire_rawtx, script
+            self.get_rawtx, wif, expire_rawtx, deposit_script
         )
-        return publish(self, signed_rawtx, dryrun=dryrun)
+        return self.publish(self, signed_rawtx, dryrun=dryrun)
 
     def finalize_commit(self, get_wif_func, state, dryrun=False):
         commit = self.rpc.mpc_highest_commit(state=state)
         if commit is None:
             return None
-        script = util.h2b(commit["script"])
-        rawtx = commit["rawtx"]
-        pubkey = scripts.get_commit_payee_pubkey(script)
-        wif = get_wif_func(pubkey=util.b2h(pubkey))
-        signed_rawtx = scripts.sign_finalize_commit(self.get_rawtx, wif,
-                                                    rawtx, script)
-        return publish(signed_rawtx, dryrun=dryrun)
+        deposit_script = commit["deposit_script"]
+        rawtx = commit["commit_rawtx"]
+        pubkey = scripts.get_deposit_payee_pubkey(deposit_script)
+        wif = get_wif_func(pubkey=pubkey)
+        signed_rawtx = scripts.sign_finalize_commit(
+            self.get_rawtx, wif, rawtx, deposit_script
+        )
+        return self.publish(signed_rawtx, dryrun=dryrun)
 
     def full_duplex_recover_funds(self, get_wif_func, get_secret_func,
                                   recv_state, send_state, dryrun=False):
-        txs = []
+        txids = []
         for ptx in self.rpc.mpc_payouts(state=recv_state):
-            txs += self.recover_payout(
+            txids += self.recover_payout(
                 get_wif_func=get_wif_func, get_secret_func=get_secret_func,
                 dryrun=dryrun, **ptx
             )
         rtxs = self.rpc.mpc_recoverables(state=send_state)
         for rtx in rtxs["revoke"]:
-            txs += self.recover_revoke(
+            txids += self.recover_revoke(
                 get_wif_func=get_wif_func, dryrun=dryrun, **ptx
             )
         for ctx in rtxs["change"]:
-            txs += self.recover_change(
+            txids += self.recover_change(
                 get_wif_func=get_wif_func, dryrun=dryrun, **ptx
             )
         for etx in rtxs["expire"]:
-            txs += self.recover_expired(
+            txids += self.recover_expired(
                 get_wif_func=get_wif_func, dryrun=dryrun, **ptx
             )
-        return txs
+        return txids
 
 
 class HubClient(MpcClient):
@@ -313,11 +309,11 @@ class HubClient(MpcClient):
             state=self.c2h_state, clearance=clearance
         )
         c2h_deposit_address = util.script2address(
-            util.h2b(self.c2h_state["deposit_script"]), netcode=netcode
+            self.c2h_state["deposit_script"], netcode=netcode
         )
         c2h_deposit = self.get_balances(c2h_deposit_address, [asset])[asset]
         h2c_deposit_address = util.script2address(
-            util.h2b(self.h2c_state["deposit_script"]), netcode=netcode
+            self.h2c_state["deposit_script"], netcode=netcode
         )
         h2c_deposit = self.get_balances(h2c_deposit_address, [asset])[asset]
         c2h_transferred = self.rpc.mpc_transferred_amount(state=self.c2h_state)
@@ -333,16 +329,6 @@ class HubClient(MpcClient):
             "c2h_transferred_quantity": c2h_transferred,
             "h2c_transferred_quantity": h2c_transferred,
         }
-
-    def _add_to_commits_requested(self, secret_hash):
-        # emulates mpc_request_commit api call
-        self.h2c_state["commits_requested"].append(secret_hash)
-
-    def _gen_secret(self):
-        secret_value = util.b2h(os.urandom(32))
-        secret_hash = util.hash160hex(secret_value)
-        self.secrets[secret_hash] = secret_value
-        return secret_hash
 
     def sync(self):
         """TODO doc string"""
@@ -393,6 +379,52 @@ class HubClient(MpcClient):
             )
 
         return receive_payments
+
+    def close(self, dryrun=False):
+        return self.finalize_commit(
+            self._get_wif, self.h2c_state, dryrun=dryrun
+        )
+
+    def is_closed(self, clearance=6):
+        c2h = self.c2h_state
+        h2c = self.h2c_state
+        return (
+            self.rpc.mpc_deposit_expired(state=c2h, clearance=clearance) or
+            self.rpc.mpc_deposit_expired(state=h2c, clearance=clearance) or
+            self.rpc.mpc_get_published_commits(state=c2h) or
+            self.rpc.mpc_get_published_commits(state=h2c)
+        )
+
+    def update(self, dryrun=False, clearance=6):
+        txids = []
+
+        # close channel if needed
+        h2c_closed = self.rpc.mpc_get_published_commits(state=self.h2c_state)
+        if self.is_closed(clearance=clearance) and not h2c_closed:
+            txid = self.close(self, dryrun=dryrun)
+            if txid:
+                txids.append(txid)
+
+        # recover funds if possible
+        txids += self.full_duplex_recover_funds(
+            self._get_wif, self.secrets.get, self.h2c_state,
+            self.c2h_state, dryrun=dryrun
+        )
+
+        return txids
+
+    def _get_wif(self, pubkey):
+        return self.client_wif
+
+    def _add_to_commits_requested(self, secret_hash):
+        # emulates mpc_request_commit api call
+        self.h2c_state["commits_requested"].append(secret_hash)
+
+    def _gen_secret(self):
+        secret_value = util.b2h(os.urandom(32))
+        secret_hash = util.hash160hex(secret_value)
+        self.secrets[secret_hash] = secret_value
+        return secret_hash
 
     def _create_initial_secrets(self):
         self.secrets = {}

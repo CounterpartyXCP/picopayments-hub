@@ -195,10 +195,9 @@ def _fmt_requested(channel_id, revoke_secret_hashes):
 
 
 def _script_data(script):
-    delay_time = scripts.get_commit_delay_time(util.h2b(script))
-    secret_hash = scripts.get_commit_revoke_secret_hash(util.h2b(script))
-    commit_address = util.script2address(util.h2b(script),
-                                         netcode=etc.netcode)
+    delay_time = scripts.get_commit_delay_time(script)
+    secret_hash = scripts.get_commit_revoke_secret_hash(script)
+    commit_address = util.script2address(script, netcode=etc.netcode)
     return {
         "commit_address": commit_address,
         "delay_time": delay_time,

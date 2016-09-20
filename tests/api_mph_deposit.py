@@ -10,7 +10,6 @@ from picopayments import lib
 from picopayments import srv
 from picopayments import err
 from counterpartylib.lib.micropayments import util
-from pycoin.serialize import b2h
 from counterpartylib.lib.micropayments.scripts import compile_deposit_script
 
 
@@ -69,9 +68,9 @@ class TestMpcHubDeposit(unittest.TestCase):
         hub_pubkey = result["pubkey"]
         c2h_spend_secret_hash = result["spend_secret_hash"]
 
-        c2h_deposit_script = b2h(compile_deposit_script(
+        c2h_deposit_script = compile_deposit_script(
             client_pubkey, hub_pubkey, c2h_spend_secret_hash, 1337
-        ))
+        )
 
         next_revoke_secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
         params = {
@@ -109,9 +108,9 @@ class TestMpcHubDeposit(unittest.TestCase):
             hub_pubkey = result["pubkey"]
             c2h_spend_secret_hash = result["spend_secret_hash"]
 
-            c2h_deposit_script = b2h(compile_deposit_script(
+            c2h_deposit_script = compile_deposit_script(
                 client_pubkey, hub_pubkey, c2h_spend_secret_hash, 1337
-            ))
+            )
 
             # submit deposit
             next_revoke_secret_hash = util.hash160hex(util.b2h(os.urandom(32)))

@@ -114,7 +114,6 @@ def recover_funds(dryrun=False):
                 lib.get_wif, lib.get_secret,
                 c2h_state, h2c_state, dryrun=dryrun
             )
-
         return txs
 
 

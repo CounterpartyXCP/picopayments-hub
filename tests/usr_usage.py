@@ -87,6 +87,20 @@ class TestUsr(unittest.TestCase):
         epsilon_after_status["balance"] == epsilon_before_status["balance"]
         zeta_after_status["balance"] == zeta_before_status["balance"]
 
+        alpha.update(dryrun=True)
+        beta.update(dryrun=True)
+        gamma.update(dryrun=True)
+        delta.update(dryrun=True)
+        epsilon.update(dryrun=True)
+        zeta.update(dryrun=True)
+
+        alpha.close(dryrun=True)
+        beta.close(dryrun=True)
+        gamma.close(dryrun=True)
+        delta.close(dryrun=True)
+        epsilon.close(dryrun=True)
+        zeta.close(dryrun=True)
+
 
 if __name__ == "__main__":
     unittest.main()

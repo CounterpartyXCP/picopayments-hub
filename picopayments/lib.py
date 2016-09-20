@@ -8,7 +8,7 @@ import copy
 import json
 import pkg_resources
 from pycoin.key.BIP32Node import BIP32Node
-from pycoin.serialize import b2h, h2b
+from pycoin.serialize import b2h
 from counterpartylib.lib.micropayments import util
 from counterpartylib.lib.micropayments import scripts
 from picopayments import rpc
@@ -89,12 +89,11 @@ def create_hub_connection(asset, client_pubkey,
     )
 
 
-def _load_incomplete_connection(handle, c2h_deposit_script):
+def _load_incomplete_connection(handle, c2h_deposit_script_hex):
 
-    c2h_ds_bin = h2b(c2h_deposit_script)
-    client_pubkey = scripts.get_deposit_payer_pubkey(c2h_ds_bin)
-    hub_pubkey = scripts.get_deposit_payee_pubkey(c2h_ds_bin)
-    expire_time = scripts.get_deposit_expire_time(c2h_ds_bin)
+    client_pubkey = scripts.get_deposit_payer_pubkey(c2h_deposit_script_hex)
+    hub_pubkey = scripts.get_deposit_payee_pubkey(c2h_deposit_script_hex)
+    expire_time = scripts.get_deposit_expire_time(c2h_deposit_script_hex)
 
     hub_conn = db.hub_connection(handle=handle)
     assert(hub_conn is not None)
@@ -120,10 +119,10 @@ def complete_connection(handle, c2h_deposit_script,
         handle, c2h_deposit_script
     )
 
-    h2c_deposit_script = b2h(scripts.compile_deposit_script(
+    h2c_deposit_script = scripts.compile_deposit_script(
         h2c["payer_pubkey"], h2c["payee_pubkey"],
         h2c["spend_secret_hash"], expire_time
-    ))
+    )
 
     data = {
         "handle": handle,
@@ -131,12 +130,12 @@ def complete_connection(handle, c2h_deposit_script,
         "c2h_channel_id": hub_conn["c2h_channel_id"],
         "c2h_deposit_script": c2h_deposit_script,
         "c2h_deposit_address": util.script2address(
-            h2b(c2h_deposit_script), netcode=etc.netcode
+            c2h_deposit_script, netcode=etc.netcode
         ),
         "h2c_channel_id": hub_conn["h2c_channel_id"],
         "h2c_deposit_script": h2c_deposit_script,
         "h2c_deposit_address": util.script2address(
-            h2b(h2c_deposit_script), netcode=etc.netcode
+            h2c_deposit_script, netcode=etc.netcode
         ),
         "next_revoke_secret_hash": next_revoke_secret_hash,
     }
@@ -322,7 +321,7 @@ def deposit_address(state):
 
 
 def get_script_address(script):
-    return util.script2address(util.h2b(script), netcode=etc.netcode)
+    return util.script2address(script, netcode=etc.netcode)
 
 
 def get_transferred_quantity(state):
@@ -433,7 +432,7 @@ def _send_client_funds(connection_data, quantity, token):
     handle = connection_data["connection"]["handle"]
     result = db.get_next_revoke_secret_hash(handle=handle)
     next_revoke_secret_hash = result["next_revoke_secret_hash"]
-    deposit_script_bin = util.h2b(h2c_state["deposit_script"])
+    deposit_script_bin = h2c_state["deposit_script"]
     hub_pubkey = scripts.get_deposit_payer_pubkey(deposit_script_bin)
     wif = db.key(pubkey=hub_pubkey)["wif"]
 
