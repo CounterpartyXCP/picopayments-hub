@@ -5,11 +5,11 @@ import unittest
 import tempfile
 from picopayments import srv
 from picopayments import etc
-from picopayments import HubClient
-from counterpartylib.lib.micropayments import util
+from picopayments_client import util
+from picopayments_client.usr import MpcClient
+from tests.mock import MockAPI
 
 
-etc.call_local_process = True
 CP_URL = os.environ.get("COUNTERPARTY_URL", "http://139.59.214.74:14000/api/")
 
 
@@ -31,7 +31,7 @@ class TestUsrClientBlockSend(unittest.TestCase):
         shutil.rmtree(self.tempdir)
 
     def test_standard_usage(self):
-        client = HubClient(verify_ssl_cert=False)
+        client = MpcClient(MockAPI(verify_ssl_cert=False))
         src_wif = self.data["funded"]["gamma"]["wif"]
         asset = self.data["funded"]["gamma"]["asset"]
         dest_address = util.wif2address(util.random_wif(netcode=etc.netcode))

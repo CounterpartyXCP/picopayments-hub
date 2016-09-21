@@ -3,12 +3,11 @@ import json
 import shutil
 import unittest
 import tempfile
-from picopayments import etc
 from picopayments import srv
-from picopayments import HubClient
+from picopayments_client.usr import HubClient
+from tests.mock import MockAPI
 
 
-etc.call_local_process = True
 CP_URL = os.environ.get("COUNTERPARTY_URL", "http://139.59.214.74:14000/api/")
 
 
@@ -31,7 +30,7 @@ class TestUsrClientSerialization(unittest.TestCase):
 
     def test_standard_usage(self):
         connection = self.data["connections"]["alpha"]
-        client = HubClient.deserialize(connection)
+        client = HubClient.deserialize(data=connection, api_cls=MockAPI)
         self.assertEqual(connection, client.serialize())
 
 

@@ -5,10 +5,10 @@
 
 from jsonrpc import dispatcher
 from picopayments import etc
-from picopayments import auth
 from picopayments import verify
 from picopayments import lib
-from picopayments import rpc
+from picopayments_client import auth
+from picopayments_client.rpc import http_call
 
 
 @dispatcher.add_method
@@ -84,9 +84,17 @@ def mph_sync(**kwargs):
         return auth.sign_json(result, authwif)
 
 
+def _cplib_call(method, params={}):
+    return http_call(
+        etc.counterparty_url, method, params=params,
+        username=etc.counterparty_username,
+        password=etc.counterparty_password
+    )
+
+
 def _add_cplib_call(method):
     def counterparty_method(**kwargs):
-        return rpc.cplib_call(method=method, params=kwargs)
+        return _cplib_call(method=method, params=kwargs)
     dispatcher[method] = counterparty_method
     return counterparty_method
 
@@ -94,13 +102,16 @@ def _add_cplib_call(method):
 @dispatcher.add_method
 def create_send(**kwargs):
     kwargs["disable_utxo_locks"] = True  # always disable on public api
-    return rpc.cplib_call(method="create_send", params=kwargs)
+    return _cplib_call(method="create_send", params=kwargs)
 
 
+search_raw_transactions = _add_cplib_call("search_raw_transactions")
+get_unspent_txouts = _add_cplib_call("get_unspent_txouts")
 getrawtransaction = _add_cplib_call("getrawtransaction")
 getrawtransaction_batch = _add_cplib_call("getrawtransaction_batch")
 get_unspent_txouts = _add_cplib_call("get_unspent_txouts")
 get_balances = _add_cplib_call("get_balances")
+get_assets = _add_cplib_call("get_assets")
 sendrawtransaction = _add_cplib_call("sendrawtransaction")
 mpc_make_deposit = _add_cplib_call("mpc_make_deposit")
 mpc_set_deposit = _add_cplib_call("mpc_set_deposit")

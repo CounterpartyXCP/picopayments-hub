@@ -9,7 +9,6 @@ from counterpartylib.lib.micropayments import validate
 from picopayments import err
 from picopayments import db
 from picopayments import etc
-from picopayments import rpc
 from picopayments import lib
 
 
@@ -61,8 +60,9 @@ REVOKES_SCHEMA = {
 
 
 def asset_exists(asset):
+    from picopayments import api
     validate.is_string(asset)
-    assets = [e["asset_name"] for e in rpc.cplib.get_assets()]
+    assets = [e["asset_name"] for e in api.get_assets()]
     if asset not in assets:
         raise err.AssetDoesNotExist(asset)
 
@@ -83,10 +83,11 @@ def is_url(url):
 
 
 def c2h_commit(handle, commit_rawtx, commit_script):
+    from picopayments import api
     hub_connection(handle)
     netcode = "XTN" if etc.testnet else "BTC"
     c2h_channel = db.receive_channel(handle=handle)
-    deposit_utxos = rpc.cplib.get_unspent_txouts(
+    deposit_utxos = api.get_unspent_txouts(
         address=c2h_channel["deposit_address"]
     )
     validate.commit_rawtx(

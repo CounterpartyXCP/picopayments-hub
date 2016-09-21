@@ -35,10 +35,6 @@ class TestVirginSetup(unittest.TestCase):
         db_path = os.path.join(self.basedir, "testnet.db")
         self.assertTrue(os.path.exists(db_path))
 
-        # check log file created
-        log_path = os.path.join(self.basedir, "testnet.log")
-        self.assertTrue(os.path.exists(log_path))
-
 
 if __name__ == "__main__":
     unittest.main()

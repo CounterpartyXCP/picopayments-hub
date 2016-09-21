@@ -45,13 +45,6 @@ class HandlesNotFound(Exception):
         super(HandlesNotFound, self).__init__(msg.format(repr(handles)))
 
 
-class RpcCallFailed(Exception):
-
-    def __init__(self, payload, response):
-        msg = "Rpc call failed! {0} -> {1}".format(payload, response)
-        super(RpcCallFailed, self).__init__(msg)
-
-
 class PaymentExceedsSpendable(Exception):
 
     def __init__(self, amount, spendable, token):
@@ -77,30 +70,12 @@ class AssetMissmatch(Exception):
         super(AssetMissmatch, self).__init__(msg.format(expected, found))
 
 
-class AuthPubkeyMissmatch(Exception):
-
-    def __init__(self, expected, found):
-        msg = "Given pubkey {0} does not match signing pubkey {1}!".format(
-            found, expected
-        )
-        super(AuthPubkeyMissmatch, self).__init__(msg)
-
-
 class ClientPubkeyMissmatch(Exception):
 
     def __init__(self, expected, found):
         msg = "Given pubkey {0} does not match channel client pubkey {1}!"
         super(ClientPubkeyMissmatch, self).__init__(
             msg.format(found, expected)
-        )
-
-
-class InvalidSignature(Exception):
-
-    def __init__(self, pubkey, signature, data):
-        msg = "Invalid signature for pubkey {0}, signature {1}, data {2}"
-        super(InvalidSignature, self).__init__(
-            msg.format(pubkey, signature, data)
         )
 
 

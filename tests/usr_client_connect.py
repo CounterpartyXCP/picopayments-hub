@@ -4,11 +4,10 @@ import shutil
 import unittest
 import tempfile
 from picopayments import srv
-from picopayments import etc
-from picopayments import HubClient
+from picopayments_client import usr
+from tests.mock import MockAPI
 
 
-etc.call_local_process = True
 CP_URL = os.environ.get("COUNTERPARTY_URL", "http://139.59.214.74:14000/api/")
 
 
@@ -35,7 +34,9 @@ class TestUsrClientConnect(unittest.TestCase):
         verify_ssl_cert = False
         auth_wif = self.data["funded"]["alpha"]["wif"]
         asset = self.data["funded"]["alpha"]["asset"]
-        client = HubClient(auth_wif=auth_wif, verify_ssl_cert=verify_ssl_cert)
+        rpc_api = MockAPI(url="http://127.0.0.1:15000/api/", auth_wif=auth_wif,
+                          verify_ssl_cert=verify_ssl_cert)
+        client = usr.HubClient(rpc_api)
         txid = client.connect(1337, 65535, asset=asset, dryrun=True)
         self.assertIsNotNone(txid)
 

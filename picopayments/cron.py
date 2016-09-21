@@ -7,8 +7,8 @@ from picopayments import etc
 from picopayments import db
 from picopayments import lib
 from picopayments import sql
-from picopayments import rpc
-from picopayments import usr
+from picopayments import api
+from picopayments_client import usr
 
 
 def fund_deposits(dryrun=False):
@@ -82,12 +82,12 @@ def close_connections(dryrun=False):
             # connection expired or  commit published
             c2h_expired = lib.is_expired(c2h_state, etc.expire_clearance)
             h2c_expired = lib.is_expired(h2c_state, etc.expire_clearance)
-            commit_published = rpc.cplib.mpc_get_published_commits(
+            commit_published = api.mpc_get_published_commits(
                 state=h2c_state
             )
             if c2h_expired or h2c_expired or commit_published:
                 db.set_connection_closed(handle=hub_connection["handle"])
-                commit_txid = usr.MpcClient().finalize_commit(
+                commit_txid = usr.MpcClient(api).finalize_commit(
                     lib.get_wif, c2h_state, dryrun=dryrun
                 )
                 closed_connections.append({
@@ -110,7 +110,7 @@ def recover_funds(dryrun=False):
             c2h_state = db.load_channel_state(c2h_mpc_id, asset, cursor=cursor)
             h2c_mpc_id = hub_connection["h2c_channel_id"]
             h2c_state = db.load_channel_state(h2c_mpc_id, asset, cursor=cursor)
-            txs += usr.MpcClient().full_duplex_recover_funds(
+            txs += usr.MpcClient(api).full_duplex_recover_funds(
                 lib.get_wif, lib.get_secret,
                 c2h_state, h2c_state, dryrun=dryrun
             )

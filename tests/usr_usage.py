@@ -5,7 +5,8 @@ import unittest
 import tempfile
 from picopayments import etc
 from picopayments import srv
-from picopayments import HubClient
+from picopayments_client.usr import HubClient
+from tests.mock import MockAPI
 
 
 etc.call_local_process = True
@@ -30,14 +31,15 @@ class TestUsr(unittest.TestCase):
         shutil.rmtree(self.tempdir)
 
     def test_standard_usage(self):
+        _c = self.data["connections"]
 
         # setup
-        alpha = HubClient.deserialize(self.data["connections"]["alpha"])
-        beta = HubClient.deserialize(self.data["connections"]["beta"])
-        gamma = HubClient.deserialize(self.data["connections"]["gamma"])
-        delta = HubClient.deserialize(self.data["connections"]["delta"])
-        epsilon = HubClient.deserialize(self.data["connections"]["epsilon"])
-        zeta = HubClient.deserialize(self.data["connections"]["zeta"])
+        alpha = HubClient.deserialize(data=_c["alpha"], api_cls=MockAPI)
+        beta = HubClient.deserialize(data=_c["beta"], api_cls=MockAPI)
+        gamma = HubClient.deserialize(data=_c["gamma"], api_cls=MockAPI)
+        delta = HubClient.deserialize(data=_c["delta"], api_cls=MockAPI)
+        epsilon = HubClient.deserialize(data=_c["epsilon"], api_cls=MockAPI)
+        zeta = HubClient.deserialize(data=_c["zeta"], api_cls=MockAPI)
 
         # after before status
         alpha_before_status = alpha.get_status()

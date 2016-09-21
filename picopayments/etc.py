@@ -34,10 +34,6 @@ database_connection = None  # set in db.setup
 database_lock = RLock()
 
 
-# rpc
-call_local_process = False
-
-
 # blockchain
 confirms = 1
 expire_clearance = 6  # only fund with x blocks clearance before expiration

@@ -11,13 +11,11 @@ from pycoin.key.BIP32Node import BIP32Node
 from pycoin.serialize import b2h
 from counterpartylib.lib.micropayments import util
 from counterpartylib.lib.micropayments import scripts
-from picopayments import rpc
-from picopayments import usr
+from picopayments_client import usr
 from picopayments import db
-from picopayments import auth
+from picopayments_client import auth
 from picopayments import err
 from picopayments import etc
-from picopayments import log
 from picopayments import sql
 
 
@@ -78,7 +76,6 @@ def create_hub_connection(asset, client_pubkey,
     data["hub_rpc_url"] = hub_rpc_url
 
     db.add_hub_connection(data)
-    log.info("Created connection {0}".format(handle))
     return (
         {
             "handle": handle,
@@ -143,7 +140,6 @@ def complete_connection(handle, c2h_deposit_script,
     data.update(create_secret())  # revoke secret
 
     db.complete_hub_connection(data)
-    log.info("Completed connection {0}".format(handle))
     return (
         {
             "deposit_script": h2c_deposit_script,
@@ -190,11 +186,11 @@ def initialize(args):
 
     terms()  # make sure terms file exists
     db.setup()  # setup and create db if needed
-    log.info("Basedir: {0}".format(etc.basedir))  # make sure log file exists
 
 
 def update_channel_state(channel_id, asset, commit=None,
                          revokes=None, cursor=None):
+    from picopayments import api
 
     state = db.load_channel_state(channel_id, asset, cursor=cursor)
     unnotified_revokes = db.unnotified_revokes(channel_id=channel_id)
@@ -203,7 +199,7 @@ def update_channel_state(channel_id, asset, commit=None,
     unnotified_revoke_secrets = [x["revoke_secret"]
                                  for x in unnotified_revokes]
     if commit is not None:
-        state = rpc.cplib.mpc_add_commit(
+        state = api.mpc_add_commit(
             state=state,
             commit_rawtx=commit["rawtx"],
             commit_script=commit["script"]
@@ -212,7 +208,7 @@ def update_channel_state(channel_id, asset, commit=None,
         # FIXME will not set revokes as unnotified
         #       currently not a problem as its only used for hub to client
         #       but its begging to be missused!!
-        state = rpc.cplib.mpc_revoke_all(state=state, secrets=revokes)
+        state = api.mpc_revoke_all(state=state, secrets=revokes)
     cursor.execute("BEGIN TRANSACTION;")
     db.save_channel_state(
         channel_id, state, unnotified_commit=unnotified_commit,
@@ -309,7 +305,8 @@ def sync_hub_connection(handle, next_revoke_secret_hash,
 
 
 def get_balance(address, asset):
-    results = rpc.cplib.get_balances(filters=[
+    from picopayments import api
+    results = api.get_balances(filters=[
         {'field': 'address', 'op': '==', 'value': address},
         {'field': 'asset', 'op': '==', 'value': asset},
     ])
@@ -325,24 +322,29 @@ def get_script_address(script):
 
 
 def get_transferred_quantity(state):
-    return rpc.cplib.mpc_transferred_amount(state=state)
+    from picopayments import api
+    return api.mpc_transferred_amount(state=state)
 
 
 def is_expired(state, clearance):
-    return rpc.cplib.mpc_deposit_expired(state=state, clearance=clearance)
+    from picopayments import api
+    return api.mpc_deposit_expired(state=state, clearance=clearance)
 
 
 def get_tx(txid):
-    return rpc.cplib.getrawtransaction(tx_hash=txid)
+    from picopayments import api
+    return api.getrawtransaction(tx_hash=txid)
 
 
 def publish(rawtx, dryrun=False):
+    from picopayments import api
     if dryrun:
         return util.gettxid(rawtx)
-    return rpc.cplib.sendrawtransaction(tx_hex=rawtx)  # pragma: no cover
+    return api.sendrawtransaction(tx_hex=rawtx)  # pragma: no cover
 
 
 def send_funds(destination, asset, quantity, dryrun=False):
+    from picopayments import api
     extra_btc = util.get_fee_multaple(
         factor=3, fee_per_kb=etc.fee_per_kb,
         regular_dust_size=etc.regular_dust_size
@@ -350,7 +352,7 @@ def send_funds(destination, asset, quantity, dryrun=False):
     key = find_key_with_funds(asset, quantity, extra_btc)
     if key is None:
         raise err.InsufficientFunds(asset, quantity)
-    unsigned_rawtx = rpc.cplib.create_send(
+    unsigned_rawtx = api.create_send(
         source=key["address"], destination=destination, asset=asset,
         regular_dust_size=extra_btc, disable_utxo_locks=True, quantity=quantity
     )
@@ -359,7 +361,8 @@ def send_funds(destination, asset, quantity, dryrun=False):
 
 
 def get_transactions(address):
-    return rpc.cplib.search_raw_transactions(address=address, unconfirmed=True)
+    from picopayments import api
+    return api.search_raw_transactions(address=address, unconfirmed=True)
 
 
 def has_unconfirmed_transactions(address):
@@ -425,6 +428,7 @@ def load_connection_data(handle, cursor):
 
 
 def _send_client_funds(connection_data, quantity, token):
+    from picopayments import api
 
     c2h_state = connection_data["c2h_state"]
     h2c_state = connection_data["h2c_state"]
@@ -436,11 +440,8 @@ def _send_client_funds(connection_data, quantity, token):
     hub_pubkey = scripts.get_deposit_payer_pubkey(deposit_script_bin)
     wif = db.key(pubkey=hub_pubkey)["wif"]
 
-    def get_secret_func(h):
-        return db.get_secret(hash=h)["value"]
-
-    result = usr.MpcClient().full_duplex_transfer(
-        wif, get_secret_func, h2c_state, c2h_state, quantity,
+    result = usr.MpcClient(api).full_duplex_transfer(
+        wif, get_secret, h2c_state, c2h_state, quantity,
         next_revoke_secret_hash, etc.delay_time
     )
 

@@ -1,4 +1,5 @@
 six >= 1.10.0
+picopayments_client
 json-rpc >= 1.10.3
 werkzeug >= 0.11.10
 pycoin == 0.70

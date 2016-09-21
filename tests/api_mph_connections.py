@@ -5,7 +5,7 @@ import unittest
 import tempfile
 import jsonschema
 from picopayments import api
-from picopayments import auth
+from picopayments_client import auth
 from picopayments import srv
 
 

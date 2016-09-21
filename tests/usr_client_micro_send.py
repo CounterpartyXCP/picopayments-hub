@@ -4,11 +4,10 @@ import shutil
 import unittest
 import tempfile
 from picopayments import srv
-from picopayments import etc
-from picopayments import HubClient
+from picopayments_client.usr import HubClient
+from tests.mock import MockAPI
 
 
-etc.call_local_process = True
 CP_URL = os.environ.get("COUNTERPARTY_URL", "http://139.59.214.74:14000/api/")
 
 
@@ -31,7 +30,7 @@ class TestUsrClientMicroSend(unittest.TestCase):
 
     def test_predefined_token(self):
         connection = self.data["connections"]["alpha"]
-        client = HubClient.deserialize(connection)
+        client = HubClient.deserialize(data=connection, api_cls=MockAPI)
         self.assertEqual(client.payments_queued, [])
         token = client.micro_send("f483", 42, "deadbeef")
         self.assertEqual(token, "deadbeef")
@@ -43,7 +42,7 @@ class TestUsrClientMicroSend(unittest.TestCase):
 
     def test_generated_token(self):
         connection = self.data["connections"]["alpha"]
-        client = HubClient.deserialize(connection)
+        client = HubClient.deserialize(data=connection, api_cls=MockAPI)
         self.assertEqual(client.payments_queued, [])
         token = client.micro_send("f483", 42)
         self.assertEqual(client.payments_queued, [{

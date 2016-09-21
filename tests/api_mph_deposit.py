@@ -5,12 +5,12 @@ import unittest
 import tempfile
 import jsonschema
 from picopayments import api
-from picopayments import auth
+from picopayments_client import auth
 from picopayments import lib
 from picopayments import srv
 from picopayments import err
-from counterpartylib.lib.micropayments import util
-from counterpartylib.lib.micropayments.scripts import compile_deposit_script
+from picopayments_client import util
+from picopayments_client.scripts import compile_deposit_script
 
 
 CP_URL = os.environ.get("COUNTERPARTY_URL", "http://139.59.214.74:14000/api/")

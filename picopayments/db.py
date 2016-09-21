@@ -4,8 +4,8 @@
 
 
 import apsw
-from counterpartylib.lib.micropayments import util
-from counterpartylib.lib.micropayments import scripts
+from picopayments_client import util
+from picopayments_client import scripts
 from picopayments import etc
 from picopayments import sql
 

@@ -6,8 +6,6 @@ import tempfile
 from pycoin.key.validate import is_address_valid
 from picopayments import lib
 from picopayments import srv
-from picopayments import rpc
-from picopayments import err
 
 
 CP_URL = os.environ.get("COUNTERPARTY_URL", "http://139.59.214.74:14000/api/")
@@ -38,12 +36,6 @@ class TestLIB(unittest.TestCase):
             is_address_valid(a, allowable_netcodes=["XTN"])
             for a in result.values()
         ]))
-
-    def test_failed_rpc_call(self):
-
-        def func():
-            rpc.cplib.nonexistant()
-        self.assertRaises(err.RpcCallFailed, func)
 
     def test_validate_read_unknown_asset(self):
 
