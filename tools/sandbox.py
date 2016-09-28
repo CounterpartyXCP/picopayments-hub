@@ -7,14 +7,14 @@ from picopayments import srv
 from picopayments import sql
 from picopayments import db
 from picopayments import lib
-from picopayments import rpc
 from picopayments import etc
 from counterpartylib.lib.micropayments import util
-from picopayments import HubClient
+from picopayments_client import rpc
+from picopayments_client import usr
+# from tests.mock import MockAPI
 
 
-etc.call_local_process = True
-CP_URL = "http://139.59.214.74:14000/api/"
+CP_URL = os.environ.get("COUNTERPARTY_URL", "http://139.59.214.74:14000/api/")
 
 
 class TestSandbox(unittest.TestCase):
@@ -23,21 +23,32 @@ class TestSandbox(unittest.TestCase):
         self.tempdir = tempfile.mkdtemp(prefix="picopayments_test_")
         self.basedir = os.path.join(self.tempdir, "basedir")
         shutil.copytree("tests/fixtures", self.basedir)
-
         srv.main([
             "--testnet",
             "--basedir={0}".format(self.basedir),
             "--cp_url={0}".format(CP_URL)
         ], serve=False)
-
         with open(os.path.join(self.basedir, "data.json")) as fp:
             self.data = json.load(fp)
 
-        url = "https://127.0.0.1:15000/api/"
-        self.client = HubClient(url, verify_ssl_cert=False)
-
     def tearDown(self):
         shutil.rmtree(self.tempdir)
+
+    def test_get_assets(self):
+        url = "https://127.0.0.1:15000/api/"
+        api = rpc.API(url=url, verify_ssl_cert=False)
+        # client = usr.MpcClient(api)
+        print(json.dumps(api.mph_terms(), indent=2))
+
+    @unittest.skip("it")
+    def test_balance(self):
+        # url = "https://139.59.214.74:15000/api/"
+        url = "https://127.0.0.1:15000/api/"
+        client = usr.MpcClient(rpc.API(url=url, verify_ssl_cert=False))
+        # client = usr.MpcClient(MockAPI(verify_ssl_cert=False))
+        wif = "cTvCnpvQJE3TvNejkWbnFA1z6jLJjB2xXXapFabGsazCz2QNYFQb"
+        address = util.wif2address(wif)
+        print(json.dumps(client.get_balances(address), indent=2))
 
     @unittest.skip("it")
     def test_fund(self):
@@ -52,30 +63,26 @@ class TestSandbox(unittest.TestCase):
             asset=asset, quantity=256,
             regular_dust_size=200000  # extra btc
         )
+
         # print("ASSET:", asset)
         # print("WIF:", wif)
         print("TXID:", txid)
 
     @unittest.skip("it")
     def test_burn(self):
-        wif = "cTvCnpvQJE3TvNejkWbnFA1z6jLJjB2xXXapFabGsazCz2QNYFQb"
-        address = util.wif2address(wif)
-        unsigned_rawtx = rpc.cplib.create_burn(source=address,
-                                               quantity=100000000)
-        txid = self.client.sign_and_publish(unsigned_rawtx, wif)
-        print("TXID:", txid)
-
-    @unittest.skip("it")
-    def test_balance(self):
-        address = "mzvuAKGL25Ms6iQyUQVbNyQLbPUGeSt6c2"
-        client = HubClient(verify_ssl_cert=False)
-        print(json.dumps(client.balances(address), indent=2))
+        pass
+        # wif = "cTvCnpvQJE3TvNejkWbnFA1z6jLJjB2xXXapFabGsazCz2QNYFQb"
+        # address = util.wif2address(wif)
+        # unsigned_rawtx = rpc.cplib.create_burn(source=address,
+        #                                        quantity=100000000)
+        # txid = self.client.sign_and_publish(unsigned_rawtx, wif)
+        # print("TXID:", txid)
 
     @unittest.skip("it")
     def test_create_expired_deposit(self):
         asset = ""
         auth_wif = ""
-        client = HubClient(auth_wif=auth_wif, verify_ssl_cert=False)
+        client = usr.HubClient(auth_wif=auth_wif, verify_ssl_cert=False)
         deposit_txid = client.connect(42, expire_time=1,
                                       asset=asset, dryrun=True)
         self.assertIsNotNone(deposit_txid)

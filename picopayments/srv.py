@@ -10,6 +10,7 @@ from jsonrpc import JSONRPCResponseManager, dispatcher
 from picopayments import lib
 from picopayments import cli
 from picopayments import etc
+from picopayments import api  # NOQA
 from picopayments import __version__
 
 
