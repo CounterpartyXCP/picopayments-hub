@@ -8,7 +8,6 @@ from picopayments import etc
 from picopayments import cron
 
 
-etc.call_local_process = True
 CP_URL = os.environ.get("COUNTERPARTY_URL", "http://139.59.214.74:14000/api/")
 
 

@@ -8,7 +8,10 @@ from picopayments import db
 from picopayments import lib
 from picopayments import sql
 from picopayments import api
-from picopayments_client import usr
+from picopayments_client.mpc import Mpc
+
+
+# FIXME use http interface to ensure its called in the same process
 
 
 def fund_deposits(dryrun=False):
@@ -25,7 +28,8 @@ def fund_deposits(dryrun=False):
             c2h_mpc_id = hub_connection["c2h_channel_id"]
             c2h_state = db.load_channel_state(c2h_mpc_id, asset, cursor=cursor)
             c2h_deposit_address = lib.deposit_address(c2h_state)
-            c2h_deposit_balance = lib.get_balance(c2h_deposit_address, asset)
+            c2h_deposit_balance = lib.get_balances(c2h_deposit_address,
+                                                   assets=[asset])[asset]
 
             if c2h_deposit_balance < terms["deposit_min"]:
                 continue  # ignore if client deposit insufficient
@@ -38,7 +42,8 @@ def fund_deposits(dryrun=False):
             h2c_mpc_id = hub_connection["h2c_channel_id"]
             h2c_state = db.load_channel_state(h2c_mpc_id, asset, cursor=cursor)
             h2c_deposit_address = lib.deposit_address(h2c_state)
-            h2c_deposit_balance = lib.get_balance(h2c_deposit_address, asset)
+            h2c_deposit_balance = lib.get_balances(h2c_deposit_address,
+                                                   assets=[asset])[asset]
 
             if lib.is_expired(h2c_state, etc.expire_clearance):
                 continue  # ignore if expires soon
@@ -87,7 +92,7 @@ def close_connections(dryrun=False):
             )
             if c2h_expired or h2c_expired or commit_published:
                 db.set_connection_closed(handle=hub_connection["handle"])
-                commit_txid = usr.MpcClient(api).finalize_commit(
+                commit_txid = Mpc(api).finalize_commit(
                     lib.get_wif, c2h_state, dryrun=dryrun
                 )
                 closed_connections.append({
@@ -110,7 +115,7 @@ def recover_funds(dryrun=False):
             c2h_state = db.load_channel_state(c2h_mpc_id, asset, cursor=cursor)
             h2c_mpc_id = hub_connection["h2c_channel_id"]
             h2c_state = db.load_channel_state(h2c_mpc_id, asset, cursor=cursor)
-            txs += usr.MpcClient(api).full_duplex_recover_funds(
+            txs += Mpc(api).full_duplex_recover_funds(
                 lib.get_wif, lib.get_secret,
                 c2h_state, h2c_state, dryrun=dryrun
             )
@@ -123,8 +128,9 @@ def collect_garbage():
         pass
 
 
-def run(dryrun=False):
+def run_all(dryrun=False):
     with etc.database_lock:
+        print("RUNNING THE FUCKING CRONS")
         close_connections(dryrun=dryrun)
         recover_funds(dryrun=dryrun)
         fund_deposits(dryrun=dryrun)

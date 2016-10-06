@@ -11,11 +11,10 @@ from picopayments import etc
 from picopayments import srv
 from picopayments import err
 from picopayments_client import util
-from picopayments_client.usr import HubClient
+from picopayments_client.mph import Mph
 from tests.mock import MockAPI
 
 
-etc.call_local_process = True
 CP_URL = os.environ.get("COUNTERPARTY_URL", "http://139.59.214.74:14000/api/")
 
 
@@ -151,8 +150,8 @@ class TestMpcHubSync(unittest.TestCase):
 
     def test_standard_commit(self):
         quantity = 5
-        client = HubClient.deserialize(data=self.data["connections"]["alpha"],
-                                       api_cls=MockAPI)
+        client = Mph.deserialize(data=self.data["connections"]["alpha"],
+                                 api_cls=MockAPI)
         sync_fee = client.channel_terms["sync_fee"]
         commit = self._create_commit(client, quantity + sync_fee)
 
@@ -179,13 +178,23 @@ class TestMpcHubSync(unittest.TestCase):
         }])
         self.assertIsNotNone(result["commit"])
 
+    def test_repeated_transfer(self):
+        alpha_data = self.data["connections"]["alpha"]
+        alpha_client = Mph.deserialize(data=alpha_data, api_cls=MockAPI)
+        beta_data = self.data["connections"]["beta"]
+        beta_client = Mph.deserialize(data=beta_data, api_cls=MockAPI)
+        alpha_client.micro_send(beta_client.handle, 5)
+        alpha_client.sync()
+        alpha_client.micro_send(beta_client.handle, 5)
+        alpha_client.sync()
+
     def test_asset_missmatch(self):
 
         def func():
             # create alice XCP connection
             auth_wif = self.data["funded"]["epsilon"]["wif"]
             asset = self.data["funded"]["epsilon"]["asset"]
-            alice = HubClient(MockAPI(
+            alice = Mph(MockAPI(
                 auth_wif=auth_wif,
                 verify_ssl_cert=False
             ))
@@ -194,8 +203,8 @@ class TestMpcHubSync(unittest.TestCase):
 
             # load bob A14456548018133352000 connection
             quantity = 5
-            bob = HubClient.deserialize(data=self.data["connections"]["alpha"],
-                                        api_cls=MockAPI)
+            bob = Mph.deserialize(data=self.data["connections"]["alpha"],
+                                  api_cls=MockAPI)
             sync_fee = bob.channel_terms["sync_fee"]
             commit = self._create_commit(bob, quantity + sync_fee)
 
@@ -222,13 +231,13 @@ class TestMpcHubSync(unittest.TestCase):
     def test_payment_exceeds_receivable(self):
 
         def func():
-            alice = HubClient.deserialize(
+            alice = Mph.deserialize(
                 data=self.data["connections"]["beta"], api_cls=MockAPI)
 
             # load bob A14456548018133352000 connection
             quantity = 1338
-            bob = HubClient.deserialize(data=self.data["connections"]["alpha"],
-                                        api_cls=MockAPI)
+            bob = Mph.deserialize(data=self.data["connections"]["alpha"],
+                                  api_cls=MockAPI)
             sync_fee = bob.channel_terms["sync_fee"]
             commit = self._create_commit(bob, quantity + sync_fee)
 
@@ -254,7 +263,7 @@ class TestMpcHubSync(unittest.TestCase):
 
         def func():
             quantity = 5
-            client = HubClient.deserialize(
+            client = Mph.deserialize(
                 data=self.data["connections"]["eta"], api_cls=MockAPI)
             sync_fee = client.channel_terms["sync_fee"]
             commit = self._create_commit(client, quantity + sync_fee)
@@ -279,11 +288,11 @@ class TestMpcHubSync(unittest.TestCase):
     def test_payee_deposit_expired(self):
 
         def func():
-            alice = HubClient.deserialize(
+            alice = Mph.deserialize(
                 data=self.data["connections"]["alpha"], api_cls=MockAPI
             )
-            bob = HubClient.deserialize(data=self.data["connections"]["eta"],
-                                        api_cls=MockAPI)
+            bob = Mph.deserialize(data=self.data["connections"]["eta"],
+                                  api_cls=MockAPI)
             quantity = 5
             sync_fee = alice.channel_terms["sync_fee"]
             commit = self._create_commit(alice, quantity + sync_fee)

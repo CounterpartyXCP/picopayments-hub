@@ -3,25 +3,73 @@
 # License: MIT (see LICENSE file)
 
 
+import time
 import json
+import threading
 from werkzeug.serving import run_simple
 from werkzeug.wrappers import Request, Response
 from jsonrpc import JSONRPCResponseManager, dispatcher
 from picopayments import lib
 from picopayments import cli
 from picopayments import etc
-from picopayments import api  # NOQA
+from picopayments import cron
 from picopayments import __version__
 
 
 @Request.application
 def application(request):
-    response = JSONRPCResponseManager.handle(
-        request.data, dispatcher
-    )  # pragma: no cover
-    return Response(
-        response.json, mimetype='application/json'
-    )  # pragma: no cover
+    response = JSONRPCResponseManager.handle(request.data, dispatcher)
+    return Response(response.json, mimetype='application/json')
+
+
+def _show_terms():
+    print("Terms file saved at {0}".format(etc.path_terms))
+    terms = lib.terms()
+    print(json.dumps(lib.terms(), indent=2, sort_keys=True))
+    return terms
+
+
+def _show_funding_addresses():
+    assets = lib.terms().keys()
+    addresses = lib.get_funding_addresses(assets)
+    print(json.dumps(addresses, indent=2, sort_keys=True))
+    return addresses
+
+
+def _ssl_context(parsed):
+    # setup ssl (generate pkey and self signed cert if none given)
+    ssl_context = 'adhoc'
+    cert = parsed["ssl_cert_file"]
+    pkey = parsed["ssl_pkey_file"]
+    if cert and pkey:
+        ssl_context = (cert, pkey)
+    return ssl_context
+
+
+_stop_cron_flag = threading.Event()
+
+
+def _cron_loop():
+    while not _stop_cron_flag.isSet():
+        cron.run_all(dryrun=False)
+        time.sleep(10)
+    print("STOP THE FUCKING CRONS")
+
+
+def _start_server(parsed):
+    try:
+        thread = threading.Thread(target=_cron_loop)
+        thread.start()
+
+        run_simple(
+            etc.host, etc.port,
+            application,
+            processes=1,  # ensure db integrety, avoid race conditions
+            ssl_context=_ssl_context(parsed)
+        )
+    finally:
+        _stop_cron_flag.set()
+        thread.join()
 
 
 def main(args, serve=True):
@@ -35,36 +83,9 @@ def main(args, serve=True):
     parsed = cli.parse(args)
     lib.initialize(parsed)
 
-    # show configured terms
     if parsed["terms"]:
-        print("Terms file saved at {0}".format(etc.path_terms))
-        terms = lib.terms()
-        print(json.dumps(lib.terms(), indent=2, sort_keys=True))
-        return terms
-
-    # show funding address for assets
+        return _show_terms()
     if parsed["funding"]:
-        assets = lib.terms().keys()
-        addresses = lib.get_funding_addresses(assets)
-        print(json.dumps(addresses, indent=2, sort_keys=True))
-        return addresses
-
+        return _show_funding_addresses()
     if serve:
-
-        # so internal calls skip http call
-        etc.call_local_process = True  # pragma: no cover
-
-        # setup ssl (generate pkey and self signed cert if none given)
-        ssl_context = 'adhoc'  # pragma: no cover
-        cert = parsed["ssl_cert_file"]  # pragma: no cover
-        pkey = parsed["ssl_pkey_file"]  # pragma: no cover
-        if cert and pkey:  # pragma: no cover
-            ssl_context = (cert, pkey)  # pragma: no cover
-
-        # start server
-        run_simple(
-            etc.host, etc.port,
-            application,
-            processes=1,  # ensure db integrety, avoid race conditions
-            ssl_context=ssl_context
-        )  # pragma: no cover
+        return _start_server(parsed)

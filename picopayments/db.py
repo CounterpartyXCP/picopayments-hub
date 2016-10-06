@@ -205,14 +205,14 @@ def _script_data(script):
     }
 
 
-def _fmt_active(channel_id, unnotified_commit, commits_active):
+def _fmt_active(channel_id, h2c_unnotified_commit, commits_active):
     active = []
     for commit_active in commits_active:
         script = commit_active["script"]
         rawtx = commit_active["rawtx"]
 
         payee_notified = 1
-        if unnotified_commit and unnotified_commit["script"] == script:
+        if h2c_unnotified_commit and h2c_unnotified_commit["script"] == script:
             payee_notified = 0
 
         data = {
@@ -227,14 +227,14 @@ def _fmt_active(channel_id, unnotified_commit, commits_active):
 
 
 def _fmt_revoked(channel_id, commits_revoked,
-                 unnotified_commit=None, unnotified_revoke_secrets=None):
+                 h2c_unnotified_commit=None, unnotified_revoke_secrets=None):
 
     unnotified_revoke_secrets = unnotified_revoke_secrets or []
     revoked = []
     for commit_revoked in commits_revoked:
         script = commit_revoked["script"]
         revoke_secret = commit_revoked["revoke_secret"]
-        if unnotified_commit and unnotified_commit["script"] == script:
+        if h2c_unnotified_commit and h2c_unnotified_commit["script"] == script:
             continue  # drop revoke as client was not notified of commit
         payee_notified = 0 if revoke_secret in unnotified_revoke_secrets else 1
         data = {
@@ -248,18 +248,18 @@ def _fmt_revoked(channel_id, commits_revoked,
     return revoked
 
 
-def save_channel_state(channel_id, state, unnotified_commit=None,
+def save_channel_state(channel_id, state, h2c_unnotified_commit=None,
                        unnotified_revoke_secrets=None, cursor=None):
 
     cursor = cursor or sql.get_cursor()
 
     # reformat state data
     commits_requested = _fmt_requested(channel_id, state["commits_requested"])
-    commits_active = _fmt_active(channel_id, unnotified_commit,
+    commits_active = _fmt_active(channel_id, h2c_unnotified_commit,
                                  state["commits_active"])
     commits_revoked = _fmt_revoked(
         channel_id, state["commits_revoked"],
-        unnotified_commit=unnotified_commit,
+        h2c_unnotified_commit=h2c_unnotified_commit,
         unnotified_revoke_secrets=unnotified_revoke_secrets
     )
 

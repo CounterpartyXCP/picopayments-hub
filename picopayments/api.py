@@ -92,7 +92,7 @@ def _cplib_call(method, params={}):
     )
 
 
-def _add_cplib_call(method):
+def _make_cplib_call(method):
     def counterparty_method(**kwargs):
         return _cplib_call(method=method, params=kwargs)
     dispatcher[method] = counterparty_method
@@ -105,24 +105,28 @@ def create_send(**kwargs):
     return _cplib_call(method="create_send", params=kwargs)
 
 
-search_raw_transactions = _add_cplib_call("search_raw_transactions")
-get_unspent_txouts = _add_cplib_call("get_unspent_txouts")
-getrawtransaction = _add_cplib_call("getrawtransaction")
-getrawtransaction_batch = _add_cplib_call("getrawtransaction_batch")
-get_unspent_txouts = _add_cplib_call("get_unspent_txouts")
-get_balances = _add_cplib_call("get_balances")
-get_assets = _add_cplib_call("get_assets")
-sendrawtransaction = _add_cplib_call("sendrawtransaction")
-mpc_make_deposit = _add_cplib_call("mpc_make_deposit")
-mpc_set_deposit = _add_cplib_call("mpc_set_deposit")
-mpc_request_commit = _add_cplib_call("mpc_request_commit")
-mpc_create_commit = _add_cplib_call("mpc_create_commit")
-mpc_add_commit = _add_cplib_call("mpc_add_commit")
-mpc_revoke_hashes_until = _add_cplib_call("mpc_revoke_hashes_until")
-mpc_revoke_all = _add_cplib_call("mpc_revoke_all")
-mpc_highest_commit = _add_cplib_call("mpc_highest_commit")
-mpc_transferred_amount = _add_cplib_call("mpc_transferred_amount")
-mpc_payouts = _add_cplib_call("mpc_payouts")
-mpc_recoverables = _add_cplib_call("mpc_recoverables")
-mpc_deposit_expired = _add_cplib_call("mpc_deposit_expired")
-mpc_get_published_commits = _add_cplib_call("mpc_get_published_commits")
+def locked_create_send(**kwargs):
+    return _cplib_call(method="create_send", params=kwargs)
+
+
+search_raw_transactions = _make_cplib_call("search_raw_transactions")
+get_unspent_txouts = _make_cplib_call("get_unspent_txouts")
+getrawtransaction = _make_cplib_call("getrawtransaction")
+getrawtransaction_batch = _make_cplib_call("getrawtransaction_batch")
+get_unspent_txouts = _make_cplib_call("get_unspent_txouts")
+get_balances = _make_cplib_call("get_balances")
+get_assets = _make_cplib_call("get_assets")
+sendrawtransaction = _make_cplib_call("sendrawtransaction")
+mpc_make_deposit = _make_cplib_call("mpc_make_deposit")
+mpc_set_deposit = _make_cplib_call("mpc_set_deposit")
+mpc_request_commit = _make_cplib_call("mpc_request_commit")
+mpc_create_commit = _make_cplib_call("mpc_create_commit")
+mpc_add_commit = _make_cplib_call("mpc_add_commit")
+mpc_revoke_hashes_until = _make_cplib_call("mpc_revoke_hashes_until")
+mpc_revoke_all = _make_cplib_call("mpc_revoke_all")
+mpc_highest_commit = _make_cplib_call("mpc_highest_commit")
+mpc_transferred_amount = _make_cplib_call("mpc_transferred_amount")
+mpc_payouts = _make_cplib_call("mpc_payouts")
+mpc_recoverables = _make_cplib_call("mpc_recoverables")
+mpc_deposit_ttl = _make_cplib_call("mpc_deposit_ttl")
+mpc_get_published_commits = _make_cplib_call("mpc_get_published_commits")

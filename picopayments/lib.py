@@ -7,11 +7,13 @@ import os
 import copy
 import json
 import pkg_resources
+import cachetools
 from pycoin.key.BIP32Node import BIP32Node
 from pycoin.serialize import b2h
 from counterpartylib.lib.micropayments import util
 from counterpartylib.lib.micropayments import scripts
-from picopayments_client import usr
+from counterpartylib.lib.util import DictCache
+from picopayments_client.mpc import Mpc
 from picopayments import db
 from picopayments_client import auth
 from picopayments import err
@@ -21,6 +23,11 @@ from picopayments import sql
 
 _TERMS_FP = pkg_resources.resource_stream("picopayments", "terms.json")
 TERMS = json.loads(_TERMS_FP.read().decode("utf-8"))
+
+
+_LOCKS = DictCache(size=65535)  # address -> lock
+_LOCKS_TTL = 3.0  # seconds
+_LOCKS_MAX = 5000  # per address
 
 
 def get_secret(secret_hash):
@@ -157,14 +164,18 @@ def find_key_with_funds(asset, asset_quantity, btc_quantity):
     nearest = {"key": None, "available": 2100000000000000}
     for key in db.keys(asset=asset):
         address = key["address"]
+        # FIXME ignore if locked by counterpartylib
         if has_unconfirmed_transactions(address):
             continue  # ignore if unconfirmed inputs/outputs
-        available = get_balance(address, asset)
-        # FIXME check btc quantity
-        if available < asset_quantity:
-            continue  # not enough funds
-        if nearest["available"] > available:
-            nearest = {"key": key, "available": available}
+        if key["address"] in _LOCKS:
+            continue  # ignore recently used to avoid doublespends
+        balances = get_balances(address, assets=["BTC", asset])
+        if btc_quantity > balances["BTC"]:
+            continue  # not enough btc
+        if asset_quantity > balances[asset]:
+            continue  # not enough assets
+        if nearest["available"] > balances[asset]:
+            nearest = {"key": key, "available": balances[asset]}
     return nearest["key"]
 
 
@@ -211,7 +222,7 @@ def update_channel_state(channel_id, asset, commit=None,
         state = api.mpc_revoke_all(state=state, secrets=revokes)
     cursor.execute("BEGIN TRANSACTION;")
     db.save_channel_state(
-        channel_id, state, unnotified_commit=unnotified_commit,
+        channel_id, state, h2c_unnotified_commit=unnotified_commit,
         unnotified_revoke_secrets=unnotified_revoke_secrets, cursor=cursor
     )
     cursor.execute("COMMIT;")
@@ -304,13 +315,9 @@ def sync_hub_connection(handle, next_revoke_secret_hash,
     )
 
 
-def get_balance(address, asset):
+def get_balances(address, assets=None):
     from picopayments import api
-    results = api.get_balances(filters=[
-        {'field': 'address', 'op': '==', 'value': address},
-        {'field': 'asset', 'op': '==', 'value': asset},
-    ])
-    return results[0]["quantity"] if results else 0
+    return Mpc(api).get_balances(address=address, assets=assets)
 
 
 def deposit_address(state):
@@ -328,7 +335,7 @@ def get_transferred_quantity(state):
 
 def is_expired(state, clearance):
     from picopayments import api
-    return api.mpc_deposit_expired(state=state, clearance=clearance)
+    return api.mpc_deposit_ttl(state=state, clearance=clearance) == 0
 
 
 def get_tx(txid):
@@ -339,8 +346,10 @@ def get_tx(txid):
 def publish(rawtx, dryrun=False):
     from picopayments import api
     if dryrun:
-        return util.gettxid(rawtx)
-    return api.sendrawtransaction(tx_hex=rawtx)  # pragma: no cover
+        txid = util.gettxid(rawtx)
+    else:
+        txid = api.sendrawtransaction(tx_hex=rawtx)  # pragma: no cover
+    return txid
 
 
 def send_funds(destination, asset, quantity, dryrun=False):
@@ -352,10 +361,12 @@ def send_funds(destination, asset, quantity, dryrun=False):
     key = find_key_with_funds(asset, quantity, extra_btc)
     if key is None:
         raise err.InsufficientFunds(asset, quantity)
-    unsigned_rawtx = api.create_send(
+    unsigned_rawtx = api.locked_create_send(
         source=key["address"], destination=destination, asset=asset,
-        regular_dust_size=extra_btc, disable_utxo_locks=True, quantity=quantity
+        disable_utxo_locks=dryrun,  # only disable if dryrun / testing
+        regular_dust_size=extra_btc, quantity=quantity
     )
+    _LOCKS[key["address"]] = cachetools.TTLCache(_LOCKS_MAX, _LOCKS_TTL)
     signed_rawtx = scripts.sign_deposit(get_tx, key["wif"], unsigned_rawtx)
     return publish(signed_rawtx, dryrun=dryrun)
 
@@ -375,6 +386,7 @@ def has_unconfirmed_transactions(address):
 
 def load_connection_data(handle, cursor):
     connection = db.hub_connection(handle=handle, cursor=cursor)
+    asset = connection["asset"]
     terms = db.terms(id=connection["terms_id"], cursor=cursor)
     h2c_state = db.load_channel_state(
         connection["h2c_channel_id"], connection["asset"], cursor=cursor
@@ -385,10 +397,10 @@ def load_connection_data(handle, cursor):
     )
     c2h_deposit_address = deposit_address(c2h_state)
     h2c_transferred = get_transferred_quantity(h2c_state)
-    h2c_deposit_amount = get_balance(h2c_deposit_address, connection["asset"])
+    h2c_deposit_amount = get_balances(h2c_deposit_address, [asset])[asset]
     c2h_transferred = get_transferred_quantity(c2h_state)
-    c2h_deposit_amount = get_balance(c2h_deposit_address, connection["asset"])
-    unnotified_commit = db.unnotified_commit(
+    c2h_deposit_amount = get_balances(c2h_deposit_address, [asset])[asset]
+    h2c_unnotified_commit = db.unnotified_commit(
         channel_id=connection["h2c_channel_id"], cursor=cursor
     )
     h2c_payments_sum = db.h2c_payments_sum(handle=handle, cursor=cursor)
@@ -420,7 +432,7 @@ def load_connection_data(handle, cursor):
         "c2h_deposit_amount": c2h_deposit_amount,
         "c2h_transferrable_amount": c2h_deposit_amount - c2h_transferred,
         "payments_sum": payments_sum,
-        "unnotified_commit": unnotified_commit,  # FIXME rename h2c_uno...
+        "h2c_unnotified_commit": h2c_unnotified_commit,
         "balance": balance,
         "receivable_amount": receivable_amount,
         "terms": terms,
@@ -440,7 +452,7 @@ def _send_client_funds(connection_data, quantity, token):
     hub_pubkey = scripts.get_deposit_payer_pubkey(deposit_script_bin)
     wif = db.key(pubkey=hub_pubkey)["wif"]
 
-    result = usr.MpcClient(api).full_duplex_transfer(
+    result = Mpc(api).full_duplex_transfer(
         wif, get_secret, h2c_state, c2h_state, quantity,
         next_revoke_secret_hash, etc.delay_time
     )
@@ -493,7 +505,18 @@ def process_payment(payer_handle, cursor, payment):
         c2h_unnotified_revokes = db.unnotified_revokes(
             channel_id=payee["connection"]["c2h_channel_id"]
         )
+        prev_h2c_unnotified_commit = payee["h2c_unnotified_commit"]
         result = _send_client_funds(payee, payment["amount"], payment["token"])
+
+        # remove previously unnotified commit if never sent to client
+        # required avoid sharing secrets
+        h2c_commits_active = result["h2c_state"]["commits_active"]
+        # FIXME how can h2c_commits_active not be a set?
+        if prev_h2c_unnotified_commit is not None:
+            prev_h2c_unnotified_commit.pop("id")
+            if (prev_h2c_unnotified_commit != h2c_commits_active[0] and
+                    prev_h2c_unnotified_commit in h2c_commits_active):
+                h2c_commits_active.remove(prev_h2c_unnotified_commit)
 
         cursor.execute("BEGIN TRANSACTION;")
 
@@ -504,7 +527,8 @@ def process_payment(payer_handle, cursor, payment):
         )
         db.save_channel_state(
             payee["connection"]["h2c_channel_id"], result["h2c_state"],
-            unnotified_commit=result["h2c_unnotified_commit"], cursor=cursor
+            h2c_unnotified_commit=result["h2c_unnotified_commit"],
+            cursor=cursor
         )
 
     # fee payment

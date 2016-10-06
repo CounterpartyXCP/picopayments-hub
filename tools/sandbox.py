@@ -8,7 +8,7 @@ from picopayments import sql
 from picopayments import db
 from picopayments import lib
 from picopayments import etc
-from counterpartylib.lib.micropayments import util
+from picopayments_client import util
 from picopayments_client import rpc
 from picopayments_client import usr
 # from tests.mock import MockAPI
@@ -34,11 +34,20 @@ class TestSandbox(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tempdir)
 
+    @unittest.skip("it")
     def test_get_assets(self):
         url = "https://127.0.0.1:15000/api/"
         api = rpc.API(url=url, verify_ssl_cert=False)
-        # client = usr.MpcClient(api)
         print(json.dumps(api.mph_terms(), indent=2))
+
+    @unittest.skip("it")
+    def test_balances(self):
+        url = "https://139.59.214.74:15000/api/"
+        api = rpc.API(url=url, verify_ssl_cert=False)
+        client = usr.MpcClient(api)
+        wif = "cTvCnpvQJE3TvNejkWbnFA1z6jLJjB2xXXapFabGsazCz2QNYFQb"
+        address = util.wif2address(wif)
+        print(json.dumps(client.get_balances(address), indent=2))
 
     @unittest.skip("it")
     def test_balance(self):

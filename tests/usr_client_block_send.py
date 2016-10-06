@@ -6,7 +6,7 @@ import tempfile
 from picopayments import srv
 from picopayments import etc
 from picopayments_client import util
-from picopayments_client.usr import MpcClient
+from picopayments_client.mpc import Mpc
 from tests.mock import MockAPI
 
 
@@ -31,7 +31,7 @@ class TestUsrClientBlockSend(unittest.TestCase):
         shutil.rmtree(self.tempdir)
 
     def test_standard_usage(self):
-        client = MpcClient(MockAPI(verify_ssl_cert=False))
+        client = Mpc(MockAPI(verify_ssl_cert=False))
         src_wif = self.data["funded"]["gamma"]["wif"]
         asset = self.data["funded"]["gamma"]["asset"]
         dest_address = util.wif2address(util.random_wif(netcode=etc.netcode))

@@ -3,13 +3,11 @@ import json
 import shutil
 import unittest
 import tempfile
-from picopayments import etc
 from picopayments import srv
-from picopayments_client.usr import HubClient
+from picopayments_client.mph import Mph
 from tests.mock import MockAPI
 
 
-etc.call_local_process = True
 CP_URL = os.environ.get("COUNTERPARTY_URL", "http://139.59.214.74:14000/api/")
 
 
@@ -34,12 +32,12 @@ class TestUsr(unittest.TestCase):
         _c = self.data["connections"]
 
         # setup
-        alpha = HubClient.deserialize(data=_c["alpha"], api_cls=MockAPI)
-        beta = HubClient.deserialize(data=_c["beta"], api_cls=MockAPI)
-        gamma = HubClient.deserialize(data=_c["gamma"], api_cls=MockAPI)
-        delta = HubClient.deserialize(data=_c["delta"], api_cls=MockAPI)
-        epsilon = HubClient.deserialize(data=_c["epsilon"], api_cls=MockAPI)
-        zeta = HubClient.deserialize(data=_c["zeta"], api_cls=MockAPI)
+        alpha = Mph.deserialize(data=_c["alpha"], api_cls=MockAPI)
+        beta = Mph.deserialize(data=_c["beta"], api_cls=MockAPI)
+        gamma = Mph.deserialize(data=_c["gamma"], api_cls=MockAPI)
+        delta = Mph.deserialize(data=_c["delta"], api_cls=MockAPI)
+        epsilon = Mph.deserialize(data=_c["epsilon"], api_cls=MockAPI)
+        zeta = Mph.deserialize(data=_c["zeta"], api_cls=MockAPI)
 
         # after before status
         alpha_before_status = alpha.get_status()

@@ -4,7 +4,7 @@ import shutil
 import unittest
 import tempfile
 from picopayments import srv
-from picopayments_client import usr
+from picopayments_client import mph
 from tests.mock import MockAPI
 
 
@@ -36,7 +36,7 @@ class TestUsrClientConnect(unittest.TestCase):
         asset = self.data["funded"]["alpha"]["asset"]
         rpc_api = MockAPI(url="http://127.0.0.1:15000/api/", auth_wif=auth_wif,
                           verify_ssl_cert=verify_ssl_cert)
-        client = usr.HubClient(rpc_api)
+        client = mph.Mph(rpc_api)
         txid = client.connect(1337, 65535, asset=asset, dryrun=True)
         self.assertIsNotNone(txid)
 
