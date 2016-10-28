@@ -10,7 +10,9 @@ import pkg_resources
 import cachetools
 from pycoin.key.BIP32Node import BIP32Node
 from pycoin.serialize import b2h
-from counterpartylib.lib.micropayments import util
+from micropayment_core import util
+from micropayment_core import keys
+from counterpartylib.lib.micropayments.util import get_fee_multaple
 from counterpartylib.lib.micropayments import scripts
 from counterpartylib.lib.util import DictCache
 from picopayments_client.mpc import Mpc
@@ -68,8 +70,8 @@ def create_hub_connection(asset, client_pubkey,
 
     # client key
     data["client_pubkey"] = client_pubkey
-    data["client_address"] = util.pubkey2address(client_pubkey,
-                                                 netcode=etc.netcode)
+    data["client_address"] = keys.address_from_pubkey(client_pubkey,
+                                                      netcode=etc.netcode)
 
     # spend secret for receive channel
     data.update(create_secret())
@@ -133,12 +135,12 @@ def complete_connection(handle, c2h_deposit_script,
         "expire_time": expire_time,
         "c2h_channel_id": hub_conn["c2h_channel_id"],
         "c2h_deposit_script": c2h_deposit_script,
-        "c2h_deposit_address": util.script2address(
+        "c2h_deposit_address": util.script_address(
             c2h_deposit_script, netcode=etc.netcode
         ),
         "h2c_channel_id": hub_conn["h2c_channel_id"],
         "h2c_deposit_script": h2c_deposit_script,
-        "h2c_deposit_address": util.script2address(
+        "h2c_deposit_address": util.script_address(
             h2c_deposit_script, netcode=etc.netcode
         ),
         "next_revoke_secret_hash": next_revoke_secret_hash,
@@ -157,7 +159,7 @@ def complete_connection(handle, c2h_deposit_script,
 
 
 def find_key_with_funds(asset, asset_quantity, btc_quantity):
-    btc_quantity = btc_quantity + util.get_fee_multaple(
+    btc_quantity = btc_quantity + get_fee_multaple(
         factor=1, fee_per_kb=etc.fee_per_kb,
         regular_dust_size=etc.regular_dust_size
     )
@@ -325,7 +327,7 @@ def deposit_address(state):
 
 
 def get_script_address(script):
-    return util.script2address(script, netcode=etc.netcode)
+    return util.script_address(script, netcode=etc.netcode)
 
 
 def get_transferred_quantity(state):
@@ -505,18 +507,26 @@ def process_payment(payer_handle, cursor, payment):
         c2h_unnotified_revokes = db.unnotified_revokes(
             channel_id=payee["connection"]["c2h_channel_id"]
         )
-        prev_h2c_unnotified_commit = payee["h2c_unnotified_commit"]
+        prev_unnotified_commit = payee["h2c_unnotified_commit"]
         result = _send_client_funds(payee, payment["amount"], payment["token"])
+
+        if prev_unnotified_commit:
+            print("XXX", json.dumps({
+                "payee": payee, "result": result
+            }, indent=2))
 
         # remove previously unnotified commit if never sent to client
         # required avoid sharing secrets
         h2c_commits_active = result["h2c_state"]["commits_active"]
-        # FIXME how can h2c_commits_active not be a set?
-        if prev_h2c_unnotified_commit is not None:
-            prev_h2c_unnotified_commit.pop("id")
-            if (prev_h2c_unnotified_commit != h2c_commits_active[0] and
-                    prev_h2c_unnotified_commit in h2c_commits_active):
-                h2c_commits_active.remove(prev_h2c_unnotified_commit)
+        prev_h2c_commits_active = payee["h2c_state"]["commits_active"]
+        new_commit = len(h2c_commits_active) != len(prev_h2c_commits_active)
+        if prev_unnotified_commit is not None and new_commit:
+            prev_unnotified_commit.pop("id")
+            h2c_commits_active.remove(prev_unnotified_commit)
+            # for i, commit in enumerate(h2c_commits_active):
+            #     if commit["script"] == prev_unnotified_commit["script"]:
+            #         del h2c_commits_active[i]
+            #         break
 
         cursor.execute("BEGIN TRANSACTION;")
 
@@ -573,6 +583,6 @@ def hub_connections(handles, assets):
         if handles is not None and connection["handle"] not in handles:
             continue
         wif = connection.pop("wif")
-        connection = auth.sign_json(connection, wif)
+        connection = auth.sign_json(connection, keys.wif_to_privkey(wif))
         connections.append(connection)
     return connections

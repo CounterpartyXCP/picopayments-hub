@@ -9,7 +9,8 @@ from picopayments_client import auth
 from picopayments import lib
 from picopayments import srv
 from picopayments import err
-from picopayments_client import util
+from micropayment_core import util
+from micropayment_core import keys
 
 
 CP_URL = os.environ.get("COUNTERPARTY_URL", "http://139.59.214.74:14000/api/")
@@ -53,7 +54,8 @@ class TestMpcHubRequest(unittest.TestCase):
         client_key = lib.create_key(asset)
         secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
         params = {"asset": asset, "spend_secret_hash": secret_hash}
-        params = auth.sign_json(params, client_key["wif"])
+        privkey = keys.wif_to_privkey(client_key["wif"])
+        params = auth.sign_json(params, privkey)
         result = api.mph_request(**params)
 
         self.assertIsNotNone(result)
@@ -66,7 +68,8 @@ class TestMpcHubRequest(unittest.TestCase):
             client_key = lib.create_key(asset)
             secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
             params = {"asset": asset, "spend_secret_hash": secret_hash}
-            params = auth.sign_json(params, client_key["wif"])
+            privkey = keys.wif_to_privkey(client_key["wif"])
+            params = auth.sign_json(params, privkey)
             api.mph_request(**params)
 
         self.assertRaises(err.AssetNotInTerms, func)
@@ -78,7 +81,8 @@ class TestMpcHubRequest(unittest.TestCase):
             client_key = lib.create_key(asset)
             secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
             params = {"asset": asset, "spend_secret_hash": secret_hash}
-            params = auth.sign_json(params, client_key["wif"])
+            privkey = keys.wif_to_privkey(client_key["wif"])
+            params = auth.sign_json(params, privkey)
             api.mph_request(**params)
 
         self.assertRaises(err.AssetDoesNotExist, func)
@@ -94,7 +98,8 @@ class TestMpcHubRequest(unittest.TestCase):
                 "spend_secret_hash": secret_hash,
                 "hub_rpc_url": "?? invalid url ??",
             }
-            params = auth.sign_json(params, client_key["wif"])
+            privkey = keys.wif_to_privkey(client_key["wif"])
+            params = auth.sign_json(params, privkey)
             api.mph_request(**params)
 
         self.assertRaises(err.InvalidUrl, func)

@@ -9,8 +9,9 @@ from picopayments_client import auth
 from picopayments import lib
 from picopayments import srv
 from picopayments import err
-from picopayments_client import util
-from picopayments_client.scripts import compile_deposit_script
+from micropayment_core import util
+from micropayment_core import keys
+from micropayment_core.scripts import compile_deposit_script
 
 
 CP_URL = os.environ.get("COUNTERPARTY_URL", "http://139.59.214.74:14000/api/")
@@ -61,7 +62,7 @@ class TestMpcHubDeposit(unittest.TestCase):
             "asset": asset,
             "spend_secret_hash": h2c_spend_secret_hash
         }
-        params = auth.sign_json(params, client_key["wif"])
+        params = auth.sign_json(params, keys.wif_to_privkey(client_key["wif"]))
         result = api.mph_request(**params)
 
         handle = result["handle"]
@@ -78,7 +79,7 @@ class TestMpcHubDeposit(unittest.TestCase):
             "deposit_script": c2h_deposit_script,
             "next_revoke_secret_hash": next_revoke_secret_hash
         }
-        params = auth.sign_json(params, client_key["wif"])
+        params = auth.sign_json(params, keys.wif_to_privkey(client_key["wif"]))
         result = api.mph_deposit(**params)
 
         self.assertIsNotNone(result)
@@ -101,7 +102,8 @@ class TestMpcHubDeposit(unittest.TestCase):
                 "asset": asset,
                 "spend_secret_hash": h2c_spend_secret_hash
             }
-            params = auth.sign_json(params, client_key["wif"])
+            privkey = keys.wif_to_privkey(client_key["wif"])
+            params = auth.sign_json(params, privkey)
             result = api.mph_request(**params)
 
             handle = result["handle"]
@@ -120,7 +122,8 @@ class TestMpcHubDeposit(unittest.TestCase):
                 "deposit_script": c2h_deposit_script,
                 "next_revoke_secret_hash": next_revoke_secret_hash
             }
-            params = auth.sign_json(params, client_key["wif"])
+            privkey = keys.wif_to_privkey(client_key["wif"])
+            params = auth.sign_json(params, privkey)
             result = api.mph_deposit(**params)
             self.assertIsNotNone(result)
 
@@ -131,7 +134,8 @@ class TestMpcHubDeposit(unittest.TestCase):
                 "deposit_script": c2h_deposit_script,
                 "next_revoke_secret_hash": next_revoke_secret_hash
             }
-            params = auth.sign_json(params, client_key["wif"])
+            privkey = keys.wif_to_privkey(client_key["wif"])
+            params = auth.sign_json(params, privkey)
             result = api.mph_deposit(**params)
 
         self.assertRaises(err.DepositAlreadyGiven, func)
@@ -150,7 +154,8 @@ class TestMpcHubDeposit(unittest.TestCase):
                 "deposit_script": c2h_deposit_script,
                 "next_revoke_secret_hash": next_revoke_secret_hash
             }
-            params = auth.sign_json(params, client_key["wif"])
+            privkey = keys.wif_to_privkey(client_key["wif"])
+            params = auth.sign_json(params, privkey)
             api.mph_deposit(**params)
 
         self.assertRaises(err.HandleNotFound, func)

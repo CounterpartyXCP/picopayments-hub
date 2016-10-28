@@ -5,7 +5,7 @@ import unittest
 import tempfile
 from picopayments import srv
 from picopayments import etc
-from picopayments_client import util
+from micropayment_core import keys
 from picopayments_client.mpc import Mpc
 from tests.mock import MockAPI
 
@@ -34,7 +34,8 @@ class TestUsrClientBlockSend(unittest.TestCase):
         client = Mpc(MockAPI(verify_ssl_cert=False))
         src_wif = self.data["funded"]["gamma"]["wif"]
         asset = self.data["funded"]["gamma"]["asset"]
-        dest_address = util.wif2address(util.random_wif(netcode=etc.netcode))
+        wif = keys.generate_wif(netcode=etc.netcode)
+        dest_address = keys.address_from_wif(wif)
         quantity = 42
         txid = client.block_send(
             source=src_wif, destination=dest_address, asset=asset,

@@ -10,7 +10,7 @@ from picopayments import lib
 from picopayments import etc
 from picopayments import srv
 from picopayments import err
-from picopayments_client import util
+from micropayment_core import keys
 from picopayments_client.mph import Mph
 from tests.mock import MockAPI
 
@@ -63,7 +63,7 @@ class TestMpcHubSync(unittest.TestCase):
                 "revokes": None,
                 "next_revoke_secret_hash": secret["secret_hash"]
             }
-            params = auth.sign_json(params, wif)
+            params = auth.sign_json(params, keys.wif_to_privkey(wif))
             api.mph_sync(**params)
 
         self.assertRaises(err.PaymentExceedsSpendable, func)
@@ -74,7 +74,7 @@ class TestMpcHubSync(unittest.TestCase):
             secret = lib.create_secret()
             connection = self.data["connections"]["alpha"]
             handle = connection["handle"]
-            wif = util.random_wif(netcode=etc.netcode)
+            wif = keys.generate_wif(netcode=etc.netcode)
             params = {
                 "handle": handle,
                 "sends": [],
@@ -82,7 +82,7 @@ class TestMpcHubSync(unittest.TestCase):
                 "revokes": None,
                 "next_revoke_secret_hash": secret["secret_hash"]
             }
-            params = auth.sign_json(params, wif)
+            params = auth.sign_json(params, keys.wif_to_privkey(wif))
             api.mph_sync(**params)
 
         self.assertRaises(err.ClientPubkeyMissmatch, func)
@@ -105,7 +105,7 @@ class TestMpcHubSync(unittest.TestCase):
                 "revokes": None,
                 "next_revoke_secret_hash": secret["secret_hash"]
             }
-            params = auth.sign_json(params, wif)
+            params = auth.sign_json(params, keys.wif_to_privkey(wif))
             api.mph_sync(**params)
 
         self.assertRaises(err.HandlesNotFound, func)
@@ -124,7 +124,7 @@ class TestMpcHubSync(unittest.TestCase):
                 "revokes": "invalidformat",
                 "next_revoke_secret_hash": secret["secret_hash"]
             }
-            params = auth.sign_json(params, wif)
+            params = auth.sign_json(params, keys.wif_to_privkey(wif))
             api.mph_sync(**params)
 
         self.assertRaises(jsonschema.exceptions.ValidationError, func)
@@ -143,7 +143,7 @@ class TestMpcHubSync(unittest.TestCase):
                 "revokes": None,
                 "next_revoke_secret_hash": secret["secret_hash"]
             }
-            params = auth.sign_json(params, wif)
+            params = auth.sign_json(params, keys.wif_to_privkey(wif))
             api.mph_sync(**params)
 
         self.assertRaises(jsonschema.exceptions.ValidationError, func)
@@ -168,7 +168,7 @@ class TestMpcHubSync(unittest.TestCase):
             "revokes": None,
             "next_revoke_secret_hash": h2c_next_revoke_secret_hash
         }
-        params = auth.sign_json(params, client.client_wif)
+        params = auth.sign_json(params, keys.wif_to_privkey(client.client_wif))
         result = api.mph_sync(**params)
 
         self.assertEqual(result["receive"], [{
@@ -183,10 +183,24 @@ class TestMpcHubSync(unittest.TestCase):
         alpha_client = Mph.deserialize(data=alpha_data, api_cls=MockAPI)
         beta_data = self.data["connections"]["beta"]
         beta_client = Mph.deserialize(data=beta_data, api_cls=MockAPI)
+
+        # ensure beta has one notified commit
+        alpha_client.micro_send(beta_client.handle, 3)
+        alpha_client.sync()
+        beta_client.sync()
+
+        # ensure unnotified commit is replaced
         alpha_client.micro_send(beta_client.handle, 5)
         alpha_client.sync()
-        alpha_client.micro_send(beta_client.handle, 5)
+        alpha_client.micro_send(beta_client.handle, 7)
         alpha_client.sync()
+        beta_client.sync()
+
+        # check balances
+        alpha_status = alpha_client.get_status()
+        beta_status = beta_client.get_status()
+        self.assertEqual(alpha_status["balance"], 1593 - 18)
+        self.assertEqual(beta_status["balance"], 1337 + 13)
 
     def test_asset_missmatch(self):
 
@@ -222,7 +236,8 @@ class TestMpcHubSync(unittest.TestCase):
                 "revokes": None,
                 "next_revoke_secret_hash": h2c_next_revoke_secret_hash
             }
-            params = auth.sign_json(params, bob.client_wif)
+            privkey = keys.wif_to_privkey(bob.client_wif)
+            params = auth.sign_json(params, privkey)
             api.mph_sync(**params)
 
         self.assertRaises(err.AssetMissmatch, func)
@@ -254,7 +269,8 @@ class TestMpcHubSync(unittest.TestCase):
                 "revokes": None,
                 "next_revoke_secret_hash": h2c_next_revoke_secret_hash
             }
-            params = auth.sign_json(params, bob.client_wif)
+            privkey = keys.wif_to_privkey(bob.client_wif)
+            params = auth.sign_json(params, privkey)
             api.mph_sync(**params)
 
         self.assertRaises(err.PaymentExceedsReceivable, func)
@@ -280,7 +296,8 @@ class TestMpcHubSync(unittest.TestCase):
                 "revokes": None,
                 "next_revoke_secret_hash": h2c_next_revoke_secret_hash
             }
-            params = auth.sign_json(params, client.client_wif)
+            privkey = keys.wif_to_privkey(client.client_wif)
+            params = auth.sign_json(params, privkey)
             api.mph_sync(**params)
 
         self.assertRaises(err.DepositExpired, func)
@@ -309,7 +326,8 @@ class TestMpcHubSync(unittest.TestCase):
                 "revokes": None,
                 "next_revoke_secret_hash": h2c_next_revoke_secret_hash
             }
-            params = auth.sign_json(params, alice.client_wif)
+            privkey = keys.wif_to_privkey(alice.client_wif)
+            params = auth.sign_json(params, privkey)
             api.mph_sync(**params)
 
         self.assertRaises(err.DepositExpired, func)

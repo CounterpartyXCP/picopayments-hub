@@ -4,8 +4,8 @@
 
 
 import apsw
-from picopayments_client import util
-from picopayments_client import scripts
+from micropayment_core import util
+from micropayment_core import scripts
 from picopayments import etc
 from picopayments import sql
 
@@ -197,7 +197,7 @@ def _fmt_requested(channel_id, revoke_secret_hashes):
 def _script_data(script):
     delay_time = scripts.get_commit_delay_time(script)
     secret_hash = scripts.get_commit_revoke_secret_hash(script)
-    commit_address = util.script2address(script, netcode=etc.netcode)
+    commit_address = util.script_address(script, netcode=etc.netcode)
     return {
         "commit_address": commit_address,
         "delay_time": delay_time,
