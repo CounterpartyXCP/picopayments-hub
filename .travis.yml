@@ -34,7 +34,7 @@ install:
   - pip install tendo==0.2.8
   - pip install xmltodict==0.10.1
   - pip install cachetools==1.1.6
-  - wget https://transfer.sh/xVsmd/counterparty-lib-9.55.0-py3-none-any.whl
+  - wget https://transfer.sh/5sgav/counterparty-lib-9.55.0-py3-none-any.whl
   - pip install --use-wheel --no-index --find-links=$PWD counterparty-lib
   - pip install -r requirements.txt
   - pip install -r requirements_tests.txt

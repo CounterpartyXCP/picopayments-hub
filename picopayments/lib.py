@@ -12,8 +12,8 @@ from pycoin.key.BIP32Node import BIP32Node
 from pycoin.serialize import b2h
 from micropayment_core import util
 from micropayment_core import keys
-from counterpartylib.lib.micropayments.util import get_fee_multaple
-from counterpartylib.lib.micropayments import scripts
+from micropayment_core import scripts
+from counterpartylib.lib.micropayments.control import _get_fee_multaple
 from counterpartylib.lib.util import DictCache
 from picopayments_client.mpc import Mpc
 from picopayments import db
@@ -159,7 +159,7 @@ def complete_connection(handle, c2h_deposit_script,
 
 
 def find_key_with_funds(asset, asset_quantity, btc_quantity):
-    btc_quantity = btc_quantity + get_fee_multaple(
+    btc_quantity = btc_quantity + _get_fee_multaple(
         factor=1, fee_per_kb=etc.fee_per_kb,
         regular_dust_size=etc.regular_dust_size
     )
@@ -356,7 +356,7 @@ def publish(rawtx, dryrun=False):
 
 def send_funds(destination, asset, quantity, dryrun=False):
     from picopayments import api
-    extra_btc = util.get_fee_multaple(
+    extra_btc = _get_fee_multaple(
         factor=3, fee_per_kb=etc.fee_per_kb,
         regular_dust_size=etc.regular_dust_size
     )

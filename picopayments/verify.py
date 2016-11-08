@@ -10,6 +10,7 @@ from picopayments import err
 from picopayments import db
 from picopayments import etc
 from picopayments import lib
+from jsonrpc import dispatcher
 
 
 URL_REGEX = re.compile(
@@ -83,15 +84,11 @@ def is_url(url):
 
 
 def c2h_commit(handle, commit_rawtx, commit_script):
-    from picopayments import api
     hub_connection(handle)
     netcode = "XTN" if etc.testnet else "BTC"
     c2h_channel = db.receive_channel(handle=handle)
-    deposit_utxos = api.get_unspent_txouts(
-        address=c2h_channel["deposit_address"]
-    )
-    validate.commit_rawtx(
-        deposit_utxos, commit_rawtx, c2h_channel["asset"],
+    validate.is_commit_rawtx(
+        dispatcher, commit_rawtx, c2h_channel["asset"],
         c2h_channel["deposit_script"], commit_script, netcode
     )
 

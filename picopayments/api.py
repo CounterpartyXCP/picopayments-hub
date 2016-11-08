@@ -111,6 +111,8 @@ def locked_create_send(**kwargs):
 
 
 search_raw_transactions = _make_cplib_call("search_raw_transactions")
+get_tx_info = _make_cplib_call("get_tx_info")
+unpack = _make_cplib_call("unpack")
 get_unspent_txouts = _make_cplib_call("get_unspent_txouts")
 getrawtransaction = _make_cplib_call("getrawtransaction")
 getrawtransaction_batch = _make_cplib_call("getrawtransaction_batch")

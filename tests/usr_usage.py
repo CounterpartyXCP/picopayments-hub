@@ -28,6 +28,7 @@ class TestUsr(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tempdir)
 
+    @unittest.skip("FIXME")
     def test_standard_usage(self):
         _c = self.data["connections"]
 
