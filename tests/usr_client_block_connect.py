@@ -4,14 +4,16 @@ import shutil
 import unittest
 import tempfile
 from picopayments import srv
-from picopayments_client.mph import Mph
+from picopayments_client import mph
 from tests.mock import MockAPI
 
 
-CP_URL = os.environ.get("COUNTERPARTY_URL", "http://139.59.214.74:14000/api/")
+CP_URL = os.environ.get("COUNTERPARTY_URL", "http://127.0.0.1:14000/api/")
 
 
-class TestUsrClientSerialization(unittest.TestCase):
+class TestUsrClientConnect(unittest.TestCase):
+
+    # FIXME test fails if request made, deposit not made then sync
 
     def setUp(self):
         self.tempdir = tempfile.mkdtemp(prefix="picopayments_test_")
@@ -29,9 +31,14 @@ class TestUsrClientSerialization(unittest.TestCase):
         shutil.rmtree(self.tempdir)
 
     def test_standard_usage(self):
-        connection = self.data["connections"]["alpha"]
-        client = Mph.deserialize(data=connection, api_cls=MockAPI)
-        self.assertEqual(connection, client.serialize())
+        verify_ssl_cert = False
+        auth_wif = self.data["funded"]["alpha"]["wif"]
+        asset = self.data["funded"]["alpha"]["asset"]
+        rpc_api = MockAPI(url="http://127.0.0.1:15000/api/", auth_wif=auth_wif,
+                          verify_ssl_cert=verify_ssl_cert)
+        client = mph.Mph(rpc_api)
+        txid = client.connect(1337, 65535, asset=asset, dryrun=True)
+        self.assertIsNotNone(txid)
 
 
 if __name__ == "__main__":

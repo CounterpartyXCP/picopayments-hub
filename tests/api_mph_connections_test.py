@@ -9,7 +9,7 @@ from picopayments_client import auth
 from picopayments import srv
 
 
-CP_URL = os.environ.get("COUNTERPARTY_URL", "http://139.59.214.74:14000/api/")
+CP_URL = os.environ.get("COUNTERPARTY_URL", "http://127.0.0.1:14000/api/")
 
 
 CONNECTION_RESULT_SCHEMA = {
@@ -57,6 +57,7 @@ class TestMpcHubConnections(unittest.TestCase):
             auth.verify_json(connection)
             # FIXME validate pubkey matches hub deposit script payer
 
+    @unittest.skip("FIXME setup mock counterpartylib")
     def test_filters_assets(self):
 
         connection = self.data["connections"]["alpha"]

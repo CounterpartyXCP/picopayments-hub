@@ -5,6 +5,7 @@ PY := env/bin/python
 PEP8 := env/bin/pep8
 AUTOPEP8 := env/bin/autopep8
 COVERAGE := env/bin/coverage
+PYTEST := env/bin/py.test
 USE_WHEELS := 0
 ifeq ($(USE_WHEELS), 0)
   WHEEL_INSTALL_ARGS := # void
@@ -86,9 +87,10 @@ test: setup
 	$(PEP8) picopayments
 	$(PEP8) examples
 	$(PEP8) tests
-	$(COVERAGE) run --source=picopayments setup.py test
-	$(COVERAGE) html
-	$(COVERAGE) report --fail-under=90
+	$(PYTEST) --ignore=env --verbose --cov-config=.coveragerc --cov-report=term-missing --cov=./picopayments -vv
+	# $(COVERAGE) run --source=picopayments setup.py test
+	# $(COVERAGE) html
+	# $(COVERAGE) report --fail-under=90
 
 
 publish: test

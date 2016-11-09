@@ -3,15 +3,15 @@ import json
 import shutil
 import unittest
 import tempfile
-from pycoin.key.validate import is_address_valid
-from picopayments import lib
 from picopayments import srv
+from picopayments_client.mph import Mph
+from tests.mock import MockAPI
 
 
-CP_URL = os.environ.get("COUNTERPARTY_URL", "http://139.59.214.74:14000/api/")
+CP_URL = os.environ.get("COUNTERPARTY_URL", "http://127.0.0.1:14000/api/")
 
 
-class TestLIB(unittest.TestCase):
+class TestUsrClientSerialization(unittest.TestCase):
 
     def setUp(self):
         self.tempdir = tempfile.mkdtemp(prefix="picopayments_test_")
@@ -28,19 +28,10 @@ class TestLIB(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tempdir)
 
-    def test_get_funding_addresses(self):
-        assets = ["XCP"]
-        result = lib.get_funding_addresses(assets)
-        assert(assets == list(result.keys()))
-        self.assertTrue(all([
-            is_address_valid(a, allowable_netcodes=["XTN"])
-            for a in result.values()
-        ]))
-
-    def test_validate_read_unknown_asset(self):
-
-        terms = lib.terms(["deadbeef"])
-        self.assertEqual(terms, {})
+    def test_standard_usage(self):
+        connection = self.data["connections"]["alpha"]
+        client = Mph.deserialize(data=connection, api_cls=MockAPI)
+        self.assertEqual(connection, client.serialize())
 
 
 if __name__ == "__main__":

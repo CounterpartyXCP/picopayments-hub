@@ -8,7 +8,7 @@ from picopayments_client.mph import Mph
 from tests.mock import MockAPI
 
 
-CP_URL = os.environ.get("COUNTERPARTY_URL", "http://139.59.214.74:14000/api/")
+CP_URL = os.environ.get("COUNTERPARTY_URL", "http://127.0.0.1:14000/api/")
 
 
 class TestUsr(unittest.TestCase):

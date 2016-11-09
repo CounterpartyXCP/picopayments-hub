@@ -1,9 +1,7 @@
 import os
-import time
 import shutil
 import unittest
 import tempfile
-import threading
 from pycoin.key import validate
 from picopayments import srv
 from picopayments import etc
@@ -11,7 +9,7 @@ from picopayments import lib
 from picopayments import __version__
 
 
-CP_URL = os.environ.get("COUNTERPARTY_URL", "http://139.59.214.74:14000/api/")
+CP_URL = os.environ.get("COUNTERPARTY_URL", "http://127.0.0.1:14000/api/")
 
 
 class TestSRV(unittest.TestCase):

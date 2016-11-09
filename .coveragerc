@@ -1,0 +1,7 @@
+# NOTE: See <http://nedbatchelder.com/code/coverage/>.
+[run]
+branch = True
+[report]
+omit =
+	tests/*
+precision = 2
