@@ -13,5 +13,6 @@ cachetools==1.1.6
 Flask==0.11
 counterparty-lib==9.55.0
 jsonschema>=2.5.1
+micropayment-core>=0.4.0
 pyOpenSSL>=16.0.0
 pyelliptic>=1.5.7
