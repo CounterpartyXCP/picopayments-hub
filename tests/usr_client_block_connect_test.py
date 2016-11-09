@@ -30,6 +30,7 @@ class TestUsrClientConnect(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tempdir)
 
+    @unittest.skip("FIXME setup mock counterpartylib")
     def test_standard_usage(self):
         verify_ssl_cert = False
         auth_wif = self.data["funded"]["alpha"]["wif"]
