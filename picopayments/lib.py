@@ -583,7 +583,6 @@ def hub_connections(handles, assets):
         if handles is not None and connection["handle"] not in handles:
             continue
         wif = connection.pop("wif")
-        raise Exception("{0} {1}".format(wif, type(wif)))
         connection = auth.sign_json(connection, keys.wif_to_privkey(wif))
         connections.append(connection)
     return connections
