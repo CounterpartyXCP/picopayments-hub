@@ -8,7 +8,7 @@ from picopayments import etc
 from picopayments import verify
 from picopayments import lib
 from picopayments_client import auth
-from picopayments_client.rpc import http_call
+from picopayments_client.rpc import jsonrpc_call
 from micropayment_core import keys
 
 
@@ -86,7 +86,7 @@ def mph_sync(**kwargs):
 
 
 def _cplib_call(method, params={}):
-    return http_call(
+    return jsonrpc_call(
         etc.counterparty_url, method, params=params,
         username=etc.counterparty_username,
         password=etc.counterparty_password

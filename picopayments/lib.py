@@ -577,9 +577,7 @@ def terms(assets=None):
 
 def hub_connections(handles, assets):
     connections = []
-    all_connections = db.hub_connections()
-    print("CONNECTIONS:", json.dumps(all_connections, indent=2))
-    for connection in all_connections:
+    for connection in db.hub_connections():
         if assets is not None and connection["asset"] not in assets:
             continue
         if handles is not None and connection["handle"] not in handles:
