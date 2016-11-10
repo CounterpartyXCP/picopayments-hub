@@ -27,7 +27,7 @@ BOB_ADDRESS = address_from_wif(BOB_WIF)
 
 
 @pytest.mark.usefixtures("picopayments_server")
-def test_get_balance_confirmed():
+def test_commit_tx_alpha():
 
     rawtx = api.create_send(**{
         'source': ALICE_ADDRESS,
@@ -46,3 +46,25 @@ def test_get_balance_confirmed():
     asset_balance, btc_balance = get_balance(dispatcher, "XCP", BOB_ADDRESS)
     assert asset_balance == 33
     assert btc_balance == 42
+
+
+@pytest.mark.usefixtures("picopayments_server")
+def test_commit_tx_beta():
+
+    rawtx = api.create_send(**{
+        'source': ALICE_ADDRESS,
+        'destination': BOB_ADDRESS,
+        'asset': 'XCP',
+        'quantity': 13,
+        'regular_dust_size': 33
+    })
+
+    asset_balance, btc_balance = get_balance(dispatcher, "XCP", BOB_ADDRESS)
+    assert asset_balance == 0
+    assert btc_balance == 0
+
+    api.sendrawtransaction(tx_hex=rawtx)
+
+    asset_balance, btc_balance = get_balance(dispatcher, "XCP", BOB_ADDRESS)
+    assert asset_balance == 13
+    assert btc_balance == 33
