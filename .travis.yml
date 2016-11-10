@@ -1,8 +1,7 @@
 language: python
 python:
   - "3.3"
-  - "3.4.3"
-  - "3.4.4"
+  - "3.4"
   - "3.5"
   # "2.7"
   # "pypy"
@@ -25,20 +24,20 @@ install:
   - pip install werkzeug==0.11.10
   - pip install colorlog==2.7.0
   - pip install json-rpc==1.10.3
-  - pip install six>=1.10.0
+  - pip install six==1.10.0
   - pip install pycoin==0.70
   - pip install pycrypto==2.6.1
   - pip install pysha3==0.3
   - pip install pytest==2.9.1
   - pip install pytest-cov==2.2.1
   - pip install jsonschema==2.5.1
-  - pip install micropayment-core>=0.4.0
+  - pip install micropayment-core==0.4.0
   - pip install python-bitcoinlib==0.5.1
   - pip install requests==2.10.0
   - pip install tendo==0.2.8
   - pip install xmltodict==0.10.1
   - pip install cachetools==1.1.6
-  - wget https://transfer.sh/5sgav/counterparty-lib-9.55.0-py3-none-any.whl
+  - wget https://transfer.sh/16YB9/counterparty-lib-9.55.0-py3-none-any.whl
   - pip install --use-wheel --no-index --find-links=$PWD counterparty-lib
   - pip install -r requirements.txt
   - pip install -r requirements_tests.txt
