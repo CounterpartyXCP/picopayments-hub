@@ -5,7 +5,7 @@ import pytest
 # from counterpartylib.test import conftest
 
 from counterpartylib.test.util_test import CURR_DIR as CPLIB_TESTDIR
-from picopayments_client import mph
+from picopayments_client.mph import Mph
 from tests import util
 
 
@@ -16,6 +16,6 @@ FIXTURE_DB = tempfile.gettempdir() + '/fixtures.unittest_fixture.db'
 @pytest.mark.usefixtures("picopayments_server")
 def test_standard_usage():
     bob_wif = util.gen_funded_wif("XCP", 1000000, 1000000)
-    client = mph.Mph(util.MockAPI(auth_wif=bob_wif))
+    client = Mph(util.MockAPI(auth_wif=bob_wif))
     txid = client.connect(1337, 65535, asset="XCP", dryrun=True)
     assert txid is not None

@@ -9,13 +9,13 @@ from counterpartylib.test.fixtures.params import DP
 
 class MockAPI(object):
 
-    def __init__(self, url=None, auth_wif=None, username=None,
-                 password=None, verify_ssl_cert=True):
-        self.url = "http://127.0.0.1:15000/api/"
+    def __init__(self, url="http://127.0.0.1:15000/api/", auth_wif=None,
+                 username=None, password=None, verify_ssl_cert=False):
+        self.url = url
         self.auth_wif = auth_wif
         self.username = username
         self.password = password
-        self.verify_ssl_cert = False
+        self.verify_ssl_cert = verify_ssl_cert
 
     def __getattribute__(self, name):
         props = ["url", "auth_wif", "username", "password", "verify_ssl_cert"]

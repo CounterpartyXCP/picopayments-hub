@@ -1,37 +1,26 @@
-import os
-import json
-import shutil
-import unittest
 import tempfile
-from picopayments import srv
+import pytest
+
+# this is require near the top to do setup of the test suite
+# from counterpartylib.test import conftest
+
+from counterpartylib.test.util_test import CURR_DIR as CPLIB_TESTDIR
 from picopayments_client.mph import Mph
-from tests.util import MockAPI
+from tests import util
 
 
-CP_URL = os.environ.get("COUNTERPARTY_URL", "http://127.0.0.1:14000/api/")
+FIXTURE_SQL_FILE = CPLIB_TESTDIR + '/fixtures/scenarios/unittest_fixture.sql'
+FIXTURE_DB = tempfile.gettempdir() + '/fixtures.unittest_fixture.db'
 
 
-class TestUsrClientSerialization(unittest.TestCase):
+@pytest.mark.usefixtures("picopayments_server")
+def test_standard_usage():
+    bob_wif = util.gen_funded_wif("XCP", 1000000, 1000000)
 
-    def setUp(self):
-        self.tempdir = tempfile.mkdtemp(prefix="picopayments_test_")
-        self.basedir = os.path.join(self.tempdir, "basedir")
-        shutil.copytree("tests/fixtures", self.basedir)
-        srv.main([
-            "--testnet",
-            "--basedir={0}".format(self.basedir),
-            "--cp_url={0}".format(CP_URL)
-        ], serve=False)
+    client_alpha = Mph(util.MockAPI(auth_wif=bob_wif))
+    serialized_alpha = client_alpha.serialize()
 
-    def tearDown(self):
-        shutil.rmtree(self.tempdir)
+    client_beta = Mph.deserialize(data=serialized_alpha, api_cls=util.MockAPI)
+    serialized_beta = client_beta.serialize()
 
-    @unittest.skip("FIXME")
-    def test_standard_usage(self):
-        connection = self.data["connections"]["alpha"]
-        client = Mph.deserialize(data=connection, api_cls=MockAPI)
-        self.assertEqual(connection, client.serialize())
-
-
-if __name__ == "__main__":
-    unittest.main()
+    assert serialized_alpha == serialized_beta
