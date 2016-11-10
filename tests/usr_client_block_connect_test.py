@@ -14,7 +14,7 @@ FIXTURE_DB = tempfile.gettempdir() + '/fixtures.unittest_fixture.db'
 
 
 @pytest.mark.usefixtures("picopayments_server")
-def test_standard_usage():
+def test_connect():
     bob_wif = util.gen_funded_wif("XCP", 1000000, 1000000)
     client = Mph(util.MockAPI(auth_wif=bob_wif))
     txid = client.connect(1337, 65535, asset="XCP", dryrun=True)

@@ -1,46 +1,28 @@
-import os
-import shutil
-import unittest
 import tempfile
-from picopayments import srv
+import pytest
+
+# this is require near the top to do setup of the test suite
+# from counterpartylib.test import conftest
+
 from picopayments import etc
-from micropayment_core import keys
+from counterpartylib.test.util_test import CURR_DIR as CPLIB_TESTDIR
 from picopayments_client.mpc import Mpc
-from tests.util import MockAPI
+from tests import util
+from micropayment_core import keys
 
 
-CP_URL = os.environ.get("COUNTERPARTY_URL", "http://127.0.0.1:14000/api/")
+FIXTURE_SQL_FILE = CPLIB_TESTDIR + '/fixtures/scenarios/unittest_fixture.sql'
+FIXTURE_DB = tempfile.gettempdir() + '/fixtures.unittest_fixture.db'
 
 
-class TestUsrClientBlockSend(unittest.TestCase):
-
-    def setUp(self):
-        self.tempdir = tempfile.mkdtemp(prefix="picopayments_test_")
-        self.basedir = os.path.join(self.tempdir, "basedir")
-        shutil.copytree("tests/fixtures", self.basedir)
-        srv.main([
-            "--testnet",
-            "--basedir={0}".format(self.basedir),
-            "--cp_url={0}".format(CP_URL)
-        ], serve=False)
-
-    def tearDown(self):
-        shutil.rmtree(self.tempdir)
-
-    @unittest.skip("FIXME setup mock counterpartylib")
-    def test_standard_usage(self):
-        client = Mpc(MockAPI(verify_ssl_cert=False))
-        src_wif = self.data["funded"]["gamma"]["wif"]
-        asset = self.data["funded"]["gamma"]["asset"]
-        wif = keys.generate_wif(netcode=etc.netcode)
-        dest_address = keys.address_from_wif(wif)
-        quantity = 42
-        txid = client.block_send(
-            source=src_wif, destination=dest_address, asset=asset,
-            quantity=quantity, dryrun=True
-        )
-        self.assertIsNotNone(txid)
-
-
-if __name__ == "__main__":
-    unittest.main()
+@pytest.mark.usefixtures("picopayments_server")
+def test_block_send():
+    alice_wif = util.gen_funded_wif("XCP", 1000000, 1000000)
+    client = Mpc(util.MockAPI(auth_wif=alice_wif))
+    bob_wif = keys.generate_wif(netcode=etc.netcode)
+    bob_address = keys.address_from_wif(bob_wif)
+    txid = client.block_send(
+        source=alice_wif, destination=bob_address, asset="XCP",
+        quantity=42, dryrun=True
+    )
+    assert txid is not None

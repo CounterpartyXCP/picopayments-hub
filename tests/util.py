@@ -1,5 +1,6 @@
 import copy
 from picopayments import api
+from picopayments import etc
 from picopayments_client import auth
 from micropayment_core import keys
 from micropayment_core.keys import generate_wif
@@ -38,7 +39,7 @@ class MockAPI(object):
 def gen_funded_wif(asset, asset_quantity, btc_quantity):
     src_wif = DP["addresses"][0][2]
     src_address = address_from_wif(src_wif)
-    dest_wif = generate_wif(netcode="XTN")
+    dest_wif = generate_wif(netcode=etc.netcode)
     dest_address = address_from_wif(dest_wif)
     rawtx = api.create_send(**{
         'source': src_address,

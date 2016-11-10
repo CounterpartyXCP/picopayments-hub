@@ -14,10 +14,10 @@ FIXTURE_DB = tempfile.gettempdir() + '/fixtures.unittest_fixture.db'
 
 
 @pytest.mark.usefixtures("picopayments_server")
-def test_standard_usage():
-    bob_wif = util.gen_funded_wif("XCP", 1000000, 1000000)
+def test_serialization():
+    auth_wif = util.gen_funded_wif("XCP", 1000000, 1000000)
 
-    client_alpha = Mph(util.MockAPI(auth_wif=bob_wif))
+    client_alpha = Mph(util.MockAPI(auth_wif=auth_wif))
     serialized_alpha = client_alpha.serialize()
 
     client_beta = Mph.deserialize(data=serialized_alpha, api_cls=util.MockAPI)
