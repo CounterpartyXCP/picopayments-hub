@@ -1,7 +1,13 @@
+import os
 import copy
 from picopayments import api
 from picopayments_client import auth
 from micropayment_core import keys
+
+
+TESTS_DIR = os.path.dirname(
+    os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__)))
+)
 
 
 class MockAPI(object):

@@ -1,5 +1,4 @@
 import os
-import json
 import unittest
 import shutil
 import tempfile
@@ -22,8 +21,6 @@ class TestDB(unittest.TestCase):
             "--basedir={0}".format(self.basedir),
             "--cp_url={0}".format(CP_URL)
         ], serve=False)
-        with open(os.path.join(self.basedir, "data.json")) as fp:
-            self.data = json.load(fp)
 
     def tearDown(self):
         shutil.rmtree(self.tempdir)
