@@ -1,18 +1,27 @@
 import os
-import shutil
-import unittest
-import tempfile
 import jsonschema
+import tempfile
+import pytest
+
+# this is require near the top to do setup of the test suite
+# from counterpartylib.test import conftest
+
+from counterpartylib.test.util_test import CURR_DIR as CPLIB_TESTDIR
+from counterpartylib.test.fixtures.params import DP
+from micropayment_core.keys import address_from_wif
+from picopayments import lib
 from picopayments import api
 from picopayments_client import auth
-from picopayments import lib
-from picopayments import srv
 from picopayments import err
 from micropayment_core import util
 from micropayment_core import keys
 
 
-CP_URL = os.environ.get("COUNTERPARTY_URL", "http://127.0.0.1:14000/api/")
+FIXTURE_SQL_FILE = CPLIB_TESTDIR + '/fixtures/scenarios/unittest_fixture.sql'
+FIXTURE_DB = tempfile.gettempdir() + '/fixtures.unittest_fixture.db'
+ASSET = "XCP"
+FUNDING_WIF = DP["addresses"][0][2]  # 91950000000 XTC, 199909140 Satoshis
+FUNDING_ADDRESS = address_from_wif(FUNDING_WIF)
 
 
 REQUEST_RESULT_SCHEMA = {
@@ -31,80 +40,70 @@ REQUEST_RESULT_SCHEMA = {
 }
 
 
-class TestMpcHubRequest(unittest.TestCase):
+@pytest.mark.usefixtures("picopayments_server")
+def test_standard_usage_xcp():
+    asset = "XCP"
+    client_key = lib.create_key(asset)
+    secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
+    params = {"asset": asset, "spend_secret_hash": secret_hash}
+    privkey = keys.wif_to_privkey(client_key["wif"])
+    params = auth.sign_json(params, privkey)
+    result = api.mph_request(**params)
 
-    def setUp(self):
-        self.tempdir = tempfile.mkdtemp(prefix="picopayments_test_")
-        self.basedir = os.path.join(self.tempdir, "basedir")
-        shutil.copytree("tests/fixtures", self.basedir)
-        srv.main([
-            "--testnet",
-            "--basedir={0}".format(self.basedir),
-            "--cp_url={0}".format(CP_URL)
-        ], serve=False)
+    assert result is not None
+    jsonschema.validate(result, REQUEST_RESULT_SCHEMA)
 
-    def tearDown(self):
-        shutil.rmtree(self.tempdir)
 
-    @unittest.skip("FIXME setup mock counterpartylib")
-    def test_standard_usage_xcp(self):
-        asset = "XCP"
+@pytest.mark.usefixtures("picopayments_server")
+def test_validate_asset_in_terms():
+
+    try:
+        asset = "DIVISIBLE"
         client_key = lib.create_key(asset)
         secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
         params = {"asset": asset, "spend_secret_hash": secret_hash}
         privkey = keys.wif_to_privkey(client_key["wif"])
         params = auth.sign_json(params, privkey)
-        result = api.mph_request(**params)
+        api.mph_request(**params)
 
-        self.assertIsNotNone(result)
-        jsonschema.validate(result, REQUEST_RESULT_SCHEMA)
-
-    @unittest.skip("FIXME setup mock counterpartylib")
-    def test_validate_asset_in_terms(self):
-
-        def func():
-            asset = "TESTASSETONE"
-            client_key = lib.create_key(asset)
-            secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
-            params = {"asset": asset, "spend_secret_hash": secret_hash}
-            privkey = keys.wif_to_privkey(client_key["wif"])
-            params = auth.sign_json(params, privkey)
-            api.mph_request(**params)
-
-        self.assertRaises(err.AssetNotInTerms, func)
-
-    @unittest.skip("FIXME setup mock counterpartylib")
-    def test_validate_asset_exists(self):
-
-        def func():
-            asset = "NONEXISTINGASSET"
-            client_key = lib.create_key(asset)
-            secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
-            params = {"asset": asset, "spend_secret_hash": secret_hash}
-            privkey = keys.wif_to_privkey(client_key["wif"])
-            params = auth.sign_json(params, privkey)
-            api.mph_request(**params)
-
-        self.assertRaises(err.AssetDoesNotExist, func)
-
-    @unittest.skip("FIXME setup mock counterpartylib")
-    def test_validate_url(self):
-
-        def func():
-            asset = "XCP"
-            client_key = lib.create_key(asset)
-            secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
-            params = {
-                "asset": asset,
-                "spend_secret_hash": secret_hash,
-                "hub_rpc_url": "?? invalid url ??",
-            }
-            privkey = keys.wif_to_privkey(client_key["wif"])
-            params = auth.sign_json(params, privkey)
-            api.mph_request(**params)
-
-        self.assertRaises(err.InvalidUrl, func)
+        assert False
+    except err.AssetNotInTerms:
+        assert True
 
 
-if __name__ == "__main__":
-    unittest.main()
+@pytest.mark.usefixtures("picopayments_server")
+def test_validate_asset_exists():
+
+    try:
+        asset = "NONEXISTINGASSET"
+        client_key = lib.create_key(asset)
+        secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
+        params = {"asset": asset, "spend_secret_hash": secret_hash}
+        privkey = keys.wif_to_privkey(client_key["wif"])
+        params = auth.sign_json(params, privkey)
+        api.mph_request(**params)
+
+        assert False
+    except err.AssetDoesNotExist:
+        assert True
+
+
+@pytest.mark.usefixtures("picopayments_server")
+def test_validate_url():
+
+    try:
+        asset = "XCP"
+        client_key = lib.create_key(asset)
+        secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
+        params = {
+            "asset": asset,
+            "spend_secret_hash": secret_hash,
+            "hub_rpc_url": "?? invalid url ??",
+        }
+        privkey = keys.wif_to_privkey(client_key["wif"])
+        params = auth.sign_json(params, privkey)
+        api.mph_request(**params)
+
+        assert False
+    except err.InvalidUrl:
+        assert True
