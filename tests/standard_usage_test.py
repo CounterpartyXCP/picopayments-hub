@@ -100,17 +100,20 @@ def test_standard_usage(server_db):
 
     assert alpha.close() is not None  # commit txid returned (block created)
     assert len(alpha.update()) == 0  # payout delay not yet passed
-    util_test.create_next_block(server_db)  # create block and let delay pass
+    for i in range(alpha.c2h_commit_delay_time - 1):
+        util_test.create_next_block(server_db)  # create block, let delay pass
     assert len(alpha.update()) == 1  # payout txid
 
     assert beta.close() is not None  # commit txid returned (block created)
     assert len(beta.update()) == 0  # payout delay not yet passed
-    util_test.create_next_block(server_db)  # create block and let delay pass
+    for i in range(beta.c2h_commit_delay_time - 1):
+        util_test.create_next_block(server_db)  # create block, let delay pass
     assert len(beta.update()) == 1  # payout txid
 
     assert gamma.close() is not None  # commit txid returned (block created)
     assert len(gamma.update()) == 0  # payout delay not yet passed
-    util_test.create_next_block(server_db)  # create block and let delay pass
+    for i in range(gamma.c2h_commit_delay_time - 1):
+        util_test.create_next_block(server_db)  # create block, let delay pass
     assert len(gamma.update()) == 1  # payout txid
 
     # hub close connections cron
