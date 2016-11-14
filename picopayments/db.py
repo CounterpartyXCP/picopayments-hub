@@ -33,7 +33,6 @@ _SET_PAYMENT_NOTIFIED = sql.load("set_payment_notified")
 _SET_REVOKE_NOTIFIED = sql.load("set_revoke_notified")
 
 
-# FIXME rename get call to get_*
 key = sql.make_fetchone("key")
 get_secret = sql.make_fetchone("get_secret")
 keys = sql.make_fetchall("keys")

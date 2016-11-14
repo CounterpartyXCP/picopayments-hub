@@ -90,14 +90,18 @@ def test_standard_usage(server_db):
         "token": "0003"
     }]
 
+    # multiple syncs/commtis from single client
+    alpha.micro_send(beta.handle, 1, "0004")
+    assert alpha.sync() == []
+
     # get after status
     alpha_after_status = alpha.get_status()
     beta_after_status = beta.get_status()
     gamma_after_status = gamma.get_status()
 
     # compare statuses
-    alpha_after_status["balance"] == alpha_before_status["balance"] + 29
-    beta_after_status["balance"] == beta_before_status["balance"] - 39
+    alpha_after_status["balance"] == alpha_before_status["balance"] + 27
+    beta_after_status["balance"] == beta_before_status["balance"] - 40
     gamma_after_status["balance"] == gamma_before_status["balance"] + 5
 
     # close alpha payment channel

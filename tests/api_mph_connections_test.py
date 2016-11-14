@@ -1,16 +1,25 @@
-import os
-import shutil
-import unittest
 import tempfile
+import pytest
+
+# this is require near the top to do setup of the test suite
+# from counterpartylib.test import conftest
+
+from counterpartylib.test.util_test import CURR_DIR as CPLIB_TESTDIR
+from counterpartylib.test.fixtures.params import DP
+from micropayment_core.keys import address_from_wif
+from picopayments_client.mph import Mph
+from picopayments import lib
+from tests import util
 import jsonschema
 from picopayments import api
 from picopayments_client import auth
-from picopayments import srv
 
 
-CP_URL = os.environ.get("COUNTERPARTY_URL", "http://127.0.0.1:14000/api/")
-
-
+FIXTURE_SQL_FILE = CPLIB_TESTDIR + '/fixtures/scenarios/unittest_fixture.sql'
+FIXTURE_DB = tempfile.gettempdir() + '/fixtures.unittest_fixture.db'
+ASSET = "XCP"
+FUNDING_WIF = DP["addresses"][0][2]  # XTC: 91950000000, BTC: 199909140
+FUNDING_ADDRESS = address_from_wif(FUNDING_WIF)
 CONNECTION_RESULT_SCHEMA = {
     "type": "object",
     "properties": {
@@ -31,63 +40,122 @@ CONNECTION_RESULT_SCHEMA = {
 }
 
 
-class TestMpcHubConnections(unittest.TestCase):
+@pytest.mark.usefixtures("picopayments_server")
+def test_all(server_db):
 
-    def setUp(self):
-        self.tempdir = tempfile.mkdtemp(prefix="picopayments_test_")
-        self.basedir = os.path.join(self.tempdir, "basedir")
-        shutil.copytree("tests/fixtures", self.basedir)
-        srv.main([
-            "--testnet",
-            "--basedir={0}".format(self.basedir),
-            "--cp_url={0}".format(CP_URL)
-        ], serve=False)
+    # fund server
+    for i in range(3):
+        address = lib.get_funding_addresses([ASSET])[ASSET]
+        rawtx = api.create_send(**{
+            'source': FUNDING_ADDRESS,
+            'destination': address,
+            'asset': ASSET,
+            'quantity': 1000000,
+            'regular_dust_size': 1000000
+        })
+        api.sendrawtransaction(tx_hex=rawtx)
 
-    def tearDown(self):
-        shutil.rmtree(self.tempdir)
+    # connect clients
+    assert len(api.mph_connections()) == 0
+    clients = []
+    for i in range(3):
+        bob_wif = util.gen_funded_wif(ASSET, 1000000, 1000000)
+        client = Mph(util.MockAPI(auth_wif=bob_wif))
+        txid = client.connect(1000000, 65535, asset=ASSET)
+        assert txid is not None
 
-    @unittest.skip("FIXME")
-    def test_all(self):
-        connections = api.mph_connections()
-        self.assertTrue(len(connections) == 7)
-        for connection in connections:
-            jsonschema.validate(connection, CONNECTION_RESULT_SCHEMA)
-            auth.verify_json(connection)
-            # FIXME validate pubkey matches hub deposit script payer
+        status = client.get_status()
+        assert status["balance"] == 1000000
+        assert status["c2h_deposit_ttl"] is not None
+        assert status["h2c_deposit_ttl"] is None  # hub deposit not yet made
+        clients.append(client)
 
-    @unittest.skip("FIXME setup mock counterpartylib")
-    def test_filters_assets(self):
-
-        connection = self.data["connections"]["alpha"]
-        asset = connection["c2h_state"]["asset"]
-        connections = api.mph_connections(assets=[asset])
-        self.assertTrue(len(connections) == 7)
-        for connection in connections:
-            self.assertEqual(connection["asset"], asset)
-
-        connection = self.data["connections"]["alpha"]
-        asset = connection["c2h_state"]["asset"]
-        connections = api.mph_connections(assets=["XCP"])
-        self.assertTrue(len(connections) == 0)
-
-    @unittest.skip("FIXME")
-    def test_filters_handles(self):
-        handles = [
-            self.data["connections"]["alpha"]["handle"],
-            self.data["connections"]["beta"]["handle"],
-            self.data["connections"]["gamma"]["handle"]
-        ]
-        connections = api.mph_connections(handles=handles)
-        self.assertTrue(len(connections) == 3)
-        for connection in connections:
-            self.assertIn(connection["handle"], handles)
-
-    def test_verifies_assets(self):
-        pass  # FIXME test it
-
-    def test_verifies_handles(self):
-        pass  # FIXME test it
+    connections = api.mph_connections()
+    assert len(connections) == 3
+    for connection in connections:
+        jsonschema.validate(connection, CONNECTION_RESULT_SCHEMA)
+        auth.verify_json(connection)
+        # FIXME validate pubkey matches hub deposit script payer
 
 
-if __name__ == "__main__":
-    unittest.main()
+@pytest.mark.usefixtures("picopayments_server")
+def test_filters_assets():
+
+    # fund server
+    for i in range(3):
+        address = lib.get_funding_addresses([ASSET])[ASSET]
+        rawtx = api.create_send(**{
+            'source': FUNDING_ADDRESS,
+            'destination': address,
+            'asset': ASSET,
+            'quantity': 1000000,
+            'regular_dust_size': 1000000
+        })
+        api.sendrawtransaction(tx_hex=rawtx)
+
+    # connect clients
+    assert len(api.mph_connections()) == 0
+    clients = []
+    for i in range(3):
+        bob_wif = util.gen_funded_wif(ASSET, 1000000, 1000000)
+        client = Mph(util.MockAPI(auth_wif=bob_wif))
+        txid = client.connect(1000000, 65535, asset=ASSET)
+        assert txid is not None
+
+        status = client.get_status()
+        assert status["balance"] == 1000000
+        assert status["c2h_deposit_ttl"] is not None
+        assert status["h2c_deposit_ttl"] is None  # hub deposit not yet made
+        clients.append(client)
+
+    connections = api.mph_connections(assets=[ASSET])
+    assert len(connections) == 3
+
+    connections = api.mph_connections(assets=["BTC"])
+    assert len(connections) == 0
+
+
+@pytest.mark.usefixtures("picopayments_server")
+def test_filters_handles():
+
+    # fund server
+    for i in range(3):
+        address = lib.get_funding_addresses([ASSET])[ASSET]
+        rawtx = api.create_send(**{
+            'source': FUNDING_ADDRESS,
+            'destination': address,
+            'asset': ASSET,
+            'quantity': 1000000,
+            'regular_dust_size': 1000000
+        })
+        api.sendrawtransaction(tx_hex=rawtx)
+
+    # connect clients
+    assert len(api.mph_connections()) == 0
+    clients = []
+    for i in range(3):
+        bob_wif = util.gen_funded_wif(ASSET, 1000000, 1000000)
+        client = Mph(util.MockAPI(auth_wif=bob_wif))
+        txid = client.connect(1000000, 65535, asset=ASSET)
+        assert txid is not None
+
+        status = client.get_status()
+        assert status["balance"] == 1000000
+        assert status["c2h_deposit_ttl"] is not None
+        assert status["h2c_deposit_ttl"] is None  # hub deposit not yet made
+        clients.append(client)
+    alpha, beta, gamma = clients
+
+    connections = api.mph_connections(handles=[alpha.handle, beta.handle])
+    assert len(connections) == 2
+
+    connections = api.mph_connections(handles=["deadbeef"])
+    assert len(connections) == 0
+
+
+def test_verifies_assets():
+    pass  # FIXME test it
+
+
+def test_verifies_handles():
+    pass  # FIXME test it
