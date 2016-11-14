@@ -13,9 +13,6 @@ from micropayment_core.keys import generate_wif
 from picopayments import api
 
 
-# from tests.util import MockAPI
-
-
 FIXTURE_SQL_FILE = CPLIB_TESTDIR + '/fixtures/scenarios/unittest_fixture.sql'
 FIXTURE_DB = tempfile.gettempdir() + '/fixtures.unittest_fixture.db'
 

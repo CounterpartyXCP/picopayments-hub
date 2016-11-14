@@ -21,8 +21,6 @@ def test_block_send():
     client = Mpc(util.MockAPI(auth_wif=alice_wif))
     bob_wif = keys.generate_wif(netcode=etc.netcode)
     bob_address = keys.address_from_wif(bob_wif)
-    txid = client.block_send(
-        source=alice_wif, destination=bob_address, asset="XCP",
-        quantity=42, dryrun=True
-    )
+    txid = client.block_send(source=alice_wif, destination=bob_address,
+                             asset="XCP", quantity=42)
     assert txid is not None

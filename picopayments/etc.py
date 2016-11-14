@@ -37,8 +37,6 @@ database_lock = RLock()
 # blockchain
 confirms = 1
 expire_clearance = 6  # only fund with x blocks clearance before expiration
-fee_per_kb = 25000  # FIXME get from bitcoind
-regular_dust_size = 5430  # FIXME get from bitcoind
 delay_time = 2
 
 

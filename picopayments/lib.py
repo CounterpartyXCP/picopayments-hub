@@ -13,7 +13,6 @@ from pycoin.serialize import b2h
 from micropayment_core import util
 from micropayment_core import keys
 from micropayment_core import scripts
-from counterpartylib.lib.micropayments.control import _get_fee_multaple
 from counterpartylib.lib.util import DictCache
 from picopayments_client.mpc import Mpc
 from picopayments import db
@@ -21,6 +20,10 @@ from picopayments_client import auth
 from picopayments import err
 from picopayments import etc
 from picopayments import sql
+
+
+# XXX remove _get_fee_multaple requirement
+from counterpartylib.lib.micropayments.control import _get_fee_multaple
 
 
 _TERMS_FP = pkg_resources.resource_stream("picopayments", "terms.json")
@@ -159,10 +162,7 @@ def complete_connection(handle, c2h_deposit_script,
 
 
 def find_key_with_funds(asset, asset_quantity, btc_quantity):
-    btc_quantity = btc_quantity + _get_fee_multaple(
-        factor=1, fee_per_kb=etc.fee_per_kb,
-        regular_dust_size=etc.regular_dust_size
-    )
+    btc_quantity = btc_quantity + _get_fee_multaple(factor=1)
     nearest = {"key": None, "available": 2100000000000000}
     for key in db.keys(asset=asset):
         address = key["address"]
@@ -345,32 +345,24 @@ def get_tx(txid):
     return api.getrawtransaction(tx_hash=txid)
 
 
-def publish(rawtx, dryrun=False):
+def publish(rawtx):
     from picopayments import api
-    if dryrun:
-        txid = util.gettxid(rawtx)
-    else:
-        txid = api.sendrawtransaction(tx_hex=rawtx)  # pragma: no cover
-    return txid
+    return api.sendrawtransaction(tx_hex=rawtx)  # pragma: no cover
 
 
-def send_funds(destination, asset, quantity, dryrun=False):
+def send_funds(destination, asset, quantity):
     from picopayments import api
-    extra_btc = _get_fee_multaple(
-        factor=3, fee_per_kb=etc.fee_per_kb,
-        regular_dust_size=etc.regular_dust_size
-    )
+    extra_btc = _get_fee_multaple(factor=3)
     key = find_key_with_funds(asset, quantity, extra_btc)
     if key is None:
         raise err.InsufficientFunds(asset, quantity)
     unsigned_rawtx = api.locked_create_send(
         source=key["address"], destination=destination, asset=asset,
-        disable_utxo_locks=dryrun,  # only disable if dryrun / testing
         regular_dust_size=extra_btc, quantity=quantity
     )
     _LOCKS[key["address"]] = cachetools.TTLCache(_LOCKS_MAX, _LOCKS_TTL)
     signed_rawtx = scripts.sign_deposit(get_tx, key["wif"], unsigned_rawtx)
-    return publish(signed_rawtx, dryrun=dryrun)
+    return publish(signed_rawtx)
 
 
 def get_transactions(address):

@@ -3,9 +3,7 @@ import shutil
 import unittest
 import tempfile
 from picopayments import srv
-
-
-CP_URL = os.environ.get("COUNTERPARTY_URL", "http://127.0.0.1:14000/api/")
+from counterpartylib.lib import config
 
 
 class TestVirginSetup(unittest.TestCase):
@@ -16,7 +14,7 @@ class TestVirginSetup(unittest.TestCase):
         srv.main([
             "--testnet",
             "--basedir={0}".format(self.basedir),
-            "--cp_url={0}".format(CP_URL)
+            "--cp_url={0}".format(config.RPC)
         ], serve=False)
 
     def tearDown(self):

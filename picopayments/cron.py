@@ -14,7 +14,7 @@ from picopayments_client.mpc import Mpc
 # FIXME use http interface to ensure its called in the same process
 
 
-def fund_deposits(dryrun=False):
+def fund_deposits():
     """Fund or top off open channels."""
     with etc.database_lock:
         deposits = []
@@ -37,6 +37,8 @@ def fund_deposits(dryrun=False):
                 continue  # ignore if expires soon
             if lib.has_unconfirmed_transactions(c2h_deposit_address):
                 continue  # ignore if unconfirmed transaction inputs/outputs
+            if api.mpc_published_commits(state=c2h_state):
+                continue  # ignore if c2h commit published
 
             # load hub to client data
             h2c_mpc_id = hub_connection["h2c_channel_id"]
@@ -49,6 +51,8 @@ def fund_deposits(dryrun=False):
                 continue  # ignore if expires soon
             if lib.has_unconfirmed_transactions(h2c_deposit_address):
                 continue  # ignore if unconfirmed transaction inputs/outputs
+            if api.mpc_published_commits(state=h2c_state):
+                continue  # ignore if h2c commit published
 
             # fund hub to client if needed
             deposit_max = terms["deposit_max"]
@@ -59,8 +63,7 @@ def fund_deposits(dryrun=False):
                 target = int(c2h_deposit_balance * deposit_ratio)
             quantity = target - h2c_deposit_balance
             if quantity > 0:
-                txid = lib.send_funds(h2c_deposit_address, asset,
-                                      quantity, dryrun=dryrun)
+                txid = lib.send_funds(h2c_deposit_address, asset, quantity)
                 deposits.append({
                     "txid": txid,
                     "asset": asset,
@@ -72,7 +75,7 @@ def fund_deposits(dryrun=False):
         return deposits
 
 
-def close_connections(dryrun=False):
+def close_connections():
     """Close connections almost expired and partially closed by client."""
     with etc.database_lock:
         closed_connections = []
@@ -87,14 +90,10 @@ def close_connections(dryrun=False):
             # connection expired or  commit published
             c2h_expired = lib.is_expired(c2h_state, etc.expire_clearance)
             h2c_expired = lib.is_expired(h2c_state, etc.expire_clearance)
-            commit_published = api.mpc_get_published_commits(
-                state=h2c_state
-            )
+            commit_published = api.mpc_published_commits(state=h2c_state)
             if c2h_expired or h2c_expired or commit_published:
                 db.set_connection_closed(handle=hub_connection["handle"])
-                commit_txid = Mpc(api).finalize_commit(
-                    lib.get_wif, c2h_state, dryrun=dryrun
-                )
+                commit_txid = Mpc(api).finalize_commit(lib.get_wif, c2h_state)
                 closed_connections.append({
                     "handle": hub_connection["handle"],
                     "commit_txid": commit_txid
@@ -104,7 +103,7 @@ def close_connections(dryrun=False):
         return closed_connections
 
 
-def recover_funds(dryrun=False):
+def recover_funds():
     """Recover funds where possible"""
     with etc.database_lock:
         txs = []
@@ -117,7 +116,7 @@ def recover_funds(dryrun=False):
             h2c_state = db.load_channel_state(h2c_mpc_id, asset, cursor=cursor)
             txs += Mpc(api).full_duplex_recover_funds(
                 lib.get_wif, lib.get_secret,
-                c2h_state, h2c_state, dryrun=dryrun
+                c2h_state, h2c_state
             )
         return txs
 
@@ -128,10 +127,9 @@ def collect_garbage():
         pass
 
 
-def run_all(dryrun=False):
+def run_all():
     with etc.database_lock:
-        print("RUNNING THE FUCKING CRONS")
-        close_connections(dryrun=dryrun)
-        recover_funds(dryrun=dryrun)
-        fund_deposits(dryrun=dryrun)
+        close_connections()
+        recover_funds()
+        fund_deposits()
         collect_garbage()

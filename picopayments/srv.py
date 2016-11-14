@@ -51,9 +51,8 @@ _stop_cron_flag = threading.Event()
 
 def _cron_loop():
     while not _stop_cron_flag.isSet():
-        cron.run_all(dryrun=False)
+        cron.run_all()
         time.sleep(10)
-    print("STOP THE FUCKING CRONS")
 
 
 def _start_server(parsed):
@@ -85,7 +84,7 @@ def main(args, serve=True):
 
     if parsed["terms"]:
         return _show_terms()
-    if parsed["funding"]:
+    if parsed["funding_addresses"]:
         return _show_funding_addresses()
     if serve:
         return _start_server(parsed)

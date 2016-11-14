@@ -38,7 +38,7 @@ def parse(args):
 
     # show deposit address
     parser.add_argument(
-        '--funding', action='store_true',
+        '--funding_addresses', action='store_true',
         help="Show addresses, used to fund the given assets."
     )
 

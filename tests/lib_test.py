@@ -7,9 +7,6 @@ from picopayments import lib
 from picopayments import srv
 
 
-CP_URL = os.environ.get("COUNTERPARTY_URL", "http://127.0.0.1:14000/api/")
-
-
 class TestLIB(unittest.TestCase):
 
     def setUp(self):
@@ -19,7 +16,6 @@ class TestLIB(unittest.TestCase):
         srv.main([
             "--testnet",
             "--basedir={0}".format(self.basedir),
-            "--cp_url={0}".format(CP_URL)
         ], serve=False)
 
     def tearDown(self):
@@ -35,7 +31,6 @@ class TestLIB(unittest.TestCase):
         ]))
 
     def test_validate_read_unknown_asset(self):
-
         terms = lib.terms(["deadbeef"])
         self.assertEqual(terms, {})
 

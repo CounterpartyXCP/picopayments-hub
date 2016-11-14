@@ -6,6 +6,7 @@ import shutil
 import tempfile
 from picopayments import srv
 from picopayments import api
+from micropayment_core.util import gettxid
 from counterpartylib.lib import config
 from counterpartylib.test import util_test
 
@@ -26,9 +27,10 @@ def picopayments_server(request, server_db):
         "--cp_password={0}".format(config.RPC_PASSWORD)
     ], serve=False)
 
-    # monkeypatch sendrawtransaction
+    # monkeypatch sendrawtransaction to send tx and create new block
     def sendrawtransaction(tx_hex):
         util_test.insert_raw_transaction(tx_hex, server_db)
+        return gettxid(tx_hex)
     api.sendrawtransaction = sendrawtransaction
 
     def tear_down():

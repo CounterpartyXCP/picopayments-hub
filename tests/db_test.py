@@ -7,9 +7,6 @@ from picopayments import srv
 from picopayments import db
 
 
-CP_URL = os.environ.get("COUNTERPARTY_URL", "http://127.0.0.1:14000/api/")
-
-
 class TestDB(unittest.TestCase):
 
     def setUp(self):
@@ -19,7 +16,6 @@ class TestDB(unittest.TestCase):
         srv.main([
             "--testnet",
             "--basedir={0}".format(self.basedir),
-            "--cp_url={0}".format(CP_URL)
         ], serve=False)
 
     def tearDown(self):

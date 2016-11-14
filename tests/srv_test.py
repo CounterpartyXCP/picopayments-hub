@@ -9,9 +9,6 @@ from picopayments import lib
 from picopayments import __version__
 
 
-CP_URL = os.environ.get("COUNTERPARTY_URL", "http://127.0.0.1:14000/api/")
-
-
 class TestSRV(unittest.TestCase):
 
     def setUp(self):
@@ -25,7 +22,6 @@ class TestSRV(unittest.TestCase):
         terms = srv.main([
             "--testnet",
             "--basedir={0}".format(self.basedir),
-            "--cp_url={0}".format(CP_URL),
             "--terms"
         ], serve=False)
         self.assertIsNotNone(terms)
@@ -34,7 +30,6 @@ class TestSRV(unittest.TestCase):
     def test_terms_mainnet(self):
         terms = srv.main([
             "--basedir={0}".format(self.basedir),
-            "--cp_url={0}".format(CP_URL),
             "--terms"
         ], serve=False)
         self.assertIsNotNone(terms)
@@ -44,7 +39,6 @@ class TestSRV(unittest.TestCase):
         addresses = srv.main([
             "--testnet",
             "--basedir={0}".format(self.basedir),
-            "--cp_url={0}".format(CP_URL),
             "--funding"
         ], serve=False)
         self.assertIsNotNone(addresses)
@@ -57,7 +51,6 @@ class TestSRV(unittest.TestCase):
     def test_funding_mainnet(self):
         addresses = srv.main([
             "--basedir={0}".format(self.basedir),
-            "--cp_url={0}".format(CP_URL),
             "--funding"
         ], serve=False)
         self.assertIsNotNone(addresses)
@@ -70,13 +63,12 @@ class TestSRV(unittest.TestCase):
     def test_version(self):
         version = srv.main([
             "--basedir={0}".format(self.basedir),
-            "--cp_url={0}".format(CP_URL),
             "--version"
         ], serve=False)
         self.assertEqual(version, __version__)
 
     def test_serve(self):
-        pass
+        pass  # FIXME implement test
 
         # func = request.environ.get('werkzeug.server.shutdown')
         # if func is None:
