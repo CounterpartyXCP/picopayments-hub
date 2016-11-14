@@ -10,4 +10,6 @@ FROM HubConnection
         ON MPC_H2C.id = HubConnection.h2c_channel_id
     INNER JOIN MicropaymentChannel AS MPC_C2H
         ON MPC_C2H.id = HubConnection.c2h_channel_id
-    INNER JOIN Keys ON MPC_H2C.payer_pubkey = Keys.pubkey;
+    INNER JOIN Keys ON MPC_H2C.payer_pubkey = Keys.pubkey
+WHERE
+    HubConnection.complete != 0 and HubConnection.closed == 0;

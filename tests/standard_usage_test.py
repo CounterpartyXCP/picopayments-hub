@@ -38,6 +38,7 @@ def test_standard_usage(server_db):
         api.sendrawtransaction(tx_hex=rawtx)
 
     # connect clients
+    assert len(api.mph_connections()) == 0
     clients = []
     for i in range(3):
         bob_wif = util.gen_funded_wif(ASSET, 1000000, 1000000)
@@ -50,6 +51,7 @@ def test_standard_usage(server_db):
         assert status["c2h_deposit_ttl"] is not None
         assert status["h2c_deposit_ttl"] is None  # hub deposit not yet made
         clients.append(client)
+    assert len(api.mph_connections()) == 3
 
     # server funds deposits
     assert len(cron.fund_deposits()) == 3
@@ -98,26 +100,30 @@ def test_standard_usage(server_db):
     beta_after_status["balance"] == beta_before_status["balance"] - 39
     gamma_after_status["balance"] == gamma_before_status["balance"] + 5
 
+    # close alpha payment channel
     assert alpha.close() is not None  # commit txid returned (block created)
     assert len(alpha.update()) == 0  # payout delay not yet passed
-    for i in range(alpha.c2h_commit_delay_time - 1):
-        util_test.create_next_block(server_db)  # create block, let delay pass
+    for i in range(alpha.c2h_commit_delay_time - 1):  # let payout delay pass
+        util_test.create_next_block(server_db)
     assert len(alpha.update()) == 1  # payout txid
 
+    # close beta payment channel
     assert beta.close() is not None  # commit txid returned (block created)
     assert len(beta.update()) == 0  # payout delay not yet passed
-    for i in range(beta.c2h_commit_delay_time - 1):
-        util_test.create_next_block(server_db)  # create block, let delay pass
+    for i in range(beta.c2h_commit_delay_time - 1):  # let payout delay pass
+        util_test.create_next_block(server_db)
     assert len(beta.update()) == 1  # payout txid
 
+    # close gamma payment channel
     assert gamma.close() is not None  # commit txid returned (block created)
     assert len(gamma.update()) == 0  # payout delay not yet passed
-    for i in range(gamma.c2h_commit_delay_time - 1):
-        util_test.create_next_block(server_db)  # create block, let delay pass
+    for i in range(gamma.c2h_commit_delay_time - 1):  # let payout delay pass
+        util_test.create_next_block(server_db)
     assert len(gamma.update()) == 1  # payout txid
 
     # hub close connections cron
     cron.run_all()
+    assert len(api.mph_connections()) == 0
 
     # recover c2h change
     assert len(alpha.update()) == 1  # txid
