@@ -402,9 +402,7 @@ def load_connection_data(handle, cursor):
     payments_sum = h2c_payments_sum - c2h_payments_sum
 
     # sendable (what this channel can send to another)
-    balance = (
-        c2h_deposit_amount + h2c_transferred - c2h_transferred - payments_sum
-    )
+    balance = c2h_deposit_amount + h2c_transferred - payments_sum
 
     # receivable (what this channel can receive from another)
     receivable_potential = h2c_deposit_amount + c2h_transferred

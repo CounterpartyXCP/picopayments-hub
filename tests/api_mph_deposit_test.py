@@ -1,5 +1,7 @@
+import os
 import tempfile
 import pytest
+import jsonschema
 
 # this is require near the top to do setup of the test suite
 # from counterpartylib.test import conftest
@@ -10,7 +12,6 @@ from micropayment_core.keys import address_from_wif
 from picopayments import lib
 from picopayments import api
 from picopayments_client import auth
-import os
 from picopayments import err
 from micropayment_core import util
 from micropayment_core import keys
@@ -19,10 +20,7 @@ from micropayment_core.scripts import compile_deposit_script
 
 FIXTURE_SQL_FILE = CPLIB_TESTDIR + '/fixtures/scenarios/unittest_fixture.sql'
 FIXTURE_DB = tempfile.gettempdir() + '/fixtures.unittest_fixture.db'
-ASSET = "XCP"
-FUNDING_WIF = DP["addresses"][0][2]  # XTC: 91950000000, BTC: 199909140
-FUNDING_ADDRESS = address_from_wif(FUNDING_WIF)
-DEPOSIT_RESULT_SCHEMA = {  # FIXME check deposit result schema
+DEPOSIT_RESULT_SCHEMA = {
     "type": "object",
     "properties": {
         "deposit_script": {"type": "string"},
@@ -102,6 +100,7 @@ def test_validate_deposit_not_already_given():
         params = auth.sign_json(params, privkey)
         result = api.mph_deposit(**params)
         assert result is not None
+        jsonschema.validate(result, DEPOSIT_RESULT_SCHEMA)
 
         # resubmit deposit
         next_revoke_secret_hash = util.hash160hex(util.b2h(os.urandom(32)))

@@ -30,7 +30,7 @@ FUNDING_ADDRESS = address_from_wif(FUNDING_WIF)
 def test_simulation_xcp():
 
     # fund server
-    for i in range(10):
+    for i in range(2):
         address = lib.get_funding_addresses([ASSET])[ASSET]
         rawtx = api.create_send(**{
             'source': FUNDING_ADDRESS,
@@ -43,7 +43,7 @@ def test_simulation_xcp():
 
     # connect clients
     clients = []
-    for i in range(10):
+    for i in range(2):
         bob_wif = util.gen_funded_wif(ASSET, 1000000, 1000000)
         client = Mph(util.MockAPI(auth_wif=bob_wif))
         txid = client.connect(1000000, 65535, asset=ASSET)

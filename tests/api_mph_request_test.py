@@ -7,8 +7,6 @@ import pytest
 # from counterpartylib.test import conftest
 
 from counterpartylib.test.util_test import CURR_DIR as CPLIB_TESTDIR
-from counterpartylib.test.fixtures.params import DP
-from micropayment_core.keys import address_from_wif
 from picopayments import lib
 from picopayments import api
 from picopayments_client import auth
@@ -19,9 +17,6 @@ from micropayment_core import keys
 
 FIXTURE_SQL_FILE = CPLIB_TESTDIR + '/fixtures/scenarios/unittest_fixture.sql'
 FIXTURE_DB = tempfile.gettempdir() + '/fixtures.unittest_fixture.db'
-ASSET = "XCP"
-FUNDING_WIF = DP["addresses"][0][2]  # 91950000000 XTC, 199909140 Satoshis
-FUNDING_ADDRESS = address_from_wif(FUNDING_WIF)
 
 
 REQUEST_RESULT_SCHEMA = {
