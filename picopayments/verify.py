@@ -95,12 +95,8 @@ def c2h_commit(handle, commit_rawtx, commit_script):
 
 def _channel_client(handle, pubkey):
 
-    # check channel exists
-    c2h_channel = db.receive_channel(handle=handle)
-    if not c2h_channel:
-        raise err.HandleNotFound(handle)
-
     # signature was done by correct client
+    c2h_channel = db.receive_channel(handle=handle)
     expected_pubkey = c2h_channel["payer_pubkey"]
     if expected_pubkey != pubkey:
         raise err.ClientPubkeyMissmatch(expected_pubkey, pubkey)

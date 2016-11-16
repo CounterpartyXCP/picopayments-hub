@@ -41,8 +41,8 @@ def test_standard_usage(server_db):
     assert len(api.mph_connections()) == 0
     clients = []
     for i in range(3):
-        bob_wif = util.gen_funded_wif(ASSET, 1000000, 1000000)
-        client = Mph(util.MockAPI(auth_wif=bob_wif))
+        auth_wif = util.gen_funded_wif(ASSET, 1000000, 1000000)
+        client = Mph(util.MockAPI(auth_wif=auth_wif))
         txid = client.connect(1000000, 65535, asset=ASSET)
         assert txid is not None
 

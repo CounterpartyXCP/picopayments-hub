@@ -44,7 +44,6 @@ def test_pubkey_missmatch(connected_clients):
         }
         params = auth.sign_json(params, keys.wif_to_privkey(wif))
         api.mph_sync(**params)
-
         assert False
     except err.ClientPubkeyMissmatch:
         assert True
@@ -53,7 +52,6 @@ def test_pubkey_missmatch(connected_clients):
 @pytest.mark.usefixtures("picopayments_server")
 def test_validate_handles_exist(connected_clients):
     alice, bob, charlie = connected_clients
-
     try:
         secret = lib.create_secret()
         params = {
@@ -69,7 +67,6 @@ def test_validate_handles_exist(connected_clients):
         }
         params = auth.sign_json(params, keys.wif_to_privkey(alice.client_wif))
         api.mph_sync(**params)
-
         assert False
     except err.HandlesNotFound:
         assert True
@@ -89,7 +86,6 @@ def test_validate_revoke_format(connected_clients):
         }
         params = auth.sign_json(params, keys.wif_to_privkey(alice.client_wif))
         api.mph_sync(**params)
-
         assert False
     except jsonschema.exceptions.ValidationError:
         assert True
@@ -109,7 +105,6 @@ def test_validate_commit_format(connected_clients):
         }
         params = auth.sign_json(params, keys.wif_to_privkey(alice.client_wif))
         api.mph_sync(**params)
-
         assert False
     except jsonschema.exceptions.ValidationError:
         assert True
@@ -146,28 +141,61 @@ def test_standard_commit(connected_clients):
     assert result["commit"] is not None
 
 
-# FIXME implementation broken!!
-# @pytest.mark.usefixtures("picopayments_server")
-# def test_repeated_transfer(connected_clients):
-#     alice, bob, charlie = connected_clients
-#
-#     # ensure beta has one notified commit
-#     alice.micro_send(bob.handle, 3)
-#     alice.sync()
-#     bob.sync()
-#
-#     # ensure unnotified commit is replaced
-#     alice.micro_send(bob.handle, 5)
-#     alice.sync()
-#     alice.micro_send(bob.handle, 7)
-#     alice.sync()
-#     bob.sync()
-#
-#     # check balances
-#     alpha_status = alice.get_status()
-#     beta_status = bob.get_status()
-#     assert alpha_status["balance"] == 1000000 - 4 - 6 - 8
-#     assert beta_status["balance"] == 1000000 + 3 + 5 + 7
+@pytest.mark.usefixtures("picopayments_server")
+def test_repeated_micro_send(connected_clients):
+    alice, bob, charlie = connected_clients
+
+    alice.micro_send(bob.handle, 5)
+    alice.micro_send(bob.handle, 7)
+    alice.sync()
+    alice_status = alice.get_status()
+    assert alice_status["balance"] == 1000000 - 13
+
+    bob.sync()
+    bob_status = bob.get_status()
+    assert bob_status["balance"] == 1000000 + 11
+
+
+@pytest.mark.usefixtures("picopayments_server")
+def test_repeated_transfer(connected_clients):
+    alice, bob, charlie = connected_clients
+
+    alice.micro_send(bob.handle, 5)
+    alice.sync()
+    alice_status = alice.get_status()
+    assert alice_status["balance"] == 1000000 - 6
+
+    bob.sync()
+    bob_status = bob.get_status()
+    assert bob_status["balance"] == 1000000 + 4
+
+    alice.micro_send(bob.handle, 7)
+    alice.sync()
+    alice_status = alice.get_status()
+    assert alice_status["balance"] == 1000000 - 6 - 8
+
+    bob.sync()
+    bob_status = bob.get_status()
+    assert bob_status["balance"] == 1000000 + 4 + 6
+
+
+@pytest.mark.usefixtures("picopayments_server")
+def test_repeated_unnotified_transfer(connected_clients):
+    alice, bob, charlie = connected_clients
+
+    # ensure unnotified commit is replaced
+    alice.micro_send(bob.handle, 5)
+    alice.sync()
+
+    alice.micro_send(bob.handle, 7)
+    alice.sync()
+    bob.sync()
+
+    # check balances
+    alice_status = alice.get_status()
+    bob_status = bob.get_status()
+    assert alice_status["balance"] == 1000000 - 6 - 8
+    assert bob_status["balance"] == 1000000 + 5 + 7 - 1
 
 
 # FIXME test bronken (clients with more then one asset
@@ -254,32 +282,31 @@ def test_send_exceeds_max(connected_clients):
         }
         params = auth.sign_json(params, keys.wif_to_privkey(alice.client_wif))
         api.mph_sync(**params)
-
         assert False
     except err.PaymentExceedsSpendable:
         assert True
 
-# FIXME implementation broken!!!
-# @pytest.mark.usefixtures("picopayments_server")
-# def test_receive_max(connected_clients):
-#     alice, bob, charlie = connected_clients
-#
-#     alice_status = alice.get_status()
-#     assert alice_status["balance"] == 1000000
-#     bob_status = bob.get_status()
-#     assert bob_status["balance"] == 1000000
-#     charlie_status = charlie.get_status()
-#     assert charlie_status["balance"] == 1000000
-#
-#     alice.micro_send(charlie.handle, 500000)
-#     alice.sync()
-#
-#     bob.micro_send(charlie.handle, 500000)
-#     bob.sync()
-#
-#     charlie.sync()
-#     charlie_status = charlie.get_status()
-#     assert charlie_status["balance"] == 1999999
+
+@pytest.mark.usefixtures("picopayments_server")
+def test_receive_max(connected_clients):
+    alice, bob, charlie = connected_clients
+
+    alice_status = alice.get_status()
+    assert alice_status["balance"] == 1000000
+    bob_status = bob.get_status()
+    assert bob_status["balance"] == 1000000
+    charlie_status = charlie.get_status()
+    assert charlie_status["balance"] == 1000000
+
+    alice.micro_send(charlie.handle, 500000)
+    alice.sync()
+
+    bob.micro_send(charlie.handle, 500000)
+    bob.sync()
+
+    charlie.sync()
+    charlie_status = charlie.get_status()
+    assert charlie_status["balance"] == 1999999
 
 
 @pytest.mark.usefixtures("picopayments_server")

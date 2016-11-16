@@ -457,42 +457,43 @@ def _send_client_funds(connection_data, quantity, token):
     }
 
 
-def process_payment(payer_handle, cursor, payment):
-
-    # load payer
-    payer = load_connection_data(payer_handle, cursor)
-
-    # check if connection expired
+def _check_payment_payer(payer, payment, payer_handle):
     if payer["c2h_expired"]:
         raise err.DepositExpired(payer_handle, "client")
     if payer["h2c_expired"]:
         raise err.DepositExpired(payer_handle, "hub")
-
-    # check payer has enough funds or can revoke sends until enough available
     if payment["amount"] > payer["balance"]:
         raise err.PaymentExceedsSpendable(
             payment["amount"], payer["balance"], payment["token"]
         )
 
+
+def _check_payment_payee(payer, payee, payment, payee_handle):
+    if payer["connection"]["asset"] != payee["connection"]["asset"]:
+        raise err.AssetMissmatch(
+            payer["connection"]["asset"], payee["connection"]["asset"]
+        )
+    if payee["h2c_expired"]:
+        raise err.DepositExpired(payee_handle, "hub")
+    if payee["c2h_expired"]:
+        raise err.DepositExpired(payee_handle, "client")
+    if payment["amount"] > payee["receivable_amount"]:
+        raise err.PaymentExceedsReceivable(
+            payment["amount"], payee["receivable_amount"], payment["token"]
+        )
+
+
+def process_payment(payer_handle, cursor, payment):
+
+    # load payer
+    payer = load_connection_data(payer_handle, cursor)
+    _check_payment_payer(payer, payment, payer_handle)
+
     # load payee
     payee_handle = payment["payee_handle"]
     if payee_handle:
         payee = load_connection_data(payee_handle, cursor)
-        if payer["connection"]["asset"] != payee["connection"]["asset"]:
-            raise err.AssetMissmatch(
-                payer["connection"]["asset"], payee["connection"]["asset"]
-            )
-
-        # check if connection expired
-        if payee["h2c_expired"]:
-            raise err.DepositExpired(payee_handle, "hub")
-        if payee["c2h_expired"]:
-            raise err.DepositExpired(payee_handle, "client")
-
-        if payment["amount"] > payee["receivable_amount"]:
-            raise err.PaymentExceedsReceivable(
-                payment["amount"], payee["receivable_amount"], payment["token"]
-            )
+        _check_payment_payee(payer, payee, payment, payee_handle)
 
         c2h_unnotified_revokes = db.unnotified_revokes(
             channel_id=payee["connection"]["c2h_channel_id"]
@@ -500,23 +501,13 @@ def process_payment(payer_handle, cursor, payment):
         prev_unnotified_commit = payee["h2c_unnotified_commit"]
         result = _send_client_funds(payee, payment["amount"], payment["token"])
 
-        if prev_unnotified_commit:
-            print("XXX", json.dumps({
-                "payee": payee, "result": result
-            }, indent=2))
-
         # remove previously unnotified commit if never sent to client
-        # required avoid sharing secrets
+        # required avoid commit transactions sharing secrets
         h2c_commits_active = result["h2c_state"]["commits_active"]
         prev_h2c_commits_active = payee["h2c_state"]["commits_active"]
         new_commit = len(h2c_commits_active) != len(prev_h2c_commits_active)
         if prev_unnotified_commit is not None and new_commit:
-            prev_unnotified_commit.pop("id")
-            h2c_commits_active.remove(prev_unnotified_commit)
-            # for i, commit in enumerate(h2c_commits_active):
-            #     if commit["script"] == prev_unnotified_commit["script"]:
-            #         del h2c_commits_active[i]
-            #         break
+            del h2c_commits_active[-2]  # unnotified is always second highest
 
         cursor.execute("BEGIN TRANSACTION;")
 
