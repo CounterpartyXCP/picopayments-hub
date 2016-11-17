@@ -30,7 +30,7 @@ def _create_commit(client, quantity):
 
 @pytest.mark.usefixtures("picopayments_server")
 def test_pubkey_missmatch(connected_clients):
-    alice, bob, charlie = connected_clients
+    alice, bob, charlie, david, eric, fred = connected_clients
     try:
         secret = lib.create_secret()
         handle = alice.handle
@@ -51,7 +51,7 @@ def test_pubkey_missmatch(connected_clients):
 
 @pytest.mark.usefixtures("picopayments_server")
 def test_validate_handles_exist(connected_clients):
-    alice, bob, charlie = connected_clients
+    alice, bob, charlie, david, eric, fred = connected_clients
     try:
         secret = lib.create_secret()
         params = {
@@ -74,7 +74,7 @@ def test_validate_handles_exist(connected_clients):
 
 @pytest.mark.usefixtures("picopayments_server")
 def test_validate_revoke_format(connected_clients):
-    alice, bob, charlie = connected_clients
+    alice, bob, charlie, david, eric, fred = connected_clients
     try:
         secret = lib.create_secret()
         params = {
@@ -93,7 +93,7 @@ def test_validate_revoke_format(connected_clients):
 
 @pytest.mark.usefixtures("picopayments_server")
 def test_validate_commit_format(connected_clients):
-    alice, bob, charlie = connected_clients
+    alice, bob, charlie, david, eric, fred = connected_clients
     try:
         secret = lib.create_secret()
         params = {
@@ -112,7 +112,7 @@ def test_validate_commit_format(connected_clients):
 
 @pytest.mark.usefixtures("picopayments_server")
 def test_standard_commit(connected_clients):
-    alice, bob, charlie = connected_clients
+    alice, bob, charlie, david, eric, fred = connected_clients
     quantity = 5
     sync_fee = alice.channel_terms["sync_fee"]
     commit = _create_commit(alice, quantity + sync_fee)
@@ -143,7 +143,7 @@ def test_standard_commit(connected_clients):
 
 @pytest.mark.usefixtures("picopayments_server")
 def test_repeated_micro_send(connected_clients):
-    alice, bob, charlie = connected_clients
+    alice, bob, charlie, david, eric, fred = connected_clients
 
     alice.micro_send(bob.handle, 5)
     alice.micro_send(bob.handle, 7)
@@ -158,7 +158,7 @@ def test_repeated_micro_send(connected_clients):
 
 @pytest.mark.usefixtures("picopayments_server")
 def test_repeated_transfer(connected_clients):
-    alice, bob, charlie = connected_clients
+    alice, bob, charlie, david, eric, fred = connected_clients
 
     alice.micro_send(bob.handle, 5)
     alice.sync()
@@ -181,7 +181,7 @@ def test_repeated_transfer(connected_clients):
 
 @pytest.mark.usefixtures("picopayments_server")
 def test_repeated_unnotified_transfer(connected_clients):
-    alice, bob, charlie = connected_clients
+    alice, bob, charlie, david, eric, fred = connected_clients
 
     # ensure unnotified commit is replaced
     alice.micro_send(bob.handle, 5)
@@ -198,52 +198,42 @@ def test_repeated_unnotified_transfer(connected_clients):
     assert bob_status["balance"] == 1000000 + 5 + 7 - 1
 
 
-# FIXME test bronken (clients with more then one asset
-# @pytest.mark.usefixtures("picopayments_server")
-# def test_asset_missmatch(connected_clients):
-#     alice, bob, charlie = connected_clients
-#
-#     try:
-#         # create alice XCP connection
-#         auth_wif = self.data["funded"]["epsilon"]["wif"]
-#         asset = self.data["funded"]["epsilon"]["asset"]
-#         alice = Mph(MockAPI(auth_wif=auth_wif, verify_ssl_cert=False))
-#         txid = alice.connect(1337, 65535, asset=asset, dryrun=True)
-#         assert txid is not None
-#
-#         # load bob A14456548018133352000 connection
-#         quantity = 5
-#         bob = Mph.deserialize(data=self.data["connections"]["alpha"],
-#                             api_cls=MockAPI)
-#         sync_fee = bob.channel_terms["sync_fee"]
-#         commit = _create_commit(bob, quantity + sync_fee)
-#
-#         h2c_next_revoke_secret_hash = bob._gen_secret()
-#         bob._add_to_commits_requested(h2c_next_revoke_secret_hash)
-#
-#         params = {
-#             "handle": bob.handle,
-#             "sends": [{
-#                 "payee_handle": alice.handle,
-#                 "amount": quantity,
-#                 "token": "deadbeef"
-#             }],
-#             "commit": commit,
-#             "revokes": None,
-#             "next_revoke_secret_hash": h2c_next_revoke_secret_hash
-#         }
-#         privkey = keys.wif_to_privkey(bob.client_wif)
-#         params = auth.sign_json(params, privkey)
-#         api.mph_sync(**params)
-#
-#         assert False
-#     except err.AssetMissmatch:
-#         assert True
+@pytest.mark.usefixtures("picopayments_server")
+def test_asset_missmatch(connected_clients):
+    alice, bob, charlie, david, eric, fred = connected_clients
+
+    try:
+        quantity = 5
+        sync_fee = david.channel_terms["sync_fee"]
+        commit = _create_commit(david, quantity + sync_fee)
+
+        h2c_next_revoke_secret_hash = david._gen_secret()
+        david._add_to_commits_requested(h2c_next_revoke_secret_hash)
+
+        params = {
+            "handle": david.handle,
+            "sends": [{
+                "payee_handle": alice.handle,
+                "amount": quantity,
+                "token": "deadbeef"
+            }],
+            "commit": commit,
+            "revokes": None,
+            "next_revoke_secret_hash": h2c_next_revoke_secret_hash
+        }
+
+        privkey = keys.wif_to_privkey(david.client_wif)
+        params = auth.sign_json(params, privkey)
+        api.mph_sync(**params)
+
+        assert False
+    except err.AssetMissmatch:
+        assert True
 
 
 @pytest.mark.usefixtures("picopayments_server")
 def test_send_max(connected_clients):
-    alice, bob, charlie = connected_clients
+    alice, bob, charlie, david, eric, fred = connected_clients
 
     alice_status = alice.get_status()
     assert alice_status["balance"] == 1000000
@@ -266,7 +256,7 @@ def test_send_max(connected_clients):
 
 @pytest.mark.usefixtures("picopayments_server")
 def test_send_exceeds_max(connected_clients):
-    alice, bob, charlie = connected_clients
+    alice, bob, charlie, david, eric, fred = connected_clients
     try:
         secret = lib.create_secret()
         params = {
@@ -289,7 +279,7 @@ def test_send_exceeds_max(connected_clients):
 
 @pytest.mark.usefixtures("picopayments_server")
 def test_receive_max(connected_clients):
-    alice, bob, charlie = connected_clients
+    alice, bob, charlie, david, eric, fred = connected_clients
 
     alice_status = alice.get_status()
     assert alice_status["balance"] == 1000000
@@ -311,7 +301,7 @@ def test_receive_max(connected_clients):
 
 @pytest.mark.usefixtures("picopayments_server")
 def test_receive_max_exceeded(connected_clients):
-    alice, bob, charlie = connected_clients
+    alice, bob, charlie, david, eric, fred = connected_clients
 
     alice_status = alice.get_status()
     assert alice_status["balance"] == 1000000
@@ -334,7 +324,7 @@ def test_receive_max_exceeded(connected_clients):
 
 @pytest.mark.usefixtures("picopayments_server")
 def test_payer_deposit_expired(connected_clients, server_db):
-    alice, bob, charlie = connected_clients
+    alice, bob, charlie, david, eric, fred = connected_clients
     try:
 
         # let client deposit expire
@@ -355,7 +345,7 @@ def test_payer_deposit_expired(connected_clients, server_db):
 
 @pytest.mark.usefixtures("picopayments_server")
 def test_payee_deposit_expired(connected_clients, server_db):
-    alice, bob, charlie = connected_clients
+    alice, bob, charlie, david, eric, fred = connected_clients
     try:
 
         # let client deposit expire

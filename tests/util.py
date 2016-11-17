@@ -49,4 +49,11 @@ def gen_funded_wif(asset, asset_quantity, btc_quantity):
         'regular_dust_size': btc_quantity
     })
     api.sendrawtransaction(tx_hex=rawtx)
+    # entries = api.get_balances(filters=[
+    #     {"field": "address", "op": "==", "value": dest_address},
+    #     {"field": "asset", "op": "==", "value": asset},
+    # ])
+    # assert entries[0]["quantity"] == asset_quantity
+    # assert entries[0]["address"] == dest_address
+    # assert entries[0]["asset"] == asset
     return dest_wif

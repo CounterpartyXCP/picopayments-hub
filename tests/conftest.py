@@ -17,7 +17,6 @@ from counterpartylib.test.fixtures.params import DP
 from tests import util
 
 
-ASSET = "XCP"
 FUNDING_WIF = DP["addresses"][0][2]  # XTC: 91950000000, BTC: 199909140
 FUNDING_ADDRESS = address_from_wif(FUNDING_WIF)
 
@@ -53,29 +52,44 @@ def picopayments_server(request, server_db):
 @pytest.fixture(scope="function")
 def connected_clients():
 
+    # create asset
+    rawtx = api.create_issuance(
+        source=FUNDING_ADDRESS,
+        asset="A7736697071037023001",
+        quantity=100000000
+    )
+    api.sendrawtransaction(tx_hex=rawtx)
+
     # fund server
     for i in range(3):
-        address = lib.get_funding_addresses([ASSET])[ASSET]
-        rawtx = api.create_send(**{
-            'source': FUNDING_ADDRESS,
-            'destination': address,
-            'asset': ASSET,
-            'quantity': 1000000,
-            'regular_dust_size': 1000000
-        })
-        api.sendrawtransaction(tx_hex=rawtx)
-
-    # FIMXE fund seconde asset
+        addresses = lib.get_funding_addresses(["XCP", "A7736697071037023001"])
+        for asset, address in addresses.items():
+            rawtx = api.create_send(**{
+                'source': FUNDING_ADDRESS,
+                'destination': address,
+                'asset': asset,
+                'quantity': 1000000,
+                'regular_dust_size': 1000000
+            })
+            api.sendrawtransaction(tx_hex=rawtx)
 
     # connect clients
     clients = []
-    for i in range(3):
-        bob_wif = util.gen_funded_wif(ASSET, 1000000, 1000000)
-        client = Mph(util.MockAPI(auth_wif=bob_wif))
-        client.connect(1000000, 42, asset=ASSET)
-        clients.append(client)
-    cron.fund_deposits()
 
-    # FIMXE connect clients to second asset
+    # fund XCP clients
+    for i in range(3):
+        bob_wif = util.gen_funded_wif("XCP", 1000000, 1000000)
+        client = Mph(util.MockAPI(auth_wif=bob_wif))
+        client.connect(1000000, 42, asset="XCP")
+        clients.append(client)
+
+    # fund A7736697071037023001 clients
+    for i in range(3):
+        bob_wif = util.gen_funded_wif("A7736697071037023001", 1000000, 1000000)
+        client = Mph(util.MockAPI(auth_wif=bob_wif))
+        client.connect(1000000, 42, asset="A7736697071037023001")
+        clients.append(client)
+
+    cron.fund_deposits()
 
     return clients

@@ -44,14 +44,12 @@ def test_standard_usage_xcp():
     privkey = keys.wif_to_privkey(client_key["wif"])
     params = auth.sign_json(params, privkey)
     result = api.mph_request(**params)
-
     assert result is not None
     jsonschema.validate(result, REQUEST_RESULT_SCHEMA)
 
 
 @pytest.mark.usefixtures("picopayments_server")
 def test_validate_asset_in_terms():
-
     try:
         asset = "DIVISIBLE"
         client_key = lib.create_key(asset)
@@ -60,7 +58,6 @@ def test_validate_asset_in_terms():
         privkey = keys.wif_to_privkey(client_key["wif"])
         params = auth.sign_json(params, privkey)
         api.mph_request(**params)
-
         assert False
     except err.AssetNotInTerms:
         assert True
@@ -68,7 +65,6 @@ def test_validate_asset_in_terms():
 
 @pytest.mark.usefixtures("picopayments_server")
 def test_validate_asset_exists():
-
     try:
         asset = "NONEXISTINGASSET"
         client_key = lib.create_key(asset)
@@ -77,7 +73,6 @@ def test_validate_asset_exists():
         privkey = keys.wif_to_privkey(client_key["wif"])
         params = auth.sign_json(params, privkey)
         api.mph_request(**params)
-
         assert False
     except err.AssetDoesNotExist:
         assert True
@@ -85,7 +80,6 @@ def test_validate_asset_exists():
 
 @pytest.mark.usefixtures("picopayments_server")
 def test_validate_url():
-
     try:
         asset = "XCP"
         client_key = lib.create_key(asset)
@@ -98,7 +92,6 @@ def test_validate_url():
         privkey = keys.wif_to_privkey(client_key["wif"])
         params = auth.sign_json(params, privkey)
         api.mph_request(**params)
-
         assert False
     except err.InvalidUrl:
         assert True

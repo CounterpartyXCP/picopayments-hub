@@ -37,14 +37,11 @@ DEPOSIT_RESULT_SCHEMA = {
 
 @pytest.mark.usefixtures("picopayments_server")
 def test_validate_handle_exists():
-
     try:
-
         asset = "XCP"
         client_key = lib.create_key(asset, netcode="XTN")
         next_revoke_secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
         c2h_deposit_script = util.b2h(os.urandom(32)),
-
         params = {
             "handle": "deadbeef",
             "deposit_script": c2h_deposit_script,
@@ -60,9 +57,7 @@ def test_validate_handle_exists():
 
 @pytest.mark.usefixtures("picopayments_server")
 def test_validate_deposit_not_already_given():
-
     try:
-
         asset = "XCP"
         client_key = lib.create_key(asset, netcode="XTN")
         client_pubkey = client_key["pubkey"]

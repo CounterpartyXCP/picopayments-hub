@@ -35,7 +35,7 @@ def test_standard_usage_xcp():
             "expire_min": 0,
             "sync_fee": 1
         },
-        "A14456548018133352000": {
+        "A7736697071037023001": {
             "deposit_max": 0,
             "deposit_min": 0,
             "deposit_ratio": 1.0,

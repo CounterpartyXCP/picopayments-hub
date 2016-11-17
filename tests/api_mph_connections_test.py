@@ -61,13 +61,7 @@ def test_all(server_db):
     for i in range(3):
         bob_wif = util.gen_funded_wif(ASSET, 1000000, 1000000)
         client = Mph(util.MockAPI(auth_wif=bob_wif))
-        txid = client.connect(1000000, 65535, asset=ASSET)
-        assert txid is not None
-
-        status = client.get_status()
-        assert status["balance"] == 1000000
-        assert status["c2h_deposit_ttl"] is not None
-        assert status["h2c_deposit_ttl"] is None  # hub deposit not yet made
+        client.connect(1000000, 65535, asset=ASSET)
         clients.append(client)
 
     connections = api.mph_connections()
@@ -99,13 +93,7 @@ def test_filters_assets():
     for i in range(3):
         bob_wif = util.gen_funded_wif(ASSET, 1000000, 1000000)
         client = Mph(util.MockAPI(auth_wif=bob_wif))
-        txid = client.connect(1000000, 65535, asset=ASSET)
-        assert txid is not None
-
-        status = client.get_status()
-        assert status["balance"] == 1000000
-        assert status["c2h_deposit_ttl"] is not None
-        assert status["h2c_deposit_ttl"] is None  # hub deposit not yet made
+        client.connect(1000000, 65535, asset=ASSET)
         clients.append(client)
 
     connections = api.mph_connections(assets=[ASSET])
@@ -136,13 +124,7 @@ def test_filters_handles():
     for i in range(3):
         bob_wif = util.gen_funded_wif(ASSET, 1000000, 1000000)
         client = Mph(util.MockAPI(auth_wif=bob_wif))
-        txid = client.connect(1000000, 65535, asset=ASSET)
-        assert txid is not None
-
-        status = client.get_status()
-        assert status["balance"] == 1000000
-        assert status["c2h_deposit_ttl"] is not None
-        assert status["h2c_deposit_ttl"] is None  # hub deposit not yet made
+        client.connect(1000000, 65535, asset=ASSET)
         clients.append(client)
     alpha, beta, gamma = clients
 
