@@ -362,3 +362,35 @@ def test_payee_deposit_expired(connected_clients, server_db):
         assert False
     except err.DepositExpired:
         assert True
+
+
+@pytest.mark.usefixtures("picopayments_server")
+def test_c2h_revoke_commit(connected_clients, server_db):
+    alice, bob, charlie, david, eric, fred = connected_clients
+
+    # send funds to bob
+    alice.micro_send(bob.handle, 5)
+    alice.sync()
+    alice_status = alice.get_status()
+    assert alice_status["balance"] == 1000000 - 6
+
+    # bob received funds
+    bob.sync()
+    bob_status = bob.get_status()
+    assert bob_status["balance"] == 1000000 + 4
+
+    # return funds to alice
+    bob.micro_send(alice.handle, 10)
+    bob.sync()
+    bob_status = bob.get_status()
+    assert bob_status["balance"] == 1000000 + 4 - 11
+
+    # check alice received returned funds
+    # alice.sync()
+    # alice_status = alice.get_status()
+    # assert alice_status["balance"] == 1000000 - 6 + 9
+
+
+@pytest.mark.usefixtures("picopayments_server")
+def test_h2c_revoke_commit(connected_clients, server_db):
+    alice, bob, charlie, david, eric, fred = connected_clients

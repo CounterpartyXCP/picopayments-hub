@@ -162,7 +162,6 @@ def complete_connection(handle, c2h_deposit_script,
 
 
 def find_key_with_funds(asset, asset_quantity, btc_quantity):
-    btc_quantity = btc_quantity + _get_fee_multaple(factor=1)
     nearest = {"key": None, "available": 2100000000000000}
     for key in db.keys(asset=asset):
         address = key["address"]
@@ -251,8 +250,8 @@ def _save_sync_data(cursor, handle, next_revoke_secret_hash,
         db.set_commit_notified(id=h2c_commit_id, cursor=cursor)
 
     # mark sent revokes as received
-    revoke_ids = [p.pop("id") for p in h2c_revokes]
-    db.set_revokes_notified(revoke_ids, cursor=cursor)
+    if h2c_revokes:
+        db.set_revokes_notified(h2c_revokes, cursor=cursor)
 
     # save next spend secret
     db.add_revoke_secret(c2h_id, next_revoke_secret["secret_hash"],
@@ -393,7 +392,7 @@ def load_connection_data(handle, cursor):
     h2c_transferred = get_transferred_quantity(h2c_state)
     h2c_deposit_amount = get_balances(h2c_deposit_address, [asset])[asset]
     c2h_transferred = get_transferred_quantity(c2h_state)
-    c2h_deposit_amount = get_balances(c2h_deposit_address, [asset])[asset]
+    c2h_deposit = get_balances(c2h_deposit_address, [asset])[asset]
     h2c_unnotified_commit = db.unnotified_commit(
         channel_id=connection["h2c_channel_id"], cursor=cursor
     )
@@ -402,7 +401,8 @@ def load_connection_data(handle, cursor):
     payments_sum = h2c_payments_sum - c2h_payments_sum
 
     # sendable (what this channel can send to another)
-    balance = c2h_deposit_amount + h2c_transferred - payments_sum
+    # FIXME sendable_amount calculated incorrectly?
+    sendable_amount = c2h_deposit + h2c_transferred - payments_sum
 
     # receivable (what this channel can receive from another)
     receivable_potential = h2c_deposit_amount + c2h_transferred
@@ -421,11 +421,12 @@ def load_connection_data(handle, cursor):
         "c2h_expired": is_expired(c2h_state, etc.expire_clearance),
         "c2h_transferred_amount": c2h_transferred,
         "c2h_payments_sum": c2h_payments_sum,
-        "c2h_deposit_amount": c2h_deposit_amount,
-        "c2h_transferrable_amount": c2h_deposit_amount - c2h_transferred,
+        "c2h_deposit": c2h_deposit,
+        "c2h_transferrable_amount": c2h_deposit - c2h_transferred,
         "payments_sum": payments_sum,
         "h2c_unnotified_commit": h2c_unnotified_commit,
-        "balance": balance,
+        "sendable_amount": sendable_amount,
+        "client_balance": c2h_deposit + h2c_transferred - c2h_transferred,
         "receivable_amount": receivable_amount,
         "terms": terms,
     }
@@ -462,9 +463,9 @@ def _check_payment_payer(payer, payment, payer_handle):
         raise err.DepositExpired(payer_handle, "client")
     if payer["h2c_expired"]:
         raise err.DepositExpired(payer_handle, "hub")
-    if payment["amount"] > payer["balance"]:
+    if payment["amount"] > payer["sendable_amount"]:
         raise err.PaymentExceedsSpendable(
-            payment["amount"], payer["balance"], payment["token"]
+            payment["amount"], payer["sendable_amount"], payment["token"]
         )
 
 

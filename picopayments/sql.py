@@ -37,11 +37,10 @@ def make_execute(script_name):
     return func
 
 
-def fetchone(script, args=None, asdict=True, cursor=None, getsum=False):
+def fetchone(script, args=None, cursor=None, getsum=False):
     """Execute script and fetch one row."""
     cursor = cursor or get_cursor()
-    if asdict:
-        cursor.setrowtrace(_row_to_dict_factory)
+    cursor.setrowtrace(_row_to_dict_factory)
     result = cursor.execute(script, args).fetchone()
     if getsum:
         return result["sum"] if result else 0
@@ -53,17 +52,14 @@ def make_fetchone(script_name, getsum=False):
 
     def func(**kwargs):
         cursor = kwargs.pop("cursor", None)
-        asdict = kwargs.pop("asdict", True)
-        return fetchone(script, args=kwargs, cursor=cursor,
-                        asdict=asdict, getsum=getsum)
+        return fetchone(script, args=kwargs, cursor=cursor, getsum=getsum)
     return func
 
 
-def fetchall(script, args=None, asdict=True, cursor=None):
+def fetchall(script, args=None, cursor=None):
     """Execute script and fetch all rows."""
     cursor = cursor or get_cursor()
-    if asdict:
-        cursor.setrowtrace(_row_to_dict_factory)
+    cursor.setrowtrace(_row_to_dict_factory)
     return cursor.execute(script, args).fetchall()
 
 
@@ -72,6 +68,5 @@ def make_fetchall(script_name):
 
     def func(**kwargs):
         cursor = kwargs.pop("cursor", None)
-        asdict = kwargs.pop("asdict", True)
-        return fetchall(script, args=kwargs, cursor=cursor, asdict=asdict)
+        return fetchall(script, args=kwargs, cursor=cursor)
     return func
