@@ -53,8 +53,8 @@ unnotified_revokes = sql.make_fetchall("unnotified_revokes")
 add_payment = sql.make_execute("add_payment")
 unnotified_payments = sql.make_fetchall("unnotified_payments")
 micropayment_channel = sql.make_fetchone("micropayment_channel")
-h2c_payments_sum = sql.make_fetchone("h2c_payments_sum", True)
-c2h_payments_sum = sql.make_fetchone("c2h_payments_sum", True)
+recv_payments_sum = sql.make_fetchone("recv_payments_sum", True)
+send_payments_sum = sql.make_fetchone("send_payments_sum", True)
 
 
 def setup():

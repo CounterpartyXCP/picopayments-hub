@@ -163,20 +163,20 @@ def test_repeated_transfer(connected_clients):
     alice.micro_send(bob.handle, 5)
     alice.sync()
     alice_status = alice.get_status()
-    assert alice_status["balance"] == 1000000 - 6
+    assert alice_status["balance"] == 1000000 - 5 - 1
 
     bob.sync()
     bob_status = bob.get_status()
-    assert bob_status["balance"] == 1000000 + 4
+    assert bob_status["balance"] == 1000000 + 5 - 1
 
     alice.micro_send(bob.handle, 7)
     alice.sync()
     alice_status = alice.get_status()
-    assert alice_status["balance"] == 1000000 - 6 - 8
+    assert alice_status["balance"] == 1000000 - 5 - 1 - 7 - 1
 
     bob.sync()
     bob_status = bob.get_status()
-    assert bob_status["balance"] == 1000000 + 4 + 6
+    assert bob_status["balance"] == 1000000 + 5 - 1 + 7 - 1
 
 
 @pytest.mark.usefixtures("picopayments_server")
@@ -372,23 +372,23 @@ def test_c2h_revoke_commit(connected_clients, server_db):
     alice.micro_send(bob.handle, 5)
     alice.sync()
     alice_status = alice.get_status()
-    assert alice_status["balance"] == 1000000 - 6
+    assert alice_status["balance"] == 1000000 - 5 - 1
 
     # bob received funds
     bob.sync()
     bob_status = bob.get_status()
-    assert bob_status["balance"] == 1000000 + 4
+    assert bob_status["balance"] == 1000000 + 5 - 1
 
     # return funds to alice
     bob.micro_send(alice.handle, 10)
     bob.sync()
     bob_status = bob.get_status()
-    assert bob_status["balance"] == 1000000 + 4 - 11
+    assert bob_status["balance"] == 1000000 + 5 - 1 - 10 - 1
 
     # check alice received returned funds
-    # alice.sync()
-    # alice_status = alice.get_status()
-    # assert alice_status["balance"] == 1000000 - 6 + 9
+    alice.sync()
+    alice_status = alice.get_status()
+    assert alice_status["balance"] == 1000000 - 5 - 1 + 10 - 1
 
 
 @pytest.mark.usefixtures("picopayments_server")

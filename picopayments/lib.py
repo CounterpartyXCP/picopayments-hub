@@ -261,36 +261,19 @@ def _save_sync_data(cursor, handle, next_revoke_secret_hash,
 
 
 def sync_hub_connection(handle, next_revoke_secret_hash,
-                        sends, commit, revokes):
+                        payments, commit, revokes):
 
     cursor = sql.get_cursor()
-
-    # load receive channel
     hub_connection = db.hub_connection(handle=handle, cursor=cursor)
-    connection_terms = db.terms(id=hub_connection["terms_id"])
-    asset = hub_connection["asset"]
-    c2h_id = hub_connection["c2h_channel_id"]
-    h2c_id = hub_connection["h2c_channel_id"]
 
-    # update channels state
-    update_channel_state(c2h_id, asset, commit=commit, cursor=cursor)
-    update_channel_state(h2c_id, asset, revokes=revokes, cursor=cursor)
-
-    # add sync fee payment
-    sends.insert(0, {
-        "payee_handle": None,  # to hub
-        "amount": connection_terms["sync_fee"],
-        "token": "sync_fee"
-    })
-
-    # process payments
-    for payment in sends:
-        process_payment(handle, cursor, payment)
-
-    # create next spend secret
-    next_revoke_secret = create_secret()
+    _update_channel_state(hub_connection, commit, revokes, cursor)
+    _process_payments(handle, payments, hub_connection, cursor)
+    _balance_channel(handle, cursor)
+    next_revoke_secret = create_secret()  # create next spend secret
 
     # load unnotified
+    c2h_id = hub_connection["c2h_channel_id"]
+    h2c_id = hub_connection["h2c_channel_id"]
     h2c_commit = db.unnotified_commit(channel_id=h2c_id)
     c2h_revokes = db.unnotified_revokes(channel_id=c2h_id)
     receive_payments = db.unnotified_payments(payee_handle=handle)
@@ -378,61 +361,56 @@ def has_unconfirmed_transactions(address):
 
 
 def load_connection_data(handle, cursor):
+
+    # connection data
     connection = db.hub_connection(handle=handle, cursor=cursor)
     asset = connection["asset"]
     terms = db.terms(id=connection["terms_id"], cursor=cursor)
+
+    # h2c data
     h2c_state = db.load_channel_state(
         connection["h2c_channel_id"], connection["asset"], cursor=cursor
     )
     h2c_deposit_address = deposit_address(h2c_state)
-    c2h_state = db.load_channel_state(
-        connection["c2h_channel_id"], connection["asset"], cursor=cursor
-    )
-    c2h_deposit_address = deposit_address(c2h_state)
     h2c_transferred = get_transferred_quantity(h2c_state)
-    h2c_deposit_amount = get_balances(h2c_deposit_address, [asset])[asset]
-    c2h_transferred = get_transferred_quantity(c2h_state)
-    c2h_deposit = get_balances(c2h_deposit_address, [asset])[asset]
+    h2c_deposit = get_balances(h2c_deposit_address, [asset])[asset]
     h2c_unnotified_commit = db.unnotified_commit(
         channel_id=connection["h2c_channel_id"], cursor=cursor
     )
-    h2c_payments_sum = db.h2c_payments_sum(handle=handle, cursor=cursor)
-    c2h_payments_sum = db.c2h_payments_sum(handle=handle, cursor=cursor)
-    payments_sum = h2c_payments_sum - c2h_payments_sum
+
+    # c2h data
+    c2h_state = db.load_channel_state(
+        connection["c2h_channel_id"], connection["asset"], cursor=cursor
+    )
+    c2h_transferred = get_transferred_quantity(c2h_state)
+
+    # payments
+    send_payments_sum = db.send_payments_sum(handle=handle, cursor=cursor)
+    recv_payments_sum = db.recv_payments_sum(handle=handle, cursor=cursor)
+    payments_sum = recv_payments_sum - send_payments_sum
 
     # sendable (what this channel can send to another)
-    # FIXME sendable_amount calculated incorrectly?
-    sendable_amount = c2h_deposit + h2c_transferred - payments_sum
+    sendable_amount = c2h_transferred + payments_sum - h2c_transferred
+    assert sendable_amount >= 0
 
     # receivable (what this channel can receive from another)
-    receivable_potential = h2c_deposit_amount + c2h_transferred
-    receivable_owed = (abs(payments_sum) if payments_sum < 0 else 0)
-    receivable_amount = receivable_potential - receivable_owed
+    receivable_amount = h2c_deposit + c2h_transferred - payments_sum
+    assert receivable_amount >= 0
 
     return {
         "connection": connection,
         "h2c_state": h2c_state,
         "h2c_expired": is_expired(h2c_state, etc.expire_clearance),
-        "h2c_transferred_amount": h2c_transferred,
-        "h2c_payments_sum": h2c_payments_sum,
-        "h2c_deposit_amount": h2c_deposit_amount,
-        "h2c_transferrable_amount": h2c_deposit_amount - h2c_transferred,
         "c2h_state": c2h_state,
         "c2h_expired": is_expired(c2h_state, etc.expire_clearance),
-        "c2h_transferred_amount": c2h_transferred,
-        "c2h_payments_sum": c2h_payments_sum,
-        "c2h_deposit": c2h_deposit,
-        "c2h_transferrable_amount": c2h_deposit - c2h_transferred,
-        "payments_sum": payments_sum,
-        "h2c_unnotified_commit": h2c_unnotified_commit,
+        "h2c_unnotified_commit": h2c_unnotified_commit,  # FIXME remove
         "sendable_amount": sendable_amount,
-        "client_balance": c2h_deposit + h2c_transferred - c2h_transferred,
         "receivable_amount": receivable_amount,
         "terms": terms,
     }
 
 
-def _send_client_funds(connection_data, quantity, token):
+def _send_client_funds(connection_data, quantity):
     from picopayments import api
 
     c2h_state = connection_data["c2h_state"]
@@ -484,51 +462,70 @@ def _check_payment_payee(payer, payee, payment, payee_handle):
         )
 
 
-def process_payment(payer_handle, cursor, payment):
+def _update_channel_state(hub_connection, commit, revokes, cursor):
+    asset = hub_connection["asset"]
+    c2h_id = hub_connection["c2h_channel_id"]
+    h2c_id = hub_connection["h2c_channel_id"]
+    update_channel_state(c2h_id, asset, commit=commit, cursor=cursor)
+    update_channel_state(h2c_id, asset, revokes=revokes, cursor=cursor)
 
-    # load payer
-    payer = load_connection_data(payer_handle, cursor)
-    _check_payment_payer(payer, payment, payer_handle)
 
-    # load payee
-    payee_handle = payment["payee_handle"]
-    if payee_handle:
-        payee = load_connection_data(payee_handle, cursor)
-        _check_payment_payee(payer, payee, payment, payee_handle)
+def _process_payments(payer_handle, payments, hub_connection, cursor):
 
-        c2h_unnotified_revokes = db.unnotified_revokes(
-            channel_id=payee["connection"]["c2h_channel_id"]
-        )
-        prev_unnotified_commit = payee["h2c_unnotified_commit"]
-        result = _send_client_funds(payee, payment["amount"], payment["token"])
+    connection_terms = db.terms(id=hub_connection["terms_id"])
 
-        # remove previously unnotified commit if never sent to client
-        # required avoid commit transactions sharing secrets
-        h2c_commits_active = result["h2c_state"]["commits_active"]
-        prev_h2c_commits_active = payee["h2c_state"]["commits_active"]
-        new_commit = len(h2c_commits_active) != len(prev_h2c_commits_active)
-        if prev_unnotified_commit is not None and new_commit:
-            del h2c_commits_active[-2]  # unnotified is always second highest
+    # add sync fee payment
+    payments.insert(0, {
+        "payee_handle": None,  # to hub
+        "amount": connection_terms["sync_fee"],
+        "token": "sync_fee"
+    })
 
-        cursor.execute("BEGIN TRANSACTION;")
+    # process payments
+    for payment in payments:
 
-        c2h_unnotified_revokes += result["c2h_revoke_secrets"]
-        db.save_channel_state(
-            payee["connection"]["c2h_channel_id"], result["c2h_state"],
-            unnotified_revoke_secrets=c2h_unnotified_revokes, cursor=cursor
-        )
-        db.save_channel_state(
-            payee["connection"]["h2c_channel_id"], result["h2c_state"],
-            h2c_unnotified_commit=result["h2c_unnotified_commit"],
-            cursor=cursor
-        )
+        # check payer
+        payer = load_connection_data(payer_handle, cursor)
+        _check_payment_payer(payer, payment, payer_handle)
 
-    # fee payment
-    else:
-        cursor.execute("BEGIN TRANSACTION;")
+        # check payee
+        payee_handle = payment["payee_handle"]
+        if payee_handle:
+            payee = load_connection_data(payee_handle, cursor)
+            _check_payment_payee(payer, payee, payment, payee_handle)
 
-    payment["payer_handle"] = payer_handle
-    db.add_payment(cursor=cursor, **payment)
+        payment["payer_handle"] = payer_handle
+        db.add_payment(cursor=cursor, **payment)
+
+
+def _balance_channel(handle, cursor):
+    connection_data = load_connection_data(handle, cursor)
+
+    c2h_unnotified_revokes = db.unnotified_revokes(
+        channel_id=connection_data["connection"]["c2h_channel_id"]
+    )
+    prev_unnotified_commit = connection_data["h2c_unnotified_commit"]
+    quantity = connection_data["sendable_amount"]
+    result = _send_client_funds(connection_data, quantity)
+
+    # remove previously unnotified commit if never sent to client
+    # required avoid commit transactions sharing secrets
+    h2c_commits_active = result["h2c_state"]["commits_active"]
+    prev_h2c_commits_active = connection_data["h2c_state"]["commits_active"]
+    new_commit = len(h2c_commits_active) != len(prev_h2c_commits_active)
+    if prev_unnotified_commit is not None and new_commit:
+        del h2c_commits_active[-2]  # unnotified is always second highest
+
+    cursor.execute("BEGIN TRANSACTION;")
+    c2h_unnotified_revokes += result["c2h_revoke_secrets"]
+    db.save_channel_state(
+        connection_data["connection"]["c2h_channel_id"], result["c2h_state"],
+        unnotified_revoke_secrets=c2h_unnotified_revokes, cursor=cursor
+    )
+    db.save_channel_state(
+        connection_data["connection"]["h2c_channel_id"], result["h2c_state"],
+        h2c_unnotified_commit=result["h2c_unnotified_commit"], cursor=cursor
+    )
     cursor.execute("COMMIT;")
 
 
