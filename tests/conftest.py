@@ -9,7 +9,6 @@ from picopayments import api
 from picopayments import lib
 from picopayments import cron
 from picopayments_client.mph import Mph
-from micropayment_core.util import gettxid
 from micropayment_core.keys import address_from_wif
 from counterpartylib.lib import config
 from counterpartylib.test import util_test
@@ -39,8 +38,8 @@ def picopayments_server(request, server_db):
 
     # monkeypatch sendrawtransaction to send tx and create new block
     def sendrawtransaction(tx_hex):
-        util_test.insert_raw_transaction(tx_hex, server_db)
-        return gettxid(tx_hex)
+        result = util_test.insert_raw_transaction(tx_hex, server_db)
+        return result["tx_hash"]
     api.sendrawtransaction = sendrawtransaction
 
     def tear_down():
