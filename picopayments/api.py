@@ -85,6 +85,22 @@ def mph_sync(**kwargs):
         return auth.sign_json(result, keys.wif_to_privkey(authwif))
 
 
+@dispatcher.add_method
+def mph_close(**kwargs):
+    with etc.database_lock:
+        auth.verify_json(kwargs)
+        verify.close_input(
+            kwargs["handle"],
+            kwargs["pubkey"],
+            kwargs.get("spend_secret"),
+        )
+        result, authwif = lib.close_connection(
+            kwargs["handle"],
+            kwargs.get("spend_secret"),
+        )
+        return auth.sign_json(result, keys.wif_to_privkey(authwif))
+
+
 def _cplib_call(method, params={}):
     return jsonrpc_call(
         etc.counterparty_url, method, params=params,

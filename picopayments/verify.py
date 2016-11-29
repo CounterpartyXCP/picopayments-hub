@@ -6,6 +6,8 @@
 import re
 import jsonschema
 from counterpartylib.lib.micropayments import validate
+from micropayment_core import scripts
+from micropayment_core import util
 from picopayments import err
 from picopayments import db
 from picopayments import etc
@@ -86,7 +88,7 @@ def is_url(url):
 def c2h_commit(handle, commit_rawtx, commit_script):
     hub_connection(handle)
     netcode = "XTN" if etc.testnet else "BTC"
-    c2h_channel = db.receive_channel(handle=handle)
+    c2h_channel = db.c2h_channel(handle=handle)
     validate.is_commit_rawtx(
         dispatcher, commit_rawtx, c2h_channel["asset"],
         c2h_channel["deposit_script"], commit_script, netcode
@@ -96,7 +98,7 @@ def c2h_commit(handle, commit_rawtx, commit_script):
 def _channel_client(handle, pubkey):
 
     # signature was done by correct client
-    c2h_channel = db.receive_channel(handle=handle)
+    c2h_channel = db.c2h_channel(handle=handle)
     expected_pubkey = c2h_channel["payer_pubkey"]
     if expected_pubkey != pubkey:
         raise err.ClientPubkeyMissmatch(expected_pubkey, pubkey)
@@ -181,3 +183,17 @@ def sync_input(handle, next_revoke_secret_hash, client_pubkey,
     if commit:
         jsonschema.validate(commit, COMMIT_SCHEMA)
         c2h_commit(handle, commit["rawtx"], commit["script"])
+
+
+def close_input(handle, client_pubkey, spend_secret):
+    hub_connection(handle)
+    _channel_client(handle, client_pubkey)
+
+    # validate spend secret for h2c deposit
+    if spend_secret is not None:
+        validate.is_string(spend_secret)
+        spend_secret_hash = util.hash160hex(spend_secret)
+        deposit_script = db.h2c_channel(handle=handle)["deposit_script"]
+        expected_hash = scripts.get_deposit_spend_secret_hash(deposit_script)
+        if expected_hash != spend_secret_hash:
+            raise err.InvalidSpendSecret(expected_hash, spend_secret)

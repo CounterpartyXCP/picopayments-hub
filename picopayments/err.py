@@ -10,6 +10,18 @@ class InvalidUrl(Exception):
         super(InvalidUrl, self).__init__(msg.format(url))
 
 
+class InvalidSpendSecret(Exception):
+
+    def __init__(self, expected_hash, spend_secret):
+        msg = (
+            "Hash of spend secret '{0}' does not match "
+            "expected deposit spend secret hash '{1}'!"
+        )
+        super(InvalidSpendSecret, self).__init__(msg.format(
+            expected_hash, spend_secret
+        ))
+
+
 class AssetNotInTerms(Exception):
 
     def __init__(self, asset):

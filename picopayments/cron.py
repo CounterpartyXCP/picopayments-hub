@@ -106,19 +106,14 @@ def close_connections():
 def recover_funds():
     """Recover funds where possible"""
     with etc.database_lock:
-        txs = []
+        _txs = []
         cursor = sql.get_cursor()
         for hub_connection in db.hub_connections_recoverable(cursor=cursor):
-            asset = hub_connection["asset"]
-            c2h_mpc_id = hub_connection["c2h_channel_id"]
-            c2h_state = db.load_channel_state(c2h_mpc_id, asset, cursor=cursor)
-            h2c_mpc_id = hub_connection["h2c_channel_id"]
-            h2c_state = db.load_channel_state(h2c_mpc_id, asset, cursor=cursor)
-            txs += Mpc(api).full_duplex_recover_funds(
-                lib.get_wif, lib.get_secret,
-                c2h_state, h2c_state
+            txs, h2c_state, c2h_state = lib.recover_funds(
+                hub_connection, cursor=cursor
             )
-        return txs
+            _txs += txs
+        return _txs
 
 
 def collect_garbage():

@@ -35,8 +35,8 @@ _LOCKS_TTL = 3.0  # seconds
 _LOCKS_MAX = 5000  # per address
 
 
-def get_secret(secret_hash):
-    return db.get_secret(hash=secret_hash)["value"]
+def get_secret(secret_hash, cursor=None):
+    return db.get_secret(hash=secret_hash, cursor=cursor)["value"]
 
 
 def get_wif(pubkey):
@@ -258,6 +258,51 @@ def _save_sync_data(cursor, handle, next_revoke_secret_hash,
                          next_revoke_secret["secret_value"], cursor=cursor)
 
     cursor.execute("COMMIT;")
+
+
+def recover_funds(hub_connection, h2c_spend_secret=None, cursor=None):
+    from picopayments import api
+    asset = hub_connection["asset"]
+    c2h_mpc_id = hub_connection["c2h_channel_id"]
+    h2c_mpc_id = hub_connection["h2c_channel_id"]
+    c2h_state = db.load_channel_state(c2h_mpc_id, asset, cursor=cursor)
+    h2c_state = db.load_channel_state(h2c_mpc_id, asset, cursor=cursor)
+    txs = Mpc(api).full_duplex_recover_funds(
+        get_wif, get_secret, c2h_state, h2c_state,
+        send_spend_secret=h2c_spend_secret
+    )
+    return txs, h2c_state, c2h_state
+
+
+def close_connection(handle, h2c_spend_secret=None):
+
+    cursor = sql.get_cursor()
+    hub_connection = db.hub_connection(handle=handle, cursor=cursor)
+
+    # close connection if not already done
+    if not hub_connection["closed"]:
+        db.set_connection_closed(handle=handle, cursor=cursor)
+
+    # recover h2c change if spend secret provided
+    c2h_state = None
+    if h2c_spend_secret is not None:
+        txs, h2c_state, c2h_state = lib.recover_funds(
+            hub_connection, cursor=cursor
+        )
+
+    # get c2h spend secret if no commits for channel
+    c2h_spend_secret = None
+    if c2h_state is None:
+        c2h_state = db.load_channel_state(hub_connection["c2h_channel_id"],
+                                          asset, cursor=cursor)
+    if len(c2h_state["commits_active"]) == 0:
+        c2h_spend_secret_hash = scripts.get_deposit_spend_secret_hash(
+            c2h_state["deposit_script"]
+        )
+        c2h_spend_secret = get_secret(c2h_spend_secret_hash)
+
+    hub_key = db.channel_payer_key(id=hub_connection["c2h_channel_id"])
+    return ({"spend_secret", c2h_spend_secret}, hub_key["wif"])
 
 
 def sync_hub_connection(handle, next_revoke_secret_hash,
