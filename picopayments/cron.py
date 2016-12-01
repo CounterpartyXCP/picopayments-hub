@@ -96,7 +96,6 @@ def publish_commits():
             expired = c2h_expired or h2c_expired
             h2c_commits_published = api.mpc_published_commits(state=h2c_state)
             closed = hub_connection["closed"] != 0
-            # FIXME also close if c2h change published
 
             # connection expired or commit published or spend secret known
             if expired or closed or h2c_commits_published or h2c_spend_secret:
@@ -107,7 +106,8 @@ def publish_commits():
                 )
                 if len(c2h_commits_published) == 0:
                     txid = Mpc(api).finalize_commit(lib.get_wif, c2h_state)
-                    txids.append(txid)
+                    if txid:
+                        txids.append(txid)
 
         return txids
 

@@ -87,10 +87,6 @@ def test_standard_usage(server_db):
     beta_before_status = beta.get_status()
     gamma_before_status = gamma.get_status()
 
-    _assert_states_synced(alpha.handle, alpha.c2h_state, alpha.h2c_state)
-    _assert_states_synced(beta.handle, beta.c2h_state, beta.h2c_state)
-    _assert_states_synced(gamma.handle, gamma.c2h_state, gamma.h2c_state)
-
     # can send multiple payments
     alpha.micro_send(beta.handle, 5, "0000")
     alpha.micro_send(gamma.handle, 6, "0001")
@@ -106,10 +102,6 @@ def test_standard_usage(server_db):
         "token": "0001"
     }]
 
-    _assert_states_synced(alpha.handle, alpha.c2h_state, alpha.h2c_state)
-    _assert_states_synced(beta.handle, beta.c2h_state, beta.h2c_state)
-    _assert_states_synced(gamma.handle, gamma.c2h_state, gamma.h2c_state)
-
     # send more back, commits are revoked to maximize liquidity
     beta.micro_send(alpha.handle, 42, "0003")
     assert beta.sync() == []
@@ -119,17 +111,9 @@ def test_standard_usage(server_db):
         "token": "0003"
     }]
 
-    _assert_states_synced(alpha.handle, alpha.c2h_state, alpha.h2c_state)
-    _assert_states_synced(beta.handle, beta.c2h_state, beta.h2c_state)
-    _assert_states_synced(gamma.handle, gamma.c2h_state, gamma.h2c_state)
-
     # multiple syncs/commtis from single client
     alpha.micro_send(beta.handle, 1, "0004")
     assert alpha.sync() == []
-
-    _assert_states_synced(alpha.handle, alpha.c2h_state, alpha.h2c_state)
-    _assert_states_synced(beta.handle, beta.c2h_state, beta.h2c_state)
-    _assert_states_synced(gamma.handle, gamma.c2h_state, gamma.h2c_state)
 
     # get after status
     alpha_after_status = alpha.get_status()
@@ -155,16 +139,13 @@ def test_standard_usage(server_db):
     assert len(gamma.h2c_state["commits_active"]) == 1
     assert len(delta.c2h_state["commits_active"]) == 0
     assert len(delta.h2c_state["commits_active"]) == 0
-    _assert_states_synced(alpha.handle, alpha.c2h_state, alpha.h2c_state)
-    _assert_states_synced(beta.handle, beta.c2h_state, beta.h2c_state)
-    _assert_states_synced(gamma.handle, gamma.c2h_state, gamma.h2c_state)
 
     # close alpha payment channel
     #        | h2c | c2h |
     # -------+-----+-----+
-    # commit |  1  |  1  |
-    # payout |  1  |  1  |
-    # change |  1  |  1  |
+    # commit |  X  |  X  |
+    # payout |  X  |  X  |
+    # change |  X  |  X  |
     assert len(api.mph_connections()) == 4
     assert len(alpha.close()) == 1          # H2C COMMIT TX
     assert len(api.mph_connections()) == 3
@@ -179,17 +160,43 @@ def test_standard_usage(server_db):
     # close beta payment channel
     # recover | h2c | c2h |
     # --------+-----+-----+
-    # commit  |  -  |  1  |
-    # payout  |  -  |  1  |
-    # change  |  1  |  1  |
+    # commit  |  -  |  X  |
+    # payout  |  -  |  X  |
+    # change  |  X  |  X  |
     assert len(api.mph_connections()) == 3
     assert len(beta.close()) == 0
     assert len(api.mph_connections()) == 2
     assert len(cron.run_all()) == 2         # H2C CHANGE TX, C2H COMMIT TX
     util_test.create_next_block(server_db)  # let payout delay pass
-    assert len(cron.run_all()) == 1         # C2H PAYOUT TXID
-    assert len(beta.update()) == 1          # C2H CHANGE TXID
+    assert len(cron.run_all()) == 1         # C2H PAYOUT TX
+    assert len(beta.update()) == 1          # C2H CHANGE TX
 
-    # FIXME close gamma
+    # close gamma payment channel
+    # recover | h2c | c2h |
+    # --------+-----+-----+
+    # commit  |  X  |  -  |
+    # payout  |  X  |  -  |
+    # change  |  X  |  X  |
+    assert len(api.mph_connections()) == 2
+    assert len(gamma.close()) == 1          # H2C COMMIT TX
+    assert len(api.mph_connections()) == 1
+    assert len(gamma.update()) == 1         # C2H CHANGE TX
+    assert len(gamma.update()) == 1         # H2C PAYOUT TX
+    assert len(cron.run_all()) == 1         # H2C CHANGE TX
 
-    # FIXME close delta
+    # close delta payment channel
+    # recover | h2c | c2h |
+    # --------+-----+-----+
+    # commit  |  -  |  -  |
+    # payout  |  -  |  -  |
+    # change  |  X  |  X  |
+    assert len(api.mph_connections()) == 1
+    assert len(delta.close()) == 0
+    assert len(api.mph_connections()) == 0
+    assert len(delta.update()) == 1         # C2H CHANGE TX
+    assert len(cron.run_all()) == 1         # H2C CHANGE TX
+
+    _assert_states_synced(alpha.handle, alpha.c2h_state, alpha.h2c_state)
+    _assert_states_synced(beta.handle, beta.c2h_state, beta.h2c_state)
+    _assert_states_synced(gamma.handle, gamma.c2h_state, gamma.h2c_state)
+    _assert_states_synced(delta.handle, delta.c2h_state, delta.h2c_state)
