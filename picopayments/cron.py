@@ -8,7 +8,9 @@ from picopayments import db
 from picopayments import lib
 from picopayments import sql
 from picopayments import api
+from micropayment_core.scripts import get_deposit_spend_secret_hash
 from picopayments_client.mpc import Mpc
+from micropayment_core.util import gettxid
 
 
 # FIXME use http interface to ensure its called in the same process
@@ -19,7 +21,7 @@ def fund_deposits():
     with etc.database_lock:
         deposits = []
         cursor = sql.get_cursor()
-        for hub_connection in db.hub_connections_complete(cursor=cursor):
+        for hub_connection in db.hub_connections_open(cursor=cursor):
 
             asset = hub_connection["asset"]
             terms = db.terms(id=hub_connection["terms_id"], cursor=cursor)
@@ -75,10 +77,9 @@ def fund_deposits():
         return deposits
 
 
-def close_connections():
-    """Close connections almost expired and partially closed by client."""
+def publish_commits():
     with etc.database_lock:
-        closed_connections = []
+        txids = []
         cursor = sql.get_cursor()
         for hub_connection in db.hub_connections_complete(cursor=cursor):
             asset = hub_connection["asset"]
@@ -86,34 +87,39 @@ def close_connections():
             c2h_state = db.load_channel_state(c2h_mpc_id, asset, cursor=cursor)
             h2c_mpc_id = hub_connection["h2c_channel_id"]
             h2c_state = db.load_channel_state(h2c_mpc_id, asset, cursor=cursor)
-
-            # connection expired or  commit published
+            h2c_spend_secret_hash = get_deposit_spend_secret_hash(
+                h2c_state["deposit_script"]
+            )
+            h2c_spend_secret = lib.get_secret(h2c_spend_secret_hash)
             c2h_expired = lib.is_expired(c2h_state, etc.expire_clearance)
             h2c_expired = lib.is_expired(h2c_state, etc.expire_clearance)
-            commit_published = api.mpc_published_commits(state=h2c_state)
-            if c2h_expired or h2c_expired or commit_published:
-                db.set_connection_closed(handle=hub_connection["handle"])
-                commit_txid = Mpc(api).finalize_commit(lib.get_wif, c2h_state)
-                closed_connections.append({
-                    "handle": hub_connection["handle"],
-                    "commit_txid": commit_txid
-                })
-                continue
+            expired = c2h_expired or h2c_expired
+            h2c_commits_published = api.mpc_published_commits(state=h2c_state)
+            closed = hub_connection["closed"] != 0
+            # FIXME also close if c2h change published
 
-        return closed_connections
+            # connection expired or commit published or spend secret known
+            if expired or closed or h2c_commits_published or h2c_spend_secret:
+                if not closed:
+                    db.set_connection_closed(handle=hub_connection["handle"])
+                c2h_commits_published = api.mpc_published_commits(
+                    state=c2h_state
+                )
+                if len(c2h_commits_published) == 0:
+                    txid = Mpc(api).finalize_commit(lib.get_wif, c2h_state)
+                    txids.append(txid)
+
+        return txids
 
 
 def recover_funds():
     """Recover funds where possible"""
     with etc.database_lock:
-        _txs = []
+        txs = []
         cursor = sql.get_cursor()
         for hub_connection in db.hub_connections_recoverable(cursor=cursor):
-            txs, h2c_state, c2h_state = lib.recover_funds(
-                hub_connection, cursor=cursor
-            )
-            _txs += txs
-        return _txs
+            txs += lib.recover_funds(hub_connection, cursor=cursor)
+        return txs
 
 
 def collect_garbage():
@@ -124,7 +130,9 @@ def collect_garbage():
 
 def run_all():
     with etc.database_lock:
-        close_connections()
-        recover_funds()
-        fund_deposits()
+        txids = []
+        txids += publish_commits()
+        txids += recover_funds()
+        fund_deposits()  # FIXME add created txids
         collect_garbage()
+        return txids

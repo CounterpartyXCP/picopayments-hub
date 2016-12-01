@@ -87,8 +87,7 @@ test: setup
 	$(PEP8) picopayments
 	$(PEP8) examples
 	$(PEP8) tests
-	# $(PYTEST) --ignore=env --verbose --cov-config=.coveragerc --cov-report=term-missing --cov=./picopayments -vv --capture=no tests/standard_usage_test.py::test_standard_usage
-	# $(PYTEST) --ignore=env --verbose --cov-config=.coveragerc --cov-report=term-missing --cov=./picopayments -vv --capture=no --pdb tests/recover_change_test.py  # ::test_standard_usage
+	# $(PYTEST) --ignore=env --verbose --cov-config=.coveragerc --cov-report=term-missing --cov=./picopayments -vv --capture=no --pdb tests/standard_usage_test.py::test_standard_usage
 	$(PYTEST) --ignore=env --verbose --cov-config=.coveragerc --cov-report=term-missing --cov=./picopayments -vv
 	# $(COVERAGE) run --source=picopayments setup.py test
 	# $(COVERAGE) html

@@ -155,42 +155,41 @@ def test_standard_usage(server_db):
     assert len(gamma.h2c_state["commits_active"]) == 1
     assert len(delta.c2h_state["commits_active"]) == 0
     assert len(delta.h2c_state["commits_active"]) == 0
-
     _assert_states_synced(alpha.handle, alpha.c2h_state, alpha.h2c_state)
     _assert_states_synced(beta.handle, beta.c2h_state, beta.h2c_state)
     _assert_states_synced(gamma.handle, gamma.c2h_state, gamma.h2c_state)
 
     # close alpha payment channel
-    assert alpha.close() is not None  # commit txid returned (block created)
-    assert len(alpha.update()) == 0  # payout delay not yet passed
+    #        | h2c | c2h |
+    # -------+-----+-----+
+    # commit |  1  |  1  |
+    # payout |  1  |  1  |
+    # change |  1  |  1  |
+    assert len(api.mph_connections()) == 4
+    assert len(alpha.close()) == 1          # H2C COMMIT TX
+    assert len(api.mph_connections()) == 3
+    assert len(alpha.update()) == 0         # h2c payout delay not yet passed
     util_test.create_next_block(server_db)  # let payout delay pass
-    assert len(alpha.update()) == 1  # payout txid
+    assert len(alpha.update()) == 1         # H2C PAYOUT TX
+    assert len(cron.run_all()) == 2         # H2C CHANGE TX, C2H COMMIT TX
+    util_test.create_next_block(server_db)  # let c2h payout delay pass
+    assert len(cron.run_all()) == 1         # C2H PAYOUT TX
+    assert len(alpha.update()) == 1         # C2H CHANGE TX
 
-    # FIXME close beta payment channel
-    assert beta.close() is None  # no active commits (net sent funds)
-    assert len(beta.update()) == 0  # payout delay not yet passed
+    # close beta payment channel
+    # recover | h2c | c2h |
+    # --------+-----+-----+
+    # commit  |  -  |  1  |
+    # payout  |  -  |  1  |
+    # change  |  1  |  1  |
+    assert len(api.mph_connections()) == 3
+    assert len(beta.close()) == 0
+    assert len(api.mph_connections()) == 2
+    assert len(cron.run_all()) == 2         # H2C CHANGE TX, C2H COMMIT TX
     util_test.create_next_block(server_db)  # let payout delay pass
-    assert len(beta.update()) == 0  # no payout txid
+    assert len(cron.run_all()) == 1         # C2H PAYOUT TXID
+    assert len(beta.update()) == 1          # C2H CHANGE TXID
 
-    # close gamma payment channel
-    assert gamma.close() is not None  # commit txid returned (block created)
-    assert len(gamma.update()) == 0  # payout delay not yet passed
-    util_test.create_next_block(server_db)  # let payout delay pass
-    assert len(gamma.update()) == 1  # payout txid
+    # FIXME close gamma
 
     # FIXME close delta
-
-    # hub close connections cron
-    cron.run_all()  # close connections (publish c2h commits)
-    util_test.create_next_block(server_db)  # let payout delay pass
-    cron.run_all()  # recover c2h payout
-    assert len(api.mph_connections()) == 2  # FIXME didn't close beta or delta!
-
-    _assert_states_synced(alpha.handle, alpha.c2h_state, alpha.h2c_state)
-    _assert_states_synced(beta.handle, beta.c2h_state, beta.h2c_state)
-    _assert_states_synced(gamma.handle, gamma.c2h_state, gamma.h2c_state)
-
-    # FIXME # recover c2h change
-    assert len(alpha.update()) == 1  # FIXME wtf why no txid?
-    assert len(beta.update()) == 0  # FIXME still open
-    assert len(gamma.update()) == 0  # FIXME no change

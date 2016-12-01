@@ -20,7 +20,7 @@ class MockAPI(object):
 
     def __getattribute__(self, name):
         props = ["url", "auth_wif", "username", "password", "verify_ssl_cert"]
-        auth_methods = ["mph_request", "mph_deposit", "mph_sync"]
+        auth_methods = ["mph_request", "mph_deposit", "mph_sync", "mph_close"]
         if name in props:
             return object.__getattribute__(self, name)
 
