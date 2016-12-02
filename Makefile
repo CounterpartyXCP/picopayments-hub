@@ -118,7 +118,8 @@ bitcoind_stopserver:
 	bitcoin-cli --rpcuser=bitcoinrpcuser --rpcpassword=bitcoinrpcpass --rpcport=18332 stop
 
 
-counterparty_startserver:
+counterparty_startserver: bitcoind_startserver
+	# requires "pip install counterparty-cli==1.1.2"
 	env/bin/counterparty-server --testnet --backend-port=18332 --backend-user=bitcoinrpcuser --backend-password=bitcoinrpcpass start
 
 

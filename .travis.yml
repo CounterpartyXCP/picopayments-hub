@@ -46,8 +46,6 @@ script:
   - pip freeze
   - pep8 picopayments
   - py.test --ignore=env --verbose --cov-config=.coveragerc --cov-report=term-missing --cov=./picopayments -vv
-  # - coverage run --source="picopayments" setup.py test
-  # - coverage report --fail-under=90
 
 after_success:
   - coveralls
