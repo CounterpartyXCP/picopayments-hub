@@ -42,6 +42,18 @@ def parse(args):
         help="Show addresses, used to fund the given assets."
     )
 
+    # show balances
+    parser.add_argument(
+        '--balances', action='store_true',
+        help="Show asset balances for hub addresses."
+    )
+
+    # show connections
+    parser.add_argument(
+        '--connections', action='store_true',
+        help="Show status for hub connections."
+    )
+
     # show hub terms
     parser.add_argument(
         '--terms', action='store_true', help="Show hub terms."
@@ -51,7 +63,7 @@ def parse(args):
     default = os.path.join(os.path.expanduser("~"), ".picopayments")
     parser.add_argument(
         '--basedir', default=default, metavar="PATH",
-        help="Location of application files: {0}".format(default)
+        help="Location of app files: {0}".format(default)
     )
 
     # server

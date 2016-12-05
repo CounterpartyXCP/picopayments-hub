@@ -6,11 +6,13 @@
 import time
 import json
 import threading
+from collections import defaultdict
 from werkzeug.serving import run_simple
 from werkzeug.wrappers import Request, Response
 from jsonrpc import JSONRPCResponseManager, dispatcher
 from picopayments import lib
 from picopayments import cli
+from picopayments import db
 from picopayments import etc
 from picopayments import cron
 from picopayments import __version__
@@ -71,6 +73,37 @@ def _start_server(parsed):
         thread.join()
 
 
+def _show_balances():
+    """Show total and individual balances (confirmed only)."""
+    result = {
+        "total": defaultdict(lambda: 0),
+        "addresses": defaultdict(lambda: []),
+    }
+    for asset in lib.terms().keys():
+        for key in db.keys(asset=asset):
+            balances = lib.get_balances(
+                key["address"], assets=["BTC", key["asset"]]
+            )
+            for asset, quantity in balances.items():
+                result["total"][asset] += quantity
+            result["addresses"][key["asset"]].append({
+                "address": key["address"],
+                "balances": balances
+            })
+
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return result
+
+
+def _show_connections():
+    # FIXME limet to only opening|connected|closed
+    connections = []
+    for hub_conn in db.hub_connections_all():
+        connections.append(lib.get_status(hub_conn))
+    print(json.dumps(connections, indent=2, sort_keys=True))
+    return connections
+
+
 def main(args, serve=True):
 
     # show version
@@ -84,6 +117,10 @@ def main(args, serve=True):
 
     if parsed["terms"]:
         return _show_terms()
+    if parsed["balances"]:
+        return _show_balances()
+    if parsed["connections"]:
+        return _show_connections()
     if parsed["funding_addresses"]:
         return _show_funding_addresses()
     if serve:

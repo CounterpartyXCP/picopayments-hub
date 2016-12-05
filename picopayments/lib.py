@@ -350,6 +350,31 @@ def get_balances(address, assets=None):
     return Mpc(api).get_balances(address=address, assets=assets)
 
 
+def get_status(hub_conn, clearance=6):
+    from picopayments import api
+
+    send_state = db.load_channel_state(
+        hub_conn["h2c_channel_id"], hub_conn["asset"], cursor=cursor
+    )
+    recv_state = db.load_channel_state(
+        hub_conn["c2h_channel_id"], hub_conn["asset"], cursor=cursor
+    )
+    status = Mpc(api).full_duplex_channel_status(
+        hub_conn["handle"], etc.netcode, send_state,
+        recv_state, clearance=clearance
+    )
+
+    # get connection state
+    connection_state = "opening"
+    if hub_conn["complete"] != 0:
+        connection_state = "connected"
+    if hub_conn["closed"] != 0:
+        connection_state = "closed"
+    status["connection_state"] = connection_state
+
+    return status
+
+
 def deposit_address(state):
     return get_script_address(state["deposit_script"])
 
