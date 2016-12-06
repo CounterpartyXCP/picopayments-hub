@@ -31,7 +31,7 @@ def _show_terms():
     return terms
 
 
-def _show_funding_addresses():
+def _show_funding():
     assets = lib.terms().keys()
     addresses = lib.get_funding_addresses(assets)
     print(json.dumps(addresses, indent=2, sort_keys=True))
@@ -121,7 +121,7 @@ def main(args, serve=True):
         return _show_balances()
     if parsed["connections"]:
         return _show_connections()
-    if parsed["funding_addresses"]:
-        return _show_funding_addresses()
+    if parsed["funding"]:
+        return _show_funding()
     if serve:
         return _start_server(parsed)

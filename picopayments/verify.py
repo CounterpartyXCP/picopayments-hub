@@ -111,17 +111,6 @@ def terms_input(assets):
         assets_exists(assets)
 
 
-def connections_input(handles, assets):
-    if assets is not None:
-        validate.is_list(assets)
-        for asset in assets:
-            validate.is_string(asset)
-    if handles is not None:
-        validate.is_list(handles)
-        for handle in handles:
-            validate.is_string(handle)
-
-
 def request_input(asset, pubkey, spend_secret_hash, hub_rpc_url):
     validate.pubkey(pubkey)
     validate.hash160(spend_secret_hash)

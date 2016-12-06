@@ -20,16 +20,16 @@ def parse(args):
         '--testnet', action='store_true', help="Use bitcoin testnet."
     )
 
-    # logging
-    parser.add_argument(
-        '--debug', action='store_true', help="Maximum logging."
-    )
-    parser.add_argument(
-        '--verbose', action='store_true', help="Maximum logging."
-    )
-    parser.add_argument(
-        '--quite', action='store_true', help="Minimum logging."
-    )
+    # # logging
+    # parser.add_argument(
+    #     '--debug', action='store_true', help="Maximum logging."
+    # )
+    # parser.add_argument(
+    #     '--verbose', action='store_true', help="Maximum logging."
+    # )
+    # parser.add_argument(
+    #     '--quite', action='store_true', help="Minimum logging."
+    # )
 
     # show version
     parser.add_argument(
@@ -38,7 +38,7 @@ def parse(args):
 
     # show deposit address
     parser.add_argument(
-        '--funding_addresses', action='store_true',
+        '--funding', action='store_true',
         help="Show addresses, used to fund the given assets."
     )
 

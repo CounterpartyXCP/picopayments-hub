@@ -623,16 +623,3 @@ def terms(assets=None):
                 terms_data.pop(key)
 
     return terms_data
-
-
-def hub_connections(handles, assets):
-    connections = []
-    for connection in db.hub_connections():
-        if assets is not None and connection["asset"] not in assets:
-            continue
-        if handles is not None and connection["handle"] not in handles:
-            continue
-        wif = connection.pop("wif")
-        connection = auth.sign_json(connection, keys.wif_to_privkey(wif))
-        connections.append(connection)
-    return connections

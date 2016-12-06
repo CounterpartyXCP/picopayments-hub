@@ -43,7 +43,6 @@ c2h_channel = sql.make_fetchone("c2h_channel")
 h2c_channel = sql.make_fetchone("h2c_channel")
 unnotified_commit = sql.make_fetchone("unnotified_commit")
 
-hub_connections = sql.make_fetchall("hub_connections")
 hub_connections_complete = sql.make_fetchall("hub_connections_complete")
 hub_connections_open = sql.make_fetchall("hub_connections_open")
 hub_connections_closed = sql.make_fetchall("hub_connections_closed")
