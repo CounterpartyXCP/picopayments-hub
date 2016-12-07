@@ -8,6 +8,7 @@ import copy
 import json
 import pkg_resources
 import cachetools
+from collections import defaultdict
 from pycoin.key.BIP32Node import BIP32Node
 from pycoin.serialize import b2h
 from micropayment_core import util
@@ -65,7 +66,7 @@ def create_hub_connection(asset, client_pubkey,
 
     # current terms and asset
     data = {"asset": asset}
-    current_terms = terms().get(asset)
+    current_terms = get_terms().get(asset)
     data.update(current_terms)
 
     # new hub key
@@ -183,7 +184,8 @@ def find_key_with_funds(asset, asset_quantity, btc_quantity):
     return nearest["key"]
 
 
-def get_funding_addresses(assets):
+def get_funding_addresses(assets=None):
+    assets = _terms_assets(assets=assets)
     addresses = {}
     for asset in assets:
         key = create_key(asset, netcode=etc.netcode)
@@ -199,7 +201,7 @@ def initialize(args):
     if not os.path.exists(etc.basedir):
         os.makedirs(etc.basedir)
 
-    terms()  # make sure terms file exists
+    get_terms()  # make sure terms file exists
     db.setup()  # setup and create db if needed
 
 
@@ -345,9 +347,57 @@ def sync_hub_connection(handle, next_revoke_secret_hash,
     )
 
 
+def _terms_assets(assets=None):
+    """limit to terms assets and use all terms assets if none given"""
+    if assets is not None:
+        return set(get_terms().keys()).intersection(set(assets))
+    return get_terms().keys()
+
+
+def get_hub_liquidity(assets=None):
+    assets = _terms_assets(assets=assets)
+
+    result = {
+        "total": defaultdict(lambda: 0),
+        "addresses": defaultdict(lambda: []),
+    }
+
+    for asset in assets:
+        for key in db.keys(asset=asset):
+
+            # get balance for asset address
+            balances = get_balances(
+                key["address"], assets=["BTC", key["asset"]]
+            )
+
+            # do not show keys with no balances
+            if not sum(balances.values()):
+                continue
+
+            # update total
+            for asset, quantity in balances.items():
+                result["total"][asset] += quantity
+
+            # add balance to addresses
+            result["addresses"][key["asset"]].append({
+                "address": key["address"],
+                "balances": balances
+            })
+    return result
+
+
 def get_balances(address, assets=None):
     from picopayments import api
     return Mpc(api).get_balances(address=address, assets=assets)
+
+
+def get_connections_status():
+    # FIXME limet to only opening|connected|closed
+    # FIXME limit by asset
+    connections = []
+    for hub_conn in db.hub_connections_all():
+        connections.append(get_status(hub_conn))
+    return connections
 
 
 def get_status(hub_conn, clearance=6):
@@ -600,7 +650,7 @@ def _balance_channel(handle, cursor):
     cursor.execute("COMMIT;")
 
 
-def terms(assets=None):
+def get_terms(assets=None):
 
     # create terms and return default value
     if not os.path.exists(etc.path_terms):

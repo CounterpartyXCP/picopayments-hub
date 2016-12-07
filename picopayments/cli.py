@@ -20,43 +20,9 @@ def parse(args):
         '--testnet', action='store_true', help="Use bitcoin testnet."
     )
 
-    # # logging
-    # parser.add_argument(
-    #     '--debug', action='store_true', help="Maximum logging."
-    # )
-    # parser.add_argument(
-    #     '--verbose', action='store_true', help="Maximum logging."
-    # )
-    # parser.add_argument(
-    #     '--quite', action='store_true', help="Minimum logging."
-    # )
-
     # show version
     parser.add_argument(
         '--version', action='store_true', help="Show version number."
-    )
-
-    # show deposit address
-    parser.add_argument(
-        '--funding', action='store_true',
-        help="Show addresses, used to fund the given assets."
-    )
-
-    # show balances
-    parser.add_argument(
-        '--balances', action='store_true',
-        help="Show asset balances for hub addresses."
-    )
-
-    # show connections
-    parser.add_argument(
-        '--connections', action='store_true',
-        help="Show status for hub connections."
-    )
-
-    # show hub terms
-    parser.add_argument(
-        '--terms', action='store_true', help="Show hub terms."
     )
 
     # basedir path

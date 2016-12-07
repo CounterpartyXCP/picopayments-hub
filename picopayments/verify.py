@@ -111,6 +111,11 @@ def terms_input(assets):
         assets_exists(assets)
 
 
+def status_input(assets):
+    if assets:
+        assets_exists(assets)
+
+
 def request_input(asset, pubkey, spend_secret_hash, hub_rpc_url):
     validate.pubkey(pubkey)
     validate.hash160(spend_secret_hash)

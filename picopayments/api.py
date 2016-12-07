@@ -13,16 +13,15 @@ from micropayment_core import keys
 
 
 @dispatcher.add_method
-def mph_funding_addresses():
-    assets = lib.terms().keys()
-    return lib.get_funding_addresses(assets)
-
-
-@dispatcher.add_method
-def mph_terms(assets=None):
+def mph_status(assets=None):
     with etc.database_lock:
-        verify.terms_input(assets)
-        return lib.terms(assets=assets)
+        verify.status_input(assets)
+        return {
+            "liquidity": lib.get_hub_liquidity(assets=assets),
+            "current_terms": lib.get_terms(assets=assets),
+            "connections": lib.get_connections_status(),
+            "funding_addresses": lib.get_funding_addresses(assets=assets)
+        }
 
 
 @dispatcher.add_method
