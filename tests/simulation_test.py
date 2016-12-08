@@ -50,9 +50,9 @@ def test_simulation_xcp():
         assert txid is not None
 
         status = client.get_status()
-        assert status["balance"] == 1000000
-        assert status["c2h_deposit_ttl"] is not None
-        assert status["h2c_deposit_ttl"] is None  # hub deposit not yet made
+        assert status["send_balance"] == 1000000
+        assert status["send_deposit_ttl"] is not None
+        assert status["recv_deposit_ttl"] is None  # hub deposit not yet made
 
         clients.append(client)
 
@@ -60,6 +60,6 @@ def test_simulation_xcp():
     cron.run_all()
     for client in clients:
         status = client.get_status()
-        assert status["h2c_deposit_ttl"] is not None  # hub deposit now made
+        assert status["recv_deposit_ttl"] is not None  # hub deposit now made
 
     # FIXME implement simulation test

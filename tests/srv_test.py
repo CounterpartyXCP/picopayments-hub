@@ -2,10 +2,7 @@ import os
 import shutil
 import unittest
 import tempfile
-from pycoin.key import validate
 from picopayments import srv
-from picopayments import etc
-from picopayments import lib
 from picopayments import __version__
 
 
@@ -17,48 +14,6 @@ class TestSRV(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.tempdir)
-
-    def test_terms_testnet(self):
-        terms = srv.main([
-            "--testnet",
-            "--basedir={0}".format(self.basedir),
-            "--terms"
-        ], serve=False)
-        self.assertIsNotNone(terms)
-        self.assertEqual(terms, lib.TERMS["TESTNET"])
-
-    def test_terms_mainnet(self):
-        terms = srv.main([
-            "--basedir={0}".format(self.basedir),
-            "--terms"
-        ], serve=False)
-        self.assertIsNotNone(terms)
-        self.assertEqual(terms, lib.TERMS["MAINNET"])
-
-    def test_funding_testnet(self):
-        addresses = srv.main([
-            "--testnet",
-            "--basedir={0}".format(self.basedir),
-            "--funding"
-        ], serve=False)
-        self.assertIsNotNone(addresses)
-        self.assertTrue(len(addresses) == 3)
-        for address in addresses:
-            validate.is_address_valid(
-                address, allowable_netcodes=[etc.netcode]
-            )
-
-    def test_funding_mainnet(self):
-        addresses = srv.main([
-            "--basedir={0}".format(self.basedir),
-            "--funding"
-        ], serve=False)
-        self.assertIsNotNone(addresses)
-        self.assertTrue(len(addresses) == 3)
-        for address in addresses:
-            validate.is_address_valid(
-                address, allowable_netcodes=[etc.netcode]
-            )
 
     def test_version(self):
         version = srv.main([

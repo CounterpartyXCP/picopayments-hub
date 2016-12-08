@@ -395,12 +395,12 @@ def get_connections_status():
     # FIXME limet to only opening|connected|closed
     # FIXME limit by asset
     connections = []
-    for hub_conn in db.hub_connections_all():
+    for hub_conn in db.hub_connections_open():
         connections.append(get_status(hub_conn))
     return connections
 
 
-def get_status(hub_conn, clearance=6):
+def get_status(hub_conn, clearance=6, cursor=None):
     from picopayments import api
 
     send_state = db.load_channel_state(

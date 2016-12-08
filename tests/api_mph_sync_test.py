@@ -21,7 +21,7 @@ FIXTURE_DB = tempfile.gettempdir() + '/fixtures.unittest_fixture.db'
 
 def _create_commit(client, quantity):
     result = client.create_signed_commit(
-        client.client_wif, client.c2h_state, quantity,
+        client.api.auth_wif, client.c2h_state, quantity,
         client.c2h_next_revoke_secret_hash, client.c2h_commit_delay_time
     )
     client.c2h_state = result["state"]
@@ -65,8 +65,8 @@ def test_validate_handles_exist(connected_clients):
             "revokes": None,
             "next_revoke_secret_hash": secret["secret_hash"]
         }
-        params = auth.sign_json(params, keys.wif_to_privkey(alice.client_wif))
-        api.mph_sync(**params)
+        privkey = keys.wif_to_privkey(alice.api.auth_wif)
+        api.mph_sync(**auth.sign_json(params, privkey))
         assert False
     except err.HandlesNotFound:
         assert True
@@ -84,7 +84,9 @@ def test_validate_revoke_format(connected_clients):
             "revokes": "invalidformat",
             "next_revoke_secret_hash": secret["secret_hash"]
         }
-        params = auth.sign_json(params, keys.wif_to_privkey(alice.client_wif))
+        params = auth.sign_json(
+            params, keys.wif_to_privkey(
+                alice.api.auth_wif))
         api.mph_sync(**params)
         assert False
     except jsonschema.exceptions.ValidationError:
@@ -103,7 +105,9 @@ def test_validate_commit_format(connected_clients):
             "revokes": None,
             "next_revoke_secret_hash": secret["secret_hash"]
         }
-        params = auth.sign_json(params, keys.wif_to_privkey(alice.client_wif))
+        params = auth.sign_json(
+            params, keys.wif_to_privkey(
+                alice.api.auth_wif))
         api.mph_sync(**params)
         assert False
     except jsonschema.exceptions.ValidationError:
@@ -130,7 +134,7 @@ def test_standard_commit(connected_clients):
         "revokes": None,
         "next_revoke_secret_hash": h2c_next_revoke_secret_hash
     }
-    params = auth.sign_json(params, keys.wif_to_privkey(alice.client_wif))
+    params = auth.sign_json(params, keys.wif_to_privkey(alice.api.auth_wif))
     result = api.mph_sync(**params)
 
     assert result["receive"] == [{
@@ -149,11 +153,11 @@ def test_repeated_micro_send(connected_clients):
     alice.micro_send(bob.handle, 7)
     alice.sync()
     alice_status = alice.get_status()
-    assert alice_status["balance"] == 1000000 - 13
+    assert alice_status["send_balance"] == 1000000 - 13
 
     bob.sync()
     bob_status = bob.get_status()
-    assert bob_status["balance"] == 1000000 + 11
+    assert bob_status["send_balance"] == 1000000 + 11
 
 
 @pytest.mark.usefixtures("picopayments_server")
@@ -163,20 +167,20 @@ def test_repeated_transfer(connected_clients):
     alice.micro_send(bob.handle, 5)
     alice.sync()
     alice_status = alice.get_status()
-    assert alice_status["balance"] == 1000000 - 5 - 1
+    assert alice_status["send_balance"] == 1000000 - 5 - 1
 
     bob.sync()
     bob_status = bob.get_status()
-    assert bob_status["balance"] == 1000000 + 5 - 1
+    assert bob_status["send_balance"] == 1000000 + 5 - 1
 
     alice.micro_send(bob.handle, 7)
     alice.sync()
     alice_status = alice.get_status()
-    assert alice_status["balance"] == 1000000 - 5 - 1 - 7 - 1
+    assert alice_status["send_balance"] == 1000000 - 5 - 1 - 7 - 1
 
     bob.sync()
     bob_status = bob.get_status()
-    assert bob_status["balance"] == 1000000 + 5 - 1 + 7 - 1
+    assert bob_status["send_balance"] == 1000000 + 5 - 1 + 7 - 1
 
 
 @pytest.mark.usefixtures("picopayments_server")
@@ -194,8 +198,8 @@ def test_repeated_unnotified_transfer(connected_clients):
     # check balances
     alice_status = alice.get_status()
     bob_status = bob.get_status()
-    assert alice_status["balance"] == 1000000 - 6 - 8
-    assert bob_status["balance"] == 1000000 + 5 + 7 - 1
+    assert alice_status["send_balance"] == 1000000 - 6 - 8
+    assert bob_status["send_balance"] == 1000000 + 5 + 7 - 1
 
 
 @pytest.mark.usefixtures("picopayments_server")
@@ -222,7 +226,7 @@ def test_asset_missmatch(connected_clients):
             "next_revoke_secret_hash": h2c_next_revoke_secret_hash
         }
 
-        privkey = keys.wif_to_privkey(david.client_wif)
+        privkey = keys.wif_to_privkey(david.api.auth_wif)
         params = auth.sign_json(params, privkey)
         api.mph_sync(**params)
 
@@ -236,9 +240,9 @@ def test_send_max(connected_clients):
     alice, bob, charlie, david, eric, fred = connected_clients
 
     alice_status = alice.get_status()
-    assert alice_status["balance"] == 1000000
+    assert alice_status["send_balance"] == 1000000
     bob_status = bob.get_status()
-    assert bob_status["balance"] == 1000000
+    assert bob_status["send_balance"] == 1000000
 
     alice.micro_send(bob.handle, 999999, "f483")
     alice.sync()
@@ -249,9 +253,9 @@ def test_send_max(connected_clients):
     }]
 
     alice_status = alice.get_status()
-    assert alice_status["balance"] == 0
+    assert alice_status["send_balance"] == 0
     bob_status = bob.get_status()
-    assert bob_status["balance"] == 1999998
+    assert bob_status["send_balance"] == 1999998
 
 
 @pytest.mark.usefixtures("picopayments_server")
@@ -270,7 +274,9 @@ def test_send_exceeds_max(connected_clients):
             "revokes": None,
             "next_revoke_secret_hash": secret["secret_hash"]
         }
-        params = auth.sign_json(params, keys.wif_to_privkey(alice.client_wif))
+        params = auth.sign_json(
+            params, keys.wif_to_privkey(
+                alice.api.auth_wif))
         api.mph_sync(**params)
         assert False
     except err.PaymentExceedsSpendable:
@@ -282,11 +288,11 @@ def test_receive_max(connected_clients):
     alice, bob, charlie, david, eric, fred = connected_clients
 
     alice_status = alice.get_status()
-    assert alice_status["balance"] == 1000000
+    assert alice_status["send_balance"] == 1000000
     bob_status = bob.get_status()
-    assert bob_status["balance"] == 1000000
+    assert bob_status["send_balance"] == 1000000
     charlie_status = charlie.get_status()
-    assert charlie_status["balance"] == 1000000
+    assert charlie_status["send_balance"] == 1000000
 
     alice.micro_send(charlie.handle, 500000)
     alice.sync()
@@ -296,7 +302,7 @@ def test_receive_max(connected_clients):
 
     charlie.sync()
     charlie_status = charlie.get_status()
-    assert charlie_status["balance"] == 1999999
+    assert charlie_status["send_balance"] == 1999999
 
 
 @pytest.mark.usefixtures("picopayments_server")
@@ -304,11 +310,11 @@ def test_receive_max_exceeded(connected_clients):
     alice, bob, charlie, david, eric, fred = connected_clients
 
     alice_status = alice.get_status()
-    assert alice_status["balance"] == 1000000
+    assert alice_status["send_balance"] == 1000000
     bob_status = bob.get_status()
-    assert bob_status["balance"] == 1000000
+    assert bob_status["send_balance"] == 1000000
     charlie_status = charlie.get_status()
-    assert charlie_status["balance"] == 1000000
+    assert charlie_status["send_balance"] == 1000000
 
     try:
         alice.micro_send(charlie.handle, 500000)
@@ -332,7 +338,7 @@ def test_payer_deposit_expired(connected_clients, server_db):
         while c2h_deposit_ttl > 0:
             util_test.create_next_block(server_db)
             status = alice.get_status(clearance=0)
-            c2h_deposit_ttl = status["c2h_deposit_ttl"]
+            c2h_deposit_ttl = status["send_deposit_ttl"]
 
         # attempt to transfer funds
         alice.micro_send(bob.handle, 1337)
@@ -353,7 +359,7 @@ def test_payee_deposit_expired(connected_clients, server_db):
         while c2h_deposit_ttl > 0:
             util_test.create_next_block(server_db)
             status = alice.get_status(clearance=0)
-            c2h_deposit_ttl = status["c2h_deposit_ttl"]
+            c2h_deposit_ttl = status["send_deposit_ttl"]
 
         # attempt to transfer funds
         bob.micro_send(alice.handle, 1337)
@@ -372,23 +378,23 @@ def test_c2h_revoke_commit(connected_clients, server_db):
     alice.micro_send(bob.handle, 5)
     alice.sync()
     alice_status = alice.get_status()
-    assert alice_status["balance"] == 1000000 - 5 - 1
+    assert alice_status["send_balance"] == 1000000 - 5 - 1
 
     # bob received funds
     bob.sync()
     bob_status = bob.get_status()
-    assert bob_status["balance"] == 1000000 + 5 - 1
+    assert bob_status["send_balance"] == 1000000 + 5 - 1
 
     # return funds to alice
     bob.micro_send(alice.handle, 10)
     bob.sync()
     bob_status = bob.get_status()
-    assert bob_status["balance"] == 1000000 + 5 - 1 - 10 - 1
+    assert bob_status["send_balance"] == 1000000 + 5 - 1 - 10 - 1
 
     # check alice received returned funds
     alice.sync()
     alice_status = alice.get_status()
-    assert alice_status["balance"] == 1000000 - 5 - 1 + 10 - 1
+    assert alice_status["send_balance"] == 1000000 - 5 - 1 + 10 - 1
 
 
 @pytest.mark.usefixtures("picopayments_server")

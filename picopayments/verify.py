@@ -124,7 +124,7 @@ def request_input(asset, pubkey, spend_secret_hash, hub_rpc_url):
         is_url(hub_rpc_url)
 
     # asset must be in terms
-    terms = lib.terms().get(asset)
+    terms = lib.get_terms().get(asset)
     if terms is None:
         raise err.AssetNotInTerms(asset)
 

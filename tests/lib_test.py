@@ -31,7 +31,7 @@ def test_get_funding_addresses():
 
 @pytest.mark.usefixtures("picopayments_server")
 def test_validate_read_unknown_asset():
-    terms = lib.terms(["deadbeef"])
+    terms = lib.get_terms(["deadbeef"])
     assert(terms == {})
 
 

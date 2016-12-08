@@ -59,7 +59,7 @@ def test_standard_usage(server_db):
         api.sendrawtransaction(tx_hex=rawtx)
 
     # connect clients
-    assert len(api.mph_connections()) == 0
+    assert len(api.mph_status()["connections"]) == 0
     clients = []
     for i in range(4):
         auth_wif = util.gen_funded_wif(ASSET, 1000000, 1000000)
@@ -68,18 +68,18 @@ def test_standard_usage(server_db):
         assert txid is not None
 
         status = client.get_status()
-        assert status["balance"] == 1000000
-        assert status["c2h_deposit_ttl"] is not None
-        assert status["h2c_deposit_ttl"] is None  # hub deposit not yet made
+        assert status["send_balance"] == 1000000
+        assert status["send_deposit_ttl"] is not None
+        assert status["recv_deposit_ttl"] is None  # hub deposit not yet made
         clients.append(client)
-    assert len(api.mph_connections()) == 4
+    assert len(api.mph_status()["connections"]) == 4
 
     # server funds deposits
     assert len(cron.fund_deposits()) == 4
     assert len(cron.fund_deposits()) == 0
     for client in clients:
         status = client.get_status()
-        assert status["h2c_deposit_ttl"] is not None  # hub deposit now made
+        assert status["recv_deposit_ttl"] is not None  # hub deposit now made
 
     # before status
     alpha, beta, gamma, delta = clients
@@ -121,9 +121,12 @@ def test_standard_usage(server_db):
     gamma_after_status = gamma.get_status()
 
     # compare statuses
-    alpha_after_status["balance"] == alpha_before_status["balance"] + 27
-    beta_after_status["balance"] == beta_before_status["balance"] - 40
-    gamma_after_status["balance"] == gamma_before_status["balance"] + 5
+    alpha_after_status["send_balance"] == alpha_before_status[
+        "send_balance"] + 27
+    beta_after_status["send_balance"] == beta_before_status[
+        "send_balance"] - 40
+    gamma_after_status["send_balance"] == gamma_before_status[
+        "send_balance"] + 5
 
     # client | c2h active | h2c active
     # -------+------------+-----------
@@ -146,9 +149,9 @@ def test_standard_usage(server_db):
     # commit |  X  |  X  |
     # payout |  X  |  X  |
     # change |  X  |  X  |
-    assert len(api.mph_connections()) == 4
+    assert len(api.mph_status()["connections"]) == 4
     assert len(alpha.close()) == 1          # H2C COMMIT TX
-    assert len(api.mph_connections()) == 3
+    assert len(api.mph_status()["connections"]) == 3
     assert len(alpha.update()) == 0         # h2c payout delay not yet passed
     util_test.create_next_block(server_db)  # let payout delay pass
     assert len(alpha.update()) == 1         # H2C PAYOUT TX
@@ -163,9 +166,9 @@ def test_standard_usage(server_db):
     # commit  |  -  |  X  |
     # payout  |  -  |  X  |
     # change  |  X  |  X  |
-    assert len(api.mph_connections()) == 3
+    assert len(api.mph_status()["connections"]) == 3
     assert len(beta.close()) == 0
-    assert len(api.mph_connections()) == 2
+    assert len(api.mph_status()["connections"]) == 2
     assert len(cron.run_all()) == 2         # H2C CHANGE TX, C2H COMMIT TX
     util_test.create_next_block(server_db)  # let payout delay pass
     assert len(cron.run_all()) == 1         # C2H PAYOUT TX
@@ -177,9 +180,9 @@ def test_standard_usage(server_db):
     # commit  |  X  |  -  |
     # payout  |  X  |  -  |
     # change  |  X  |  X  |
-    assert len(api.mph_connections()) == 2
+    assert len(api.mph_status()["connections"]) == 2
     assert len(gamma.close()) == 1          # H2C COMMIT TX
-    assert len(api.mph_connections()) == 1
+    assert len(api.mph_status()["connections"]) == 1
     assert len(gamma.update()) == 1         # C2H CHANGE TX
     assert len(gamma.update()) == 1         # H2C PAYOUT TX
     assert len(cron.run_all()) == 1         # H2C CHANGE TX
@@ -190,9 +193,9 @@ def test_standard_usage(server_db):
     # commit  |  -  |  -  |
     # payout  |  -  |  -  |
     # change  |  X  |  X  |
-    assert len(api.mph_connections()) == 1
+    assert len(api.mph_status()["connections"]) == 1
     assert len(delta.close()) == 0
-    assert len(api.mph_connections()) == 0
+    assert len(api.mph_status()["connections"]) == 0
     assert len(delta.update()) == 1         # C2H CHANGE TX
     assert len(cron.run_all()) == 1         # H2C CHANGE TX
 

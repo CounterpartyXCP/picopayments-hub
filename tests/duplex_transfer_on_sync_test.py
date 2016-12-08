@@ -16,7 +16,7 @@ def test_dublex_transfer(connected_clients):
     alice, bob, charlie, david, eric, fred = connected_clients
 
     bob_before_status = bob.get_status()
-    assert bob_before_status["balance"] == 1000000
+    assert bob_before_status["send_balance"] == 1000000
 
     alice.micro_send(bob.handle, 1337, "0000")
     assert alice.sync() == []
@@ -29,4 +29,4 @@ def test_dublex_transfer(connected_clients):
     }]
 
     bob_after_status = bob.get_status()
-    assert bob_after_status["balance"] == 1000000 + 1337 - 1 - 42
+    assert bob_after_status["send_balance"] == 1000000 + 1337 - 1 - 42
