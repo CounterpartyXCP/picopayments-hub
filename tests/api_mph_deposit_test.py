@@ -7,14 +7,11 @@ import jsonschema
 # from counterpartylib.test import conftest
 
 from counterpartylib.test.util_test import CURR_DIR as CPLIB_TESTDIR
-from counterpartylib.test.fixtures.params import DP
-from micropayment_core.keys import address_from_wif
 from picopayments import lib
 from picopayments import api
 from picopayments_client import auth
 from picopayments import err
 from micropayment_core import util
-from micropayment_core import keys
 from micropayment_core.scripts import compile_deposit_script
 
 
@@ -47,8 +44,7 @@ def test_validate_handle_exists():
             "deposit_script": c2h_deposit_script,
             "next_revoke_secret_hash": next_revoke_secret_hash
         }
-        privkey = keys.wif_to_privkey(client_key["wif"])
-        params = auth.sign_json(params, privkey)
+        params = auth.sign_json(params, client_key["wif"])
         api.mph_deposit(**params)
         assert False
     except err.HandleNotFound:
@@ -71,8 +67,7 @@ def test_validate_deposit_not_already_given():
             "asset": asset,
             "spend_secret_hash": h2c_spend_secret_hash
         }
-        privkey = keys.wif_to_privkey(client_key["wif"])
-        params = auth.sign_json(params, privkey)
+        params = auth.sign_json(params, client_key["wif"])
         result = api.mph_request(**params)
 
         handle = result["handle"]
@@ -91,8 +86,7 @@ def test_validate_deposit_not_already_given():
             "deposit_script": c2h_deposit_script,
             "next_revoke_secret_hash": next_revoke_secret_hash
         }
-        privkey = keys.wif_to_privkey(client_key["wif"])
-        params = auth.sign_json(params, privkey)
+        params = auth.sign_json(params, client_key["wif"])
         result = api.mph_deposit(**params)
         assert result is not None
         jsonschema.validate(result, DEPOSIT_RESULT_SCHEMA)
@@ -104,8 +98,7 @@ def test_validate_deposit_not_already_given():
             "deposit_script": c2h_deposit_script,
             "next_revoke_secret_hash": next_revoke_secret_hash
         }
-        privkey = keys.wif_to_privkey(client_key["wif"])
-        params = auth.sign_json(params, privkey)
+        params = auth.sign_json(params, client_key["wif"])
         result = api.mph_deposit(**params)
 
         assert False

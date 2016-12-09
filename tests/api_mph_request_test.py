@@ -12,7 +12,6 @@ from picopayments import api
 from picopayments_client import auth
 from picopayments import err
 from micropayment_core import util
-from micropayment_core import keys
 
 
 FIXTURE_SQL_FILE = CPLIB_TESTDIR + '/fixtures/scenarios/unittest_fixture.sql'
@@ -45,8 +44,7 @@ def test_standard_usage_xcp():
         "spend_secret_hash": secret_hash,
         "hub_rpc_url": "https://does.not.exist",
     }
-    privkey = keys.wif_to_privkey(client_key["wif"])
-    params = auth.sign_json(params, privkey)
+    params = auth.sign_json(params, client_key["wif"])
     result = api.mph_request(**params)
     assert result is not None
     jsonschema.validate(result, REQUEST_RESULT_SCHEMA)
@@ -59,8 +57,7 @@ def test_validate_asset_in_terms():
         client_key = lib.create_key(asset)
         secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
         params = {"asset": asset, "spend_secret_hash": secret_hash}
-        privkey = keys.wif_to_privkey(client_key["wif"])
-        params = auth.sign_json(params, privkey)
+        params = auth.sign_json(params, client_key["wif"])
         api.mph_request(**params)
         assert False
     except err.AssetNotInTerms:
@@ -74,8 +71,7 @@ def test_validate_asset_exists():
         client_key = lib.create_key(asset)
         secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
         params = {"asset": asset, "spend_secret_hash": secret_hash}
-        privkey = keys.wif_to_privkey(client_key["wif"])
-        params = auth.sign_json(params, privkey)
+        params = auth.sign_json(params, client_key["wif"])
         api.mph_request(**params)
         assert False
     except err.AssetDoesNotExist:
@@ -93,8 +89,7 @@ def test_validate_url():
             "spend_secret_hash": secret_hash,
             "hub_rpc_url": "?? invalid url ??",
         }
-        privkey = keys.wif_to_privkey(client_key["wif"])
-        params = auth.sign_json(params, privkey)
+        params = auth.sign_json(params, client_key["wif"])
         api.mph_request(**params)
         assert False
     except err.InvalidUrl:

@@ -2,7 +2,6 @@ import copy
 from picopayments import api
 from picopayments import etc
 from picopayments_client import auth
-from micropayment_core import keys
 from micropayment_core.keys import generate_wif
 from micropayment_core.keys import address_from_wif
 from counterpartylib.test.fixtures.params import DP
@@ -27,8 +26,7 @@ class MockAPI(object):
         def wrapper(*args, **kwargs):
             kwargs = copy.deepcopy(kwargs)  # simulate http serialization
             if name in auth_methods:
-                privkey = keys.wif_to_privkey(self.auth_wif)
-                kwargs = auth.sign_json(kwargs, privkey)
+                kwargs = auth.sign_json(kwargs, self.auth_wif)
             result = object.__getattribute__(api, name)(**kwargs)
             if name in auth_methods:
                 auth.verify_json(result)

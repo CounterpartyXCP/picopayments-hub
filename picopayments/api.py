@@ -40,7 +40,7 @@ def mph_request(**kwargs):
             kwargs["spend_secret_hash"],
             kwargs.get("hub_rpc_url")
         )
-        return auth.sign_json(result, keys.wif_to_privkey(authwif))
+        return auth.sign_json(result, authwif)
 
 
 @dispatcher.add_method
@@ -58,7 +58,7 @@ def mph_deposit(**kwargs):
             kwargs["deposit_script"],
             kwargs["next_revoke_secret_hash"]
         )
-        return auth.sign_json(result, keys.wif_to_privkey(authwif))
+        return auth.sign_json(result, authwif)
 
 
 @dispatcher.add_method
@@ -80,7 +80,7 @@ def mph_sync(**kwargs):
             kwargs.get("commit"),
             kwargs.get("revokes")
         )
-        return auth.sign_json(result, keys.wif_to_privkey(authwif))
+        return auth.sign_json(result, authwif)
 
 
 @dispatcher.add_method
@@ -96,7 +96,7 @@ def mph_close(**kwargs):
             kwargs["handle"],
             kwargs.get("spend_secret"),
         )
-        return auth.sign_json(result, keys.wif_to_privkey(authwif))
+        return auth.sign_json(result, authwif)
 
 
 def _cplib_call(method, params={}):

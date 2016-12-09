@@ -42,7 +42,7 @@ def test_pubkey_missmatch(connected_clients):
             "revokes": None,
             "next_revoke_secret_hash": secret["secret_hash"]
         }
-        params = auth.sign_json(params, keys.wif_to_privkey(wif))
+        params = auth.sign_json(params, wif)
         api.mph_sync(**params)
         assert False
     except err.ClientPubkeyMissmatch:
@@ -65,8 +65,7 @@ def test_validate_handles_exist(connected_clients):
             "revokes": None,
             "next_revoke_secret_hash": secret["secret_hash"]
         }
-        privkey = keys.wif_to_privkey(alice.api.auth_wif)
-        api.mph_sync(**auth.sign_json(params, privkey))
+        api.mph_sync(**auth.sign_json(params, alice.api.auth_wif))
         assert False
     except err.HandlesNotFound:
         assert True
@@ -84,9 +83,7 @@ def test_validate_revoke_format(connected_clients):
             "revokes": "invalidformat",
             "next_revoke_secret_hash": secret["secret_hash"]
         }
-        params = auth.sign_json(
-            params, keys.wif_to_privkey(
-                alice.api.auth_wif))
+        params = auth.sign_json(params, alice.api.auth_wif)
         api.mph_sync(**params)
         assert False
     except jsonschema.exceptions.ValidationError:
@@ -105,9 +102,7 @@ def test_validate_commit_format(connected_clients):
             "revokes": None,
             "next_revoke_secret_hash": secret["secret_hash"]
         }
-        params = auth.sign_json(
-            params, keys.wif_to_privkey(
-                alice.api.auth_wif))
+        params = auth.sign_json(params, alice.api.auth_wif)
         api.mph_sync(**params)
         assert False
     except jsonschema.exceptions.ValidationError:
@@ -134,7 +129,7 @@ def test_standard_commit(connected_clients):
         "revokes": None,
         "next_revoke_secret_hash": h2c_next_revoke_secret_hash
     }
-    params = auth.sign_json(params, keys.wif_to_privkey(alice.api.auth_wif))
+    params = auth.sign_json(params, alice.api.auth_wif)
     result = api.mph_sync(**params)
 
     assert result["receive"] == [{
@@ -226,8 +221,7 @@ def test_asset_missmatch(connected_clients):
             "next_revoke_secret_hash": h2c_next_revoke_secret_hash
         }
 
-        privkey = keys.wif_to_privkey(david.api.auth_wif)
-        params = auth.sign_json(params, privkey)
+        params = auth.sign_json(params, david.api.auth_wif)
         api.mph_sync(**params)
 
         assert False
@@ -274,9 +268,7 @@ def test_send_exceeds_max(connected_clients):
             "revokes": None,
             "next_revoke_secret_hash": secret["secret_hash"]
         }
-        params = auth.sign_json(
-            params, keys.wif_to_privkey(
-                alice.api.auth_wif))
+        params = auth.sign_json(params, alice.api.auth_wif)
         api.mph_sync(**params)
         assert False
     except err.PaymentExceedsSpendable:
