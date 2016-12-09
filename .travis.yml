@@ -43,7 +43,6 @@ install:
   - pip install -r requirements_tests.txt
 
 script:
-  - pip freeze
   - pep8 picopayments
   - py.test --ignore=env --verbose --cov-config=.coveragerc --cov-report=term-missing --cov=./picopayments -vv
 
