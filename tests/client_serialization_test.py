@@ -17,10 +17,11 @@ FIXTURE_DB = tempfile.gettempdir() + '/fixtures.unittest_fixture.db'
 def test_serialization():
     auth_wif = util.gen_funded_wif("XCP", 1000000, 1000000)
 
-    client_alpha = Mph(util.MockAPI(auth_wif=auth_wif))
+    hub_api = util.MockAPI(auth_wif=auth_wif)
+    client_alpha = Mph(hub_api)
     serialized_alpha = client_alpha.serialize()
 
-    client_beta = Mph.deserialize(data=serialized_alpha, api_cls=util.MockAPI)
+    client_beta = Mph.deserialize(api=hub_api, data=serialized_alpha)
     serialized_beta = client_beta.serialize()
 
     assert serialized_alpha == serialized_beta

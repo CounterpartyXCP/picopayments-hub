@@ -116,11 +116,7 @@ def _make_cplib_call(method):
 
 @dispatcher.add_method
 def create_send(**kwargs):
-    kwargs["disable_utxo_locks"] = True  # always disable on public api
-    return _cplib_call(method="create_send", params=kwargs)
-
-
-def locked_create_send(**kwargs):
+    kwargs["disable_utxo_locks"] = True  # always disable
     return _cplib_call(method="create_send", params=kwargs)
 
 

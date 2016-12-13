@@ -23,10 +23,6 @@ from picopayments import etc
 from picopayments import sql
 
 
-# XXX remove _get_fee_multaple requirement
-from counterpartylib.lib.micropayments.control import _get_fee_multaple
-
-
 _TERMS_FP = pkg_resources.resource_stream("picopayments", "terms.json")
 TERMS = json.loads(_TERMS_FP.read().decode("utf-8"))
 
@@ -455,13 +451,19 @@ def publish(rawtx):
 
 def send_funds(destination, asset, quantity):
     from picopayments import api
-    extra_btc = _get_fee_multaple(factor=3)
+    regular_dust_size = 5500  # FIXME get from cplib
+    fee_per_kb = 25000  # FIXME get from cplib
+    fee = int(fee_per_kb / 2)
+    extra_btc = (fee + regular_dust_size) * 3
     key = find_key_with_funds(asset, quantity, extra_btc)
     if key is None:
         raise err.InsufficientFunds(asset, quantity)
-    unsigned_rawtx = api.locked_create_send(
-        source=key["address"], destination=destination, asset=asset,
-        regular_dust_size=extra_btc, quantity=quantity
+    unsigned_rawtx = api.create_send(
+        source=key["address"],
+        destination=destination,
+        asset=asset,
+        regular_dust_size=extra_btc,
+        quantity=quantity,
     )
     _LOCKS[key["address"]] = cachetools.TTLCache(_LOCKS_MAX, _LOCKS_TTL)
     signed_rawtx = scripts.sign_deposit(get_tx, key["wif"], unsigned_rawtx)
