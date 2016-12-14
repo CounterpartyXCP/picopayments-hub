@@ -130,11 +130,9 @@ def collect_garbage():
 
 def run_all():
     with etc.database_lock:
-        print("CRON RUN ALL BEGIN")
         txids = []
         txids += publish_commits()
         txids += recover_funds()
         fund_deposits()  # FIXME add created txids
         collect_garbage()
-        print("CRON RUN ALL END")
         return txids

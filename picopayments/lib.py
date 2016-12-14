@@ -407,7 +407,7 @@ def get_status(hub_conn, clearance=6, cursor=None):
     )
     status = Mpc(api).full_duplex_channel_status(
         hub_conn["handle"], etc.netcode, send_state,
-        recv_state, clearance=clearance
+        recv_state, get_secret, clearance=clearance
     )
 
     # get connection state
