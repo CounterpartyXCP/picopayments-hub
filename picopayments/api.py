@@ -19,7 +19,7 @@ def mph_status(assets=None):
         return {
             "liquidity": lib.get_hub_liquidity(assets=assets),
             "current_terms": lib.get_terms(assets=assets),
-            "connections": lib.get_connections_status(),
+            "connections": lib.get_connections_status(assets=assets),
             "funding_addresses": lib.get_funding_addresses(assets=assets)
         }
 

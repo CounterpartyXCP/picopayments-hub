@@ -387,12 +387,12 @@ def get_balances(address, assets=None):
     return Mpc(api).get_balances(address=address, assets=assets)
 
 
-def get_connections_status():
-    # FIXME limet to only opening|connected|closed
+def get_connections_status(assets=None):
+    # FIXME limit to only open connections
     # FIXME limit by asset
-    connections = []
+    connections = {}
     for hub_conn in db.hub_connections_open():
-        connections.append(get_status(hub_conn))
+        connections[hub_conn["handle"]] = get_status(hub_conn)
     return connections
 
 
@@ -409,16 +409,12 @@ def get_status(hub_conn, clearance=6, cursor=None):
         hub_conn["handle"], etc.netcode, send_state,
         recv_state, get_secret, clearance=clearance
     )
-
-    # get connection state
-    connection_state = "opening"
-    if hub_conn["complete"] != 0:
-        connection_state = "connected"
-    if hub_conn["closed"] != 0:
-        connection_state = "closed"
-    status["connection_state"] = connection_state
-
-    return status
+    return {
+        "asset": status["asset"],
+        "balance": status["balance"],
+        "ttl": status["ttl"],
+        "status": status["status"]
+    }
 
 
 def deposit_address(state):
