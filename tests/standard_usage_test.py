@@ -150,7 +150,7 @@ def test_standard_usage(server_db):
     # payout |  X  |  X  |
     # change |  X  |  X  |
     assert len(api.mph_status()["connections"]) == 4
-    assert len(alpha.close()) == 1          # H2C COMMIT TX
+    assert alpha.close() is not None        # H2C COMMIT TX
     assert len(api.mph_status()["connections"]) == 3
     assert len(alpha.update()) == 0         # h2c payout delay not yet passed
     util_test.create_next_block(server_db)  # let payout delay pass
@@ -167,7 +167,7 @@ def test_standard_usage(server_db):
     # payout  |  -  |  X  |
     # change  |  X  |  X  |
     assert len(api.mph_status()["connections"]) == 3
-    assert len(beta.close()) == 0
+    assert beta.close() is None
     assert len(api.mph_status()["connections"]) == 2
     assert len(cron.run_all()) == 2         # H2C CHANGE TX, C2H COMMIT TX
     util_test.create_next_block(server_db)  # let payout delay pass
@@ -181,7 +181,7 @@ def test_standard_usage(server_db):
     # payout  |  X  |  -  |
     # change  |  X  |  X  |
     assert len(api.mph_status()["connections"]) == 2
-    assert len(gamma.close()) == 1          # H2C COMMIT TX
+    assert gamma.close() is not None        # H2C COMMIT TX
     assert len(api.mph_status()["connections"]) == 1
     assert len(gamma.update()) == 1         # C2H CHANGE TX
     assert len(gamma.update()) == 1         # H2C PAYOUT TX
@@ -194,7 +194,7 @@ def test_standard_usage(server_db):
     # payout  |  -  |  -  |
     # change  |  X  |  X  |
     assert len(api.mph_status()["connections"]) == 1
-    assert len(delta.close()) == 0
+    assert delta.close() is None
     assert len(api.mph_status()["connections"]) == 0
     assert len(delta.update()) == 1         # C2H CHANGE TX
     assert len(cron.run_all()) == 1         # H2C CHANGE TX
