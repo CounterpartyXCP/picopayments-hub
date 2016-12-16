@@ -10,7 +10,7 @@ from counterpartylib.lib.micropayments.control import get_balance
 from counterpartylib.lib.api import dispatcher
 from micropayment_core.keys import address_from_wif
 from micropayment_core.keys import generate_wif
-from picopayments import api
+from picopayments_hub import api
 
 
 FIXTURE_SQL_FILE = CPLIB_TESTDIR + '/fixtures/scenarios/unittest_fixture.sql'

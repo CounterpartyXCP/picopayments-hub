@@ -6,8 +6,8 @@ import pytest
 
 from counterpartylib.test.util_test import CURR_DIR as CPLIB_TESTDIR
 from picopayments_client.mph import Mph
-from picopayments import cron
-from picopayments import err
+from picopayments_hub import cron
+from picopayments_hub import err
 from tests import util
 
 

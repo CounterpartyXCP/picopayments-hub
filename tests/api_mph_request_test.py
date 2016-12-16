@@ -7,10 +7,10 @@ import pytest
 # from counterpartylib.test import conftest
 
 from counterpartylib.test.util_test import CURR_DIR as CPLIB_TESTDIR
-from picopayments import lib
-from picopayments import api
+from picopayments_hub import lib
+from picopayments_hub import api
+from picopayments_hub import err
 from picopayments_client import auth
-from picopayments import err
 from micropayment_core import util
 
 

@@ -7,9 +7,9 @@ import pytest
 from counterpartylib.test.util_test import CURR_DIR as CPLIB_TESTDIR
 import os
 from pycoin.serialize import b2h
-from picopayments import db
-from picopayments import api
-from picopayments import lib
+from picopayments_hub import db
+from picopayments_hub import api
+from picopayments_hub import lib
 
 
 FIXTURE_SQL_FILE = CPLIB_TESTDIR + '/fixtures/scenarios/unittest_fixture.sql'

@@ -5,8 +5,8 @@ import pytest
 # from counterpartylib.test import conftest
 
 from counterpartylib.test.util_test import CURR_DIR as CPLIB_TESTDIR
-from picopayments import lib
-from picopayments import api
+from picopayments_hub import lib
+from picopayments_hub import api
 from pycoin.key.validate import is_address_valid
 from micropayment_core.keys import address_from_wif
 from counterpartylib.test.fixtures.params import DP

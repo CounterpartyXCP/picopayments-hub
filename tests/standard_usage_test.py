@@ -9,10 +9,10 @@ from counterpartylib.test.fixtures.params import DP
 from counterpartylib.test import util_test
 from micropayment_core.keys import address_from_wif
 from picopayments_client.mph import Mph
-from picopayments import api
-from picopayments import lib
-from picopayments import db
-from picopayments import cron
+from picopayments_hub import api
+from picopayments_hub import lib
+from picopayments_hub import db
+from picopayments_hub import cron
 from tests import util
 
 

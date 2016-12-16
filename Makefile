@@ -81,15 +81,15 @@ shell: install
 
 
 test: setup
-	$(AUTOPEP8) --in-place --aggressive --aggressive --recursive picopayments
+	$(AUTOPEP8) --in-place --aggressive --aggressive --recursive picopayments_hub
 	$(AUTOPEP8) --in-place --aggressive --aggressive --recursive examples
 	$(AUTOPEP8) --in-place --aggressive --aggressive --recursive tests
-	$(PEP8) picopayments
+	$(PEP8) picopayments_hub
 	$(PEP8) examples
 	$(PEP8) tests
-	$(PYTEST) --ignore=env --verbose --cov-config=.coveragerc --cov-report=term-missing --cov=./picopayments -vv
-	# $(PYTEST) --ignore=env --verbose --cov-config=.coveragerc --cov-report=term-missing --cov=./picopayments -vv --capture=no --pdb tests/api_mph_sync_test.py::test_validate_handles_exist
-	# $(PYTEST) --ignore=env --verbose --cov-config=.coveragerc --cov-report=term-missing --cov=./picopayments -vv --capture=no --pdb tests/api_mph_sync_test.py::test_repeated_transfer
+	$(PYTEST) --ignore=env --verbose --cov-config=.coveragerc --cov-report=term-missing --cov=./picopayments_hub -vv
+	# $(PYTEST) --ignore=env --verbose --cov-config=.coveragerc --cov-report=term-missing --cov=./picopayments_hub -vv --capture=no --pdb tests/api_mph_sync_test.py::test_validate_handles_exist
+	# $(PYTEST) --ignore=env --verbose --cov-config=.coveragerc --cov-report=term-missing --cov=./picopayments_hub -vv --capture=no --pdb tests/api_mph_sync_test.py::test_repeated_transfer
 
 
 publish: test

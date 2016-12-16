@@ -2,8 +2,8 @@ import os
 import shutil
 import unittest
 import tempfile
-from picopayments import srv
-from picopayments import __version__
+from picopayments_hub import srv
+from picopayments_hub import __version__
 
 
 class TestSRV(unittest.TestCase):

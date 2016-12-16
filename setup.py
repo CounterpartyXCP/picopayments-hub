@@ -5,12 +5,12 @@
 from setuptools import setup, find_packages
 
 
-exec(open('picopayments/version.py').read())  # load __version__
+exec(open('picopayments_hub/version.py').read())  # load __version__
 
 
 setup(
-    name='picopayments',
-    scripts=['picopayments/bin/picopayments'],
+    name='picopayments-hub',
+    scripts=['picopayments_hub/bin/picopayments-hub'],
     description="Micropayment hub for counterparty assets.",
     long_description=open("README.rst").read(),
     keywords="storj, counterparty, micropayment, hub",
@@ -21,7 +21,7 @@ setup(
     version=__version__,  # NOQA
     test_suite="tests",
     dependency_links=[],
-    package_data={'picopayments': ['sql/*.sql', '*.json']},
+    package_data={'picopayments_hub': ['sql/*.sql', '*.json']},
     include_package_data=True,
     install_requires=open("requirements.txt").readlines(),
     tests_require=open("requirements_tests.txt").readlines(),

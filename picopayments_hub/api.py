@@ -4,9 +4,9 @@
 
 
 from jsonrpc import dispatcher
-from picopayments import etc
-from picopayments import verify
-from picopayments import lib
+from picopayments_hub import etc
+from picopayments_hub import verify
+from picopayments_hub import lib
 from picopayments_client import auth
 from picopayments_client.rpc import jsonrpc_call
 from micropayment_core import keys

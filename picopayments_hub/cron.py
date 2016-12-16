@@ -3,11 +3,11 @@
 # License: MIT (see LICENSE file)
 
 
-from picopayments import etc
-from picopayments import db
-from picopayments import lib
-from picopayments import sql
-from picopayments import api
+from picopayments_hub import etc
+from picopayments_hub import db
+from picopayments_hub import lib
+from picopayments_hub import sql
+from picopayments_hub import api
 from micropayment_core.scripts import get_deposit_spend_secret_hash
 from picopayments_client.mpc import Mpc
 from micropayment_core.util import gettxid

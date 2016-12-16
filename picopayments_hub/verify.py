@@ -8,10 +8,10 @@ import jsonschema
 from counterpartylib.lib.micropayments import validate
 from micropayment_core import scripts
 from micropayment_core import util
-from picopayments import err
-from picopayments import db
-from picopayments import etc
-from picopayments import lib
+from picopayments_hub import err
+from picopayments_hub import db
+from picopayments_hub import etc
+from picopayments_hub import lib
 from jsonrpc import dispatcher
 
 
@@ -63,7 +63,7 @@ REVOKES_SCHEMA = {
 
 
 def asset_exists(asset):
-    from picopayments import api
+    from picopayments_hub import api
     validate.is_string(asset)
     assets = [e["asset_name"] for e in api.get_assets()]
     if asset not in assets:

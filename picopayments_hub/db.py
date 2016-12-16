@@ -6,8 +6,8 @@
 import apsw
 from micropayment_core import util
 from micropayment_core import scripts
-from picopayments import etc
-from picopayments import sql
+from picopayments_hub import etc
+from picopayments_hub import sql
 
 
 # old version -> migrate sql

@@ -4,7 +4,7 @@ import pytest
 # this is require near the top to do setup of the test suite
 # from counterpartylib.test import conftest
 
-from picopayments import etc
+from picopayments_hub import etc
 from counterpartylib.test.util_test import CURR_DIR as CPLIB_TESTDIR
 from picopayments_client.mpc import Mpc
 from tests import util

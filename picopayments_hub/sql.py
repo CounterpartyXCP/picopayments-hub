@@ -5,7 +5,7 @@
 
 import os
 import pkg_resources
-from picopayments import etc
+from picopayments_hub import etc
 
 
 def _row_to_dict_factory(cursor, row):
@@ -18,7 +18,7 @@ def get_cursor():
 
 def load(script_name):
     sql_path = os.path.join("sql", "{0}.sql".format(script_name))
-    script = pkg_resources.resource_stream("picopayments", sql_path).read()
+    script = pkg_resources.resource_stream("picopayments_hub", sql_path).read()
     return script.decode("utf-8")
 
 

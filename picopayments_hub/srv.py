@@ -8,11 +8,11 @@ import threading
 from werkzeug.serving import run_simple
 from werkzeug.wrappers import Request, Response
 from jsonrpc import JSONRPCResponseManager, dispatcher
-from picopayments import lib
-from picopayments import cli
-from picopayments import etc
-from picopayments import cron
-from picopayments import __version__
+from picopayments_hub import lib
+from picopayments_hub import cli
+from picopayments_hub import etc
+from picopayments_hub import cron
+from picopayments_hub import __version__
 
 
 @Request.application

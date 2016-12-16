@@ -7,12 +7,12 @@ import jsonschema
 
 from counterpartylib.test.util_test import CURR_DIR as CPLIB_TESTDIR
 from counterpartylib.test import util_test
-from picopayments import lib
-from picopayments import api
+from picopayments_hub import lib
+from picopayments_hub import api
+from picopayments_hub import err
+from picopayments_hub import etc
 from picopayments_client import auth
-from picopayments import err
 from micropayment_core import keys
-from picopayments import etc
 
 
 FIXTURE_SQL_FILE = CPLIB_TESTDIR + '/fixtures/scenarios/unittest_fixture.sql'

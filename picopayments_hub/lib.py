@@ -16,14 +16,13 @@ from micropayment_core import keys
 from micropayment_core import scripts
 from counterpartylib.lib.util import DictCache
 from picopayments_client.mpc import Mpc
-from picopayments import db
-from picopayments_client import auth
-from picopayments import err
-from picopayments import etc
-from picopayments import sql
+from picopayments_hub import db
+from picopayments_hub import err
+from picopayments_hub import etc
+from picopayments_hub import sql
 
 
-_TERMS_FP = pkg_resources.resource_stream("picopayments", "terms.json")
+_TERMS_FP = pkg_resources.resource_stream("picopayments_hub", "terms.json")
 TERMS = json.loads(_TERMS_FP.read().decode("utf-8"))
 
 
@@ -203,7 +202,7 @@ def initialize(args):
 
 def update_channel_state(channel_id, asset, commit=None,
                          revokes=None, cursor=None):
-    from picopayments import api
+    from picopayments_hub import api
 
     state = db.load_channel_state(channel_id, asset, cursor=cursor)
     unnotified_revokes = db.unnotified_revokes(channel_id=channel_id)
@@ -262,7 +261,7 @@ def _save_sync_data(cursor, handle, next_revoke_secret_hash,
 
 
 def recover_funds(hub_connection, cursor=None):
-    from picopayments import api
+    from picopayments_hub import api
     asset = hub_connection["asset"]
     c2h_mpc_id = hub_connection["c2h_channel_id"]
     h2c_mpc_id = hub_connection["h2c_channel_id"]
@@ -383,7 +382,7 @@ def get_hub_liquidity(assets=None):
 
 
 def get_balances(address, assets=None):
-    from picopayments import api
+    from picopayments_hub import api
     return Mpc(api).get_balances(address=address, assets=assets)
 
 
@@ -397,7 +396,7 @@ def get_connections_status(assets=None):
 
 
 def get_status(hub_conn, clearance=6, cursor=None):
-    from picopayments import api
+    from picopayments_hub import api
 
     send_state = db.load_channel_state(
         hub_conn["h2c_channel_id"], hub_conn["asset"], cursor=cursor
@@ -426,27 +425,27 @@ def get_script_address(script):
 
 
 def get_transferred_quantity(state):
-    from picopayments import api
+    from picopayments_hub import api
     return api.mpc_transferred_amount(state=state)
 
 
 def is_expired(state, clearance):
-    from picopayments import api
+    from picopayments_hub import api
     return api.mpc_deposit_ttl(state=state, clearance=clearance) == 0
 
 
 def get_tx(txid):
-    from picopayments import api
+    from picopayments_hub import api
     return api.getrawtransaction(tx_hash=txid)
 
 
 def publish(rawtx):
-    from picopayments import api
+    from picopayments_hub import api
     return api.sendrawtransaction(tx_hex=rawtx)  # pragma: no cover
 
 
 def send_funds(destination, asset, quantity):
-    from picopayments import api
+    from picopayments_hub import api
     regular_dust_size = 5500  # FIXME get from cplib
     fee_per_kb = 25000  # FIXME get from cplib
     fee = int(fee_per_kb / 2)
@@ -467,7 +466,7 @@ def send_funds(destination, asset, quantity):
 
 
 def get_transactions(address):
-    from picopayments import api
+    from picopayments_hub import api
     return api.search_raw_transactions(address=address, unconfirmed=True)
 
 
@@ -530,7 +529,7 @@ def load_connection_data(handle, cursor):
 
 
 def _send_client_funds(connection_data, quantity):
-    from picopayments import api
+    from picopayments_hub import api
 
     c2h_state = connection_data["c2h_state"]
     h2c_state = connection_data["h2c_state"]
