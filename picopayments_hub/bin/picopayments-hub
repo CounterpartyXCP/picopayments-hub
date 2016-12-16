@@ -8,7 +8,7 @@
 
 
 import sys
-from picopayments.srv import main
+from picopayments_hub.srv import main
 
 
 if __name__ == "__main__":
