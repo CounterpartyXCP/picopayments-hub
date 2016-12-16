@@ -5,17 +5,17 @@ PicoPayments Hub
 |BuildLink|_ |CoverageLink|_ |LicenseLink|_ |IssuesLink|_
 
 
-.. |BuildLink| image:: https://travis-ci.org/StorjRND/picopayments.svg
-.. _BuildLink: https://travis-ci.org/StorjRND/picopayments
+.. |BuildLink| image:: https://travis-ci.org/StorjRND/picopayments-hub.svg
+.. _BuildLink: https://travis-ci.org/StorjRND/picopayments-hub
 
-.. |CoverageLink| image:: https://coveralls.io/repos/StorjRND/picopayments/badge.svg
-.. _CoverageLink: https://coveralls.io/r/StorjRND/picopayments
+.. |CoverageLink| image:: https://coveralls.io/repos/StorjRND/picopayments-hub/badge.svg
+.. _CoverageLink: https://coveralls.io/r/StorjRND/picopayments-hub
 
 .. |LicenseLink| image:: https://img.shields.io/badge/license-MIT-blue.svg
-.. _LicenseLink: https://raw.githubusercontent.com/F483/picopayments/master/LICENSE
+.. _LicenseLink: https://raw.githubusercontent.com/F483/picopayments-hub/master/LICENSE
 
-.. |IssuesLink| image:: https://img.shields.io/github/issues/F483/picopayments.svg
-.. _IssuesLink: https://github.com/F483/picopayments/issues
+.. |IssuesLink| image:: https://img.shields.io/github/issues/F483/picopayments-hub.svg
+.. _IssuesLink: https://github.com/F483/picopayments-hub/issues
 
 
 Decentral micropayment hub for counterparty assets.
@@ -29,6 +29,11 @@ Testnet:
 
  * Picopayments api: https://139.59.214.74:15000/api/ 
  * Counterpartylib api: http://139.59.214.74:14000/api/ 
+
+Mainnet:
+
+ * Picopayments api: TODO setup
+ * Counterpartylib api: TODO setup
 
 
 ==========
