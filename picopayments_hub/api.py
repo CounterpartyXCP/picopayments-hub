@@ -7,9 +7,8 @@ from jsonrpc import dispatcher
 from picopayments_hub import etc
 from picopayments_hub import verify
 from picopayments_hub import lib
-from picopayments_client import auth
-from picopayments_client.rpc import jsonrpc_call
-from micropayment_core import keys
+from picopayments_cli import auth
+from picopayments_cli.rpc import jsonrpc_call
 
 
 @dispatcher.add_method

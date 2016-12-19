@@ -8,7 +8,7 @@ from picopayments_hub import srv
 from picopayments_hub import api
 from picopayments_hub import lib
 from picopayments_hub import cron
-from picopayments_client.mph import Mph
+from picopayments_cli.mph import Mph
 from micropayment_core.keys import address_from_wif
 from counterpartylib.lib import config
 from counterpartylib.test import util_test

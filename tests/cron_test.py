@@ -5,7 +5,7 @@ import pytest
 # from counterpartylib.test import conftest
 
 from counterpartylib.test.util_test import CURR_DIR as CPLIB_TESTDIR
-from picopayments_client.mph import Mph
+from picopayments_cli.mph import Mph
 from picopayments_hub import cron
 from picopayments_hub import err
 from tests import util

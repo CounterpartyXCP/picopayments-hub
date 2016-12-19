@@ -15,7 +15,7 @@ from micropayment_core import util
 from micropayment_core import keys
 from micropayment_core import scripts
 from counterpartylib.lib.util import DictCache
-from picopayments_client.mpc import Mpc
+from picopayments_cli.mpc import Mpc
 from picopayments_hub import db
 from picopayments_hub import err
 from picopayments_hub import etc

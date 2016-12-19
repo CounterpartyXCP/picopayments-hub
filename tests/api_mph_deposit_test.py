@@ -10,7 +10,7 @@ from counterpartylib.test.util_test import CURR_DIR as CPLIB_TESTDIR
 from picopayments_hub import lib
 from picopayments_hub import api
 from picopayments_hub import err
-from picopayments_client import auth
+from picopayments_cli import auth
 from micropayment_core import util
 from micropayment_core.scripts import compile_deposit_script
 

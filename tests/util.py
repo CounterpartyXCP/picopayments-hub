@@ -1,7 +1,7 @@
 import copy
 from picopayments_hub import api
 from picopayments_hub import etc
-from picopayments_client import auth
+from picopayments_cli import auth
 from micropayment_core.keys import generate_wif
 from micropayment_core.keys import address_from_wif
 from counterpartylib.test.fixtures.params import DP

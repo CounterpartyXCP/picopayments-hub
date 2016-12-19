@@ -11,7 +11,7 @@ from picopayments_hub import lib
 from picopayments_hub import api
 from picopayments_hub import err
 from picopayments_hub import etc
-from picopayments_client import auth
+from picopayments_cli import auth
 from micropayment_core import keys
 
 

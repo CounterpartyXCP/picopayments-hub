@@ -9,8 +9,7 @@ from picopayments_hub import lib
 from picopayments_hub import sql
 from picopayments_hub import api
 from micropayment_core.scripts import get_deposit_spend_secret_hash
-from picopayments_client.mpc import Mpc
-from micropayment_core.util import gettxid
+from picopayments_cli.mpc import Mpc
 
 
 # FIXME use http interface to ensure its called in the same process
@@ -130,9 +129,11 @@ def collect_garbage():
 
 def run_all():
     with etc.database_lock:
+        print("BEGIN CRON")
         txids = []
         txids += publish_commits()
         txids += recover_funds()
         fund_deposits()  # FIXME add created txids
         collect_garbage()
+        print("END CRON", txids)
         return txids

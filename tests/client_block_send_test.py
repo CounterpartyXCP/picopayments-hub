@@ -6,7 +6,7 @@ import pytest
 
 from picopayments_hub import etc
 from counterpartylib.test.util_test import CURR_DIR as CPLIB_TESTDIR
-from picopayments_client.mpc import Mpc
+from picopayments_cli.mpc import Mpc
 from tests import util
 from micropayment_core import keys
 
