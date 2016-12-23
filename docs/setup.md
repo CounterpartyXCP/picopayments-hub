@@ -65,7 +65,7 @@ Best use a screen as the node does not run as a daemon.
     pip install pytest==2.9.1
     pip install pytest-cov==2.2.1
     pip install jsonschema==2.5.1
-    pip install micropayment-core==0.4.2
+    pip install micropayment-core==0.4.3
     pip install python-bitcoinlib==0.5.1
     pip install requests==2.10.0
     pip install tendo==0.2.8
@@ -88,8 +88,8 @@ Setup picopayments node with patched micropayments support.
 Best use a screen as the node does not run as a daemon.
 
     # setup virtualenv
-    mkdir picopayments
-    cd picopayments
+    mkdir picopayments_hub
+    cd picopayments_hub
     virtualenv -p /usr/bin/python3 env
     source env/bin/activate
 
@@ -107,6 +107,8 @@ Best use a screen as the node does not run as a daemon.
     pip install pysha3==0.3
     pip install pytest==2.9.1
     pip install pytest-cov==2.2.1
+    pip install jsonschema>=2.5.1
+    pip install micropayment-core==0.4.3
     pip install python-bitcoinlib==0.5.1
     pip install requests==2.10.0
     pip install tendo==0.2.8
@@ -117,23 +119,20 @@ Best use a screen as the node does not run as a daemon.
     wget https://transfer.sh/CFSkg/counterparty-lib-9.55.0-py3-none-any.whl
     pip install --use-wheel --no-index --find-links=$PWD counterparty-lib
 
-    pip install picopayments
+    pip install picopayments-hub
     
     # show hub terms (edit terms file as you see fit)
-    picopayments --testnet --terms
+    picopayments-hub --testnet --terms  # FIXME add command
 
-    # show funding addresses (use to fund the picopayments hub)
-    picopayments --testnet --funding
+    # Start picopayment hub (use generated self signed cert)
+    picopayments-hub --testnet --host=0.0.0.0 --cp_url=http://127.0.0.1:14000/api/
 
-    # Start picopayment node (use generated self signed cert)
-    picopayments --testnet --host=0.0.0.0 --cp_url=http://127.0.0.1:14000/api/
-
-    # Start picopayment node (provide existing cert)
-    picopayments --testnet --host=0.0.0.0 --cp_url=http://127.0.0.1:14000/api/ --ssl_cert_file=path/to.cert --ssl_pkey_file=path/to.key
+    # Start picopayment hub (provide existing cert)
+    picopayments-hub --testnet --host=0.0.0.0 --cp_url=http://127.0.0.1:14000/api/ --ssl_cert_file=path/to.cert --ssl_pkey_file=path/to.key
 
 
 ## 5. Verify picopayment hub is working.
 
 Run from differnt network to ensure the hub is reachable from the internet.
 
-    curl -X POST https://your.hub.url.or.ip:15000/api/ -H 'Content-Type: application/json; charset=UTF-8' -H 'Accept: application/json, text/javascript' -k --data-binary '{ "jsonrpc": "2.0", "id": 0, "method": "mph_terms" }'
+    curl -X POST https://your.hub.url.or.ip:15000/api/ -H 'Content-Type: application/json; charset=UTF-8' -H 'Accept: application/json, text/javascript' -k --data-binary '{ "jsonrpc": "2.0", "id": 0, "method": "mph_status" }'
