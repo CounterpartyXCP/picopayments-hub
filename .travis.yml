@@ -31,13 +31,13 @@ install:
   - pip install pytest==2.9.1
   - pip install pytest-cov==2.2.1
   - pip install jsonschema==2.5.1
-  - pip install micropayment-core==0.4.0
+  - pip install micropayment-core==0.4.2
   - pip install python-bitcoinlib==0.5.1
   - pip install requests==2.10.0
   - pip install tendo==0.2.8
   - pip install xmltodict==0.10.1
   - pip install cachetools==1.1.6
-  - wget https://transfer.sh/YemDk/counterparty-lib-9.55.0-py3-none-any.whl
+  - wget https://transfer.sh/CFSkg/counterparty-lib-9.55.0-py3-none-any.whl
   - pip install --use-wheel --no-index --find-links=$PWD counterparty-lib
   - pip install -r requirements.txt
   - pip install -r requirements_tests.txt

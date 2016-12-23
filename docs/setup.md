@@ -50,19 +50,22 @@ Best use a screen as the node does not run as a daemon.
     source env/bin/activate
 
     pip install prettytable==0.7.2
-    pip install apsw
+    pip install apsw==3.9.2-r1
     pip install python-dateutil==2.5.3
     pip install Flask-HTTPAuth==3.1.2
     pip install Flask==0.11
     pip install appdirs==1.4.0
+    pip install werkzeug==0.11.10
     pip install colorlog==2.7.0
     pip install json-rpc==1.10.3
-    pip install six>=1.10.0
+    pip install six==1.10.0
     pip install pycoin==0.70
     pip install pycrypto==2.6.1
     pip install pysha3==0.3
     pip install pytest==2.9.1
     pip install pytest-cov==2.2.1
+    pip install jsonschema==2.5.1
+    pip install micropayment-core==0.4.2
     pip install python-bitcoinlib==0.5.1
     pip install requests==2.10.0
     pip install tendo==0.2.8
@@ -70,7 +73,7 @@ Best use a screen as the node does not run as a daemon.
     pip install cachetools==1.1.6
 
     # install counterparty-lib with micropayments patch
-    wget https://transfer.sh/YemDk/counterparty-lib-9.55.0-py3-none-any.whl
+    wget https://transfer.sh/CFSkg/counterparty-lib-9.55.0-py3-none-any.whl
     pip install --use-wheel --no-index --find-links=$PWD counterparty-lib
     
     pip install counterparty-cli==1.1.2
@@ -111,7 +114,7 @@ Best use a screen as the node does not run as a daemon.
     pip install cachetools==1.1.6
 
     # install counterparty-lib with micropayments patch
-    wget https://transfer.sh/YemDk/counterparty-lib-9.55.0-py3-none-any.whl
+    wget https://transfer.sh/CFSkg/counterparty-lib-9.55.0-py3-none-any.whl
     pip install --use-wheel --no-index --find-links=$PWD counterparty-lib
 
     pip install picopayments

@@ -1,5 +1,5 @@
 six == 1.10.0
-picopayments-cli == 0.0.16
+picopayments-cli == 0.0.19
 json-rpc == 1.10.3
 werkzeug == 0.11.10
 pycoin == 0.70
@@ -13,6 +13,5 @@ cachetools == 1.1.6
 Flask == 0.11
 counterparty-lib == 9.55.0
 jsonschema == 2.5.1
-micropayment-core == 0.4.0
 pyOpenSSL == 16.2.0
 pyelliptic == 1.5.7
