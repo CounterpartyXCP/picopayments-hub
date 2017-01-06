@@ -8,6 +8,7 @@ import copy
 import json
 import pkg_resources
 import cachetools
+import random
 from collections import defaultdict
 from pycoin.key.BIP32Node import BIP32Node
 from pycoin.serialize import b2h
@@ -162,7 +163,9 @@ def complete_connection(handle, c2h_deposit_script,
 
 def find_key_with_funds(asset, asset_quantity, btc_quantity):
     nearest = {"key": None, "available": 2100000000000000}
-    for key in db.keys(asset=asset):
+    keys = db.keys(asset=asset)
+    random.shuffle(keys)  # prevent draining btc for fees from one address
+    for key in keys:
         address = key["address"]
         # FIXME ignore if locked by counterpartylib
         if has_unconfirmed_transactions(address):
@@ -478,10 +481,15 @@ def has_unconfirmed_transactions(address):
     return False
 
 
-def load_connection_data(handle, cursor):
+def load_connection_data(handle, new_c2h_commit=None,
+                         new_h2c_revokes=None, cursor=None):
+    from picopayments_hub import api
+    # FIXME this is getting dangerous, used in lib and verify, split it up!
 
     # connection data
     connection = db.hub_connection(handle=handle, cursor=cursor)
+    if not connection:
+        raise err.HandleNotFound(handle)
     asset = connection["asset"]
     terms = db.terms(id=connection["terms_id"], cursor=cursor)
 
@@ -489,6 +497,9 @@ def load_connection_data(handle, cursor):
     h2c_state = db.load_channel_state(
         connection["h2c_channel_id"], connection["asset"], cursor=cursor
     )
+    if new_h2c_revokes is not None:
+        h2c_state = api.mpc_revoke_all(state=h2c_state,
+                                       secrets=new_h2c_revokes)
     h2c_deposit_address = deposit_address(h2c_state)
     h2c_transferred = get_transferred_quantity(h2c_state)
     h2c_deposit = get_balances(h2c_deposit_address, [asset])[asset]
@@ -500,6 +511,12 @@ def load_connection_data(handle, cursor):
     c2h_state = db.load_channel_state(
         connection["c2h_channel_id"], connection["asset"], cursor=cursor
     )
+    if new_c2h_commit is not None:
+        c2h_state = api.mpc_add_commit(
+            state=c2h_state,
+            commit_rawtx=new_c2h_commit["rawtx"],
+            commit_script=new_c2h_commit["script"]
+        )
     c2h_transferred = get_transferred_quantity(c2h_state)
 
     # payments
@@ -554,32 +571,6 @@ def _send_client_funds(connection_data, quantity):
     }
 
 
-def _check_payment_payer(payer, payment, payer_handle):
-    if payer["c2h_expired"]:
-        raise err.DepositExpired(payer_handle, "client")
-    if payer["h2c_expired"]:
-        raise err.DepositExpired(payer_handle, "hub")
-    if payment["amount"] > payer["sendable_amount"]:
-        raise err.PaymentExceedsSpendable(
-            payment["amount"], payer["sendable_amount"], payment["token"]
-        )
-
-
-def _check_payment_payee(payer, payee, payment, payee_handle):
-    if payer["connection"]["asset"] != payee["connection"]["asset"]:
-        raise err.AssetMissmatch(
-            payer["connection"]["asset"], payee["connection"]["asset"]
-        )
-    if payee["h2c_expired"]:
-        raise err.DepositExpired(payee_handle, "hub")
-    if payee["c2h_expired"]:
-        raise err.DepositExpired(payee_handle, "client")
-    if payment["amount"] > payee["receivable_amount"]:
-        raise err.PaymentExceedsReceivable(
-            payment["amount"], payee["receivable_amount"], payment["token"]
-        )
-
-
 def _update_channel_state(hub_connection, commit, revokes, cursor):
     asset = hub_connection["asset"]
     c2h_id = hub_connection["c2h_channel_id"]
@@ -590,9 +581,8 @@ def _update_channel_state(hub_connection, commit, revokes, cursor):
 
 def _process_payments(payer_handle, payments, hub_connection, cursor):
 
-    connection_terms = db.terms(id=hub_connection["terms_id"])
-
     # add sync fee payment
+    connection_terms = db.terms(id=hub_connection["terms_id"])
     payments.insert(0, {
         "payee_handle": None,  # to hub
         "amount": connection_terms["sync_fee"],
@@ -601,23 +591,12 @@ def _process_payments(payer_handle, payments, hub_connection, cursor):
 
     # process payments
     for payment in payments:
-
-        # check payer
-        payer = load_connection_data(payer_handle, cursor)
-        _check_payment_payer(payer, payment, payer_handle)
-
-        # check payee
-        payee_handle = payment["payee_handle"]
-        if payee_handle:
-            payee = load_connection_data(payee_handle, cursor)
-            _check_payment_payee(payer, payee, payment, payee_handle)
-
         payment["payer_handle"] = payer_handle
         db.add_payment(cursor=cursor, **payment)
 
 
 def _balance_channel(handle, cursor):
-    connection_data = load_connection_data(handle, cursor)
+    connection_data = load_connection_data(handle, cursor=cursor)
 
     c2h_unnotified_revokes = db.unnotified_revokes(
         channel_id=connection_data["connection"]["c2h_channel_id"]

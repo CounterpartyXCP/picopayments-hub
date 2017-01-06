@@ -27,8 +27,7 @@ Public hubs
 
 Testnet: 
 
- * Picopayments api: https://139.59.214.74:15000/api/ 
- * Counterpartylib api: http://139.59.214.74:14000/api/ 
+ * Picopayments api: https://micro.test.storj.io:15000/api/ 
 
 Mainnet:
 

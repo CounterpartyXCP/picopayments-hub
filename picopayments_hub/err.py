@@ -50,20 +50,13 @@ class HandleNotFound(Exception):
         super(HandleNotFound, self).__init__(msg.format(handle))
 
 
-class HandlesNotFound(Exception):
+class AmountExceedsSpendable(Exception):
 
-    def __init__(self, handles):
-        msg = "One or more unknown handles: {0}"
-        super(HandlesNotFound, self).__init__(msg.format(repr(handles)))
-
-
-class PaymentExceedsSpendable(Exception):
-
-    def __init__(self, amount, spendable, token):
-        msg = "Payment amount exceeds payer spendable! {0}: {1} > {2}".format(
-            token, amount, spendable
+    def __init__(self, amount, spendable):
+        msg = "Payment amount exceeds payer spendable! {0} > {1}".format(
+            amount, spendable
         )
-        super(PaymentExceedsSpendable, self).__init__(msg)
+        super(AmountExceedsSpendable, self).__init__(msg)
 
 
 class PaymentExceedsReceivable(Exception):

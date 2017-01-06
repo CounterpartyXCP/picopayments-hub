@@ -88,8 +88,8 @@ test: setup
 	$(PEP8) examples
 	$(PEP8) tests
 	$(PYTEST) --ignore=env --verbose --cov-config=.coveragerc --cov-report=term-missing --cov=./picopayments_hub -vv
+	# $(PYTEST) --ignore=env --verbose --cov-config=.coveragerc --cov-report=term-missing --cov=./picopayments_hub -vv --capture=no --pdb tests/standard_usage_test.py::test_standard_usage
 	# $(PYTEST) --ignore=env --verbose --cov-config=.coveragerc --cov-report=term-missing --cov=./picopayments_hub -vv --capture=no --pdb tests/api_mph_sync_test.py::test_validate_handles_exist
-	# $(PYTEST) --ignore=env --verbose --cov-config=.coveragerc --cov-report=term-missing --cov=./picopayments_hub -vv --capture=no --pdb tests/api_mph_sync_test.py::test_repeated_transfer
 
 
 publish: test

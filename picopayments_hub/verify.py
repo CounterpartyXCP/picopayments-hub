@@ -4,6 +4,7 @@
 
 
 import re
+import copy
 import jsonschema
 from counterpartylib.lib.micropayments import validate
 from micropayment_core import scripts
@@ -35,7 +36,7 @@ PAYMENT_SCHEMA = {
     "items": {
         "type": "object",
         "properties": {
-            "payee_handle": {"type": "string"},
+            "payee_handle": {"type": ["string", "null"]},
             "amount": {"type": "number"},
             "token": {"type": "string"}
         },
@@ -75,9 +76,47 @@ def assets_exists(assets):
         asset_exists(asset)
 
 
-def handles_exist(handles):
-    if not db.handles_exist(handles):
-        raise err.HandlesNotFound(handles)
+def _check_payment_payer(payer_handle, payments, new_c2h_commit,
+                         new_h2c_revokes, cursor=None):
+    from picopayments_hub import lib
+
+    # check payer
+    payer = lib.load_connection_data(payer_handle, cursor=cursor,
+                                     new_c2h_commit=new_c2h_commit,
+                                     new_h2c_revokes=new_h2c_revokes)
+    if payer["c2h_expired"]:
+        raise err.DepositExpired(payer_handle, "client")
+    if payer["h2c_expired"]:
+        raise err.DepositExpired(payer_handle, "hub")
+    amount = sum(payment["amount"] for payment in payments)
+    if amount > payer["sendable_amount"]:
+        raise err.AmountExceedsSpendable(
+            amount, payer["sendable_amount"]
+        )
+
+    return payer
+
+
+def _check_payment_payee(payer, payment, cursor=None):
+    from picopayments_hub import lib
+
+    payee_handle = payment["payee_handle"]
+    if payee_handle:
+        payee = lib.load_connection_data(payee_handle, cursor=cursor)
+        if payer["connection"]["asset"] != payee["connection"]["asset"]:
+            raise err.AssetMissmatch(
+                payer["connection"]["asset"], payee["connection"]["asset"]
+            )
+        if payee["h2c_expired"]:
+            raise err.DepositExpired(payee_handle, "hub")
+        if payee["c2h_expired"]:
+            raise err.DepositExpired(payee_handle, "client")
+        if payment["amount"] > payee["receivable_amount"]:
+            raise err.PaymentExceedsReceivable(
+                payment["amount"],
+                payee["receivable_amount"],
+                payment["token"]
+            )
 
 
 def is_url(url):
@@ -155,20 +194,9 @@ def deposit_input(handle, deposit_script,
 
 def sync_input(handle, next_revoke_secret_hash, client_pubkey,
                payments, commit, revokes):
-    hub_connection(handle)
+    connection = hub_connection(handle)
     validate.hash160(next_revoke_secret_hash)
     _channel_client(handle, client_pubkey)
-
-    handles = []
-    if payments:
-        jsonschema.validate(payments, PAYMENT_SCHEMA)
-        for payment in payments:
-            validate.is_hex(payment["token"])
-            validate.is_hex(payment["payee_handle"])
-            validate.is_quantity(payment["amount"])
-            handles.append(payment["payee_handle"])
-
-    handles_exist(handles)
 
     if revokes:
         jsonschema.validate(revokes, REVOKES_SCHEMA)
@@ -177,6 +205,22 @@ def sync_input(handle, next_revoke_secret_hash, client_pubkey,
     if commit:
         jsonschema.validate(commit, COMMIT_SCHEMA)
         c2h_commit(handle, commit["rawtx"], commit["script"])
+
+    payments = copy.deepcopy(payments) or []
+    connection_terms = db.terms(id=connection["terms_id"])
+    payments.insert(0, {
+        "payee_handle": None,  # to hub
+        "amount": connection_terms["sync_fee"],
+        "token": "deadbeef"  # sync_fee
+    })
+    jsonschema.validate(payments, PAYMENT_SCHEMA)
+    payer = _check_payment_payer(handle, payments, commit, revokes)
+    for payment in payments:
+        validate.is_hex(payment["token"])
+        validate.is_quantity(payment["amount"])
+        if payment["payee_handle"] is not None:
+            validate.is_hex(payment["payee_handle"])
+        _check_payment_payee(payer, payment)
 
 
 def close_input(handle, client_pubkey, spend_secret):

@@ -53,21 +53,10 @@ def test_pubkey_missmatch(connected_clients):
 def test_validate_handles_exist(connected_clients):
     alice, bob, charlie, david, eric, fred = connected_clients
     try:
-        secret = lib.create_secret()
-        params = {
-            "handle": alice.handle,
-            "sends": [{
-                "payee_handle": "deadbeef",
-                "amount": 1337,
-                "token": "deadbeef"
-            }],
-            "commit": None,
-            "revokes": None,
-            "next_revoke_secret_hash": secret["secret_hash"]
-        }
-        api.mph_sync(**auth.sign_json(params, alice.api.auth_wif))
+        alice.micro_send("deadbeef", 1337)
+        alice.sync()
         assert False
-    except err.HandlesNotFound:
+    except err.HandleNotFound:
         assert True
 
 
@@ -255,6 +244,13 @@ def test_send_max(connected_clients):
 @pytest.mark.usefixtures("picopayments_server")
 def test_send_exceeds_max(connected_clients):
     alice, bob, charlie, david, eric, fred = connected_clients
+
+    # check before status
+    alice_status = alice.get_status()
+    assert alice_status["send_balance"] == 1000000
+    bob_status = bob.get_status()
+    assert bob_status["send_balance"] == 1000000
+
     try:
         secret = lib.create_secret()
         params = {
@@ -271,8 +267,18 @@ def test_send_exceeds_max(connected_clients):
         params = auth.sign_json(params, alice.api.auth_wif)
         api.mph_sync(**params)
         assert False
-    except err.PaymentExceedsSpendable:
+    except err.AmountExceedsSpendable:
         assert True
+
+    # check after status
+    alice_status = alice.get_status()
+    assert alice_status["send_balance"] == 1000000
+    bob_status = bob.get_status()
+    assert bob_status["send_balance"] == 1000000
+
+    # actors can still sync
+    assert alice.sync() == []
+    assert bob.sync() == []
 
 
 @pytest.mark.usefixtures("picopayments_server")
@@ -301,6 +307,7 @@ def test_receive_max(connected_clients):
 def test_receive_max_exceeded(connected_clients):
     alice, bob, charlie, david, eric, fred = connected_clients
 
+    # check before status
     alice_status = alice.get_status()
     assert alice_status["send_balance"] == 1000000
     bob_status = bob.get_status()
@@ -309,7 +316,7 @@ def test_receive_max_exceeded(connected_clients):
     assert charlie_status["send_balance"] == 1000000
 
     try:
-        alice.micro_send(charlie.handle, 500000)
+        token = alice.micro_send(charlie.handle, 500000)
         alice.sync()
 
         bob.micro_send(charlie.handle, 500001)
@@ -318,6 +325,29 @@ def test_receive_max_exceeded(connected_clients):
         assert False
     except err.PaymentExceedsReceivable:
         assert True
+
+    # only receives alice payment
+    assert charlie.sync() == [{
+        "payer_handle": alice.handle,
+        "amount": 500000,
+        "token": token
+    }]
+
+    # check before status
+    alice_status = alice.get_status()
+    assert alice_status["send_balance"] == 1000000 - 500000 - 1
+    bob_status = bob.get_status()  # fail dropped payments and preserved state
+    assert bob_status["send_balance"] == 1000000
+    charlie_status = charlie.get_status()
+    assert charlie_status["send_balance"] == 1000000 + 500000 - 1
+
+    # actors can still sync
+    assert alice.sync() == []
+    assert bob.sync() == []
+    assert charlie.sync() == []
+
+
+# FIXME test send more payments then assets provided by commit/revokes
 
 
 @pytest.mark.usefixtures("picopayments_server")
@@ -392,3 +422,4 @@ def test_c2h_revoke_commit(connected_clients, server_db):
 @pytest.mark.usefixtures("picopayments_server")
 def test_h2c_revoke_commit(connected_clients, server_db):
     alice, bob, charlie, david, eric, fred = connected_clients
+    # FIXME test it
