@@ -38,6 +38,7 @@ def picopayments_server(request, server_db):
 
     # monkeypatch sendrawtransaction to send tx and create new block
     def sendrawtransaction(tx_hex):
+        # FIXME require tx to be signed
         result = util_test.insert_raw_transaction(tx_hex, server_db)
         return result["tx_hash"]
     api.sendrawtransaction = sendrawtransaction

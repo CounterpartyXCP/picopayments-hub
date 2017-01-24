@@ -64,7 +64,7 @@ def test_standard_usage(server_db):
     for i in range(4):
         auth_wif = util.gen_funded_wif(ASSET, 1000000, 1000000)
         client = Mph(util.MockAPI(auth_wif=auth_wif))
-        txid = client.connect(1000000, 65535, asset=ASSET)
+        txid = client.connect(1000000, 42, asset=ASSET)
         assert txid is not None
 
         status = client.get_status()
@@ -203,3 +203,97 @@ def test_standard_usage(server_db):
     _assert_states_synced(beta.handle, beta.c2h_state, beta.h2c_state)
     _assert_states_synced(gamma.handle, gamma.c2h_state, gamma.h2c_state)
     _assert_states_synced(delta.handle, delta.c2h_state, delta.h2c_state)
+
+
+@pytest.mark.usefixtures("picopayments_server")
+def test_hub_doesnt_publish_commit(server_db):
+    pass
+
+
+@pytest.mark.usefixtures("picopayments_server")
+def test_user_doesnt_publish_commit(server_db):
+    pass
+
+    # # fund server
+    # for i in range(2):
+    #     address = lib.get_funding_addresses([ASSET])[ASSET]
+    #     rawtx = api.create_send(**{
+    #         'source': FUNDING_ADDRESS,
+    #         'destination': address,
+    #         'asset': ASSET,
+    #         'quantity': 1000000,
+    #         'regular_dust_size': 1000000
+    #     })
+    #     api.sendrawtransaction(tx_hex=rawtx)
+
+    # # connect clients
+    # assert len(api.mph_status()["connections"]) == 0
+    # clients = []
+    # for i in range(2):
+    #     auth_wif = util.gen_funded_wif(ASSET, 1000000, 1000000)
+    #     client = Mph(util.MockAPI(auth_wif=auth_wif))
+    #     txid = client.connect(1000000, 42, asset=ASSET)
+    #     assert txid is not None
+
+    #     status = client.get_status()
+    #     assert status["send_balance"] == 1000000
+    #     assert status["send_deposit_ttl"] is not None
+    #     assert status["recv_deposit_ttl"] is None  # hub deposit not yet made
+    #     clients.append(client)
+    # assert len(api.mph_status()["connections"]) == 2
+
+    # # server funds deposits
+    # assert len(cron.fund_deposits()) == 2
+    # assert len(cron.fund_deposits()) == 0
+    # for client in clients:
+    #     status = client.get_status()
+    #     assert status["recv_deposit_ttl"] is not None  # hub deposit now made
+
+    # # before status
+    # alpha, beta = clients
+
+    # # send funds to beta
+    # alpha.micro_send(beta.handle, 42)
+    # alpha.sync()
+    # alpha_status = alpha.get_status()
+    # assert alpha_status["send_balance"] == 1000000 - 42 - 1
+
+    # # beta received funds
+    # beta.sync()
+    # beta_status = beta.get_status()
+    # assert beta_status["send_balance"] == 1000000 + 42 - 1
+
+    # # return some funds to alpha
+    # beta.micro_send(alpha.handle, 13)
+    # beta.sync()
+    # beta_status = beta.get_status()
+    # assert beta_status["send_balance"] == 1000000 + 42 - 1 - 13 - 1
+
+    # # alpha received funds
+    # alpha.sync()
+    # alpha_status = alpha.get_status()
+    # assert alpha_status["send_balance"] == 1000000 - 42 - 1 + 13 - 1
+
+    # # beta settles
+    # assert len(api.mph_status()["connections"]) == 2
+    # assert beta.close() is not None  # h2c commit
+    # assert len(api.mph_status()["connections"]) == 1
+    # assert len(beta.update()) == 1  # c2h change
+    # util_test.create_next_block(server_db)  # let payout delay pass
+    # assert len(beta.update()) == 1  # h2c payout
+    # assert len(cron.run_all()) == 1  # h2c change
+
+    # # # let client deposit expire
+    # # c2h_deposit_ttl = 9999999999999999
+    # # while c2h_deposit_ttl > 0:
+    # #     util_test.create_next_block(server_db)
+    # #     status = alpha.get_status(clearance=0)
+    # #     c2h_deposit_ttl = status["send_deposit_ttl"]
+
+    # # # hub closes alice channel
+    # # assert len(cron.run_all()) == 999
+
+    # #  _assert_states_synced(alpha.handle, alpha.c2h_state, alpha.h2c_state)
+    # #  _assert_states_synced(beta.handle, beta.c2h_state, beta.h2c_state)
+    # #  _assert_states_synced(gamma.handle, gamma.c2h_state, gamma.h2c_state)
+    # #  _assert_states_synced(delta.handle, delta.c2h_state, delta.h2c_state)
