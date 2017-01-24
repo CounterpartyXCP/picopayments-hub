@@ -5,6 +5,11 @@ from picopayments_cli import auth
 from micropayment_core.keys import generate_wif
 from micropayment_core.keys import address_from_wif
 from counterpartylib.test.fixtures.params import DP
+from micropayment_core import scripts
+
+
+def get_tx(txid):
+    return api.getrawtransaction(tx_hash=txid)
 
 
 class MockAPI(object):
@@ -39,19 +44,13 @@ def gen_funded_wif(asset, asset_quantity, btc_quantity):
     src_address = address_from_wif(src_wif)
     dest_wif = generate_wif(netcode=etc.netcode)
     dest_address = address_from_wif(dest_wif)
-    rawtx = api.create_send(**{
+    unsigned_rawtx = api.create_send(**{
         'source': src_address,
         'destination': dest_address,
         'asset': asset,
         'quantity': asset_quantity,
         'regular_dust_size': btc_quantity
     })
-    api.sendrawtransaction(tx_hex=rawtx)
-    # entries = api.get_balances(filters=[
-    #     {"field": "address", "op": "==", "value": dest_address},
-    #     {"field": "asset", "op": "==", "value": asset},
-    # ])
-    # assert entries[0]["quantity"] == asset_quantity
-    # assert entries[0]["address"] == dest_address
-    # assert entries[0]["asset"] == asset
+    signed_rawtx = scripts.sign_deposit(get_tx, src_wif, unsigned_rawtx)
+    api.sendrawtransaction(tx_hex=signed_rawtx)
     return dest_wif

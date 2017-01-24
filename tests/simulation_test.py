@@ -7,6 +7,7 @@ import pytest
 from counterpartylib.test.util_test import CURR_DIR as CPLIB_TESTDIR
 from counterpartylib.test.fixtures.params import DP
 from micropayment_core.keys import address_from_wif
+from micropayment_core import scripts
 from picopayments_cli.mph import Mph
 from picopayments_hub import api
 from picopayments_hub import lib
@@ -26,20 +27,26 @@ FUNDING_WIF = DP["addresses"][0][2]  # XTC: 91950000000, BTC: 199909140
 FUNDING_ADDRESS = address_from_wif(FUNDING_WIF)
 
 
+def get_tx(txid):
+    return api.getrawtransaction(tx_hash=txid)
+
+
 @pytest.mark.usefixtures("picopayments_server")
 def test_simulation_xcp():
 
     # fund server
     for i in range(2):
         address = lib.get_funding_addresses([ASSET])[ASSET]
-        rawtx = api.create_send(**{
+        unsigned_rawtx = api.create_send(**{
             'source': FUNDING_ADDRESS,
             'destination': address,
             'asset': ASSET,
             'quantity': 1000000,
             'regular_dust_size': 1000000
         })
-        api.sendrawtransaction(tx_hex=rawtx)
+        signed_rawtx = scripts.sign_deposit(
+            get_tx, FUNDING_WIF, unsigned_rawtx)
+        api.sendrawtransaction(tx_hex=signed_rawtx)
 
     # connect clients
     clients = []

@@ -13,6 +13,7 @@ from picopayments_hub import api
 from picopayments_hub import lib
 from picopayments_hub import db
 from picopayments_hub import cron
+from micropayment_core import scripts
 from tests import util
 
 
@@ -21,6 +22,10 @@ FIXTURE_DB = tempfile.gettempdir() + '/fixtures.unittest_fixture.db'
 ASSET = "XCP"
 FUNDING_WIF = DP["addresses"][0][2]  # XTC: 91950000000, BTC: 199909140
 FUNDING_ADDRESS = address_from_wif(FUNDING_WIF)
+
+
+def get_tx(txid):
+    return api.getrawtransaction(tx_hash=txid)
 
 
 def _assert_states_synced(handle, c2h_state, h2c_state):
@@ -49,14 +54,17 @@ def test_standard_usage(server_db):
     # fund server
     for i in range(4):
         address = lib.get_funding_addresses([ASSET])[ASSET]
-        rawtx = api.create_send(**{
+        unsigned_rawtx = api.create_send(**{
             'source': FUNDING_ADDRESS,
             'destination': address,
             'asset': ASSET,
             'quantity': 1000000,
             'regular_dust_size': 1000000
         })
-        api.sendrawtransaction(tx_hex=rawtx)
+        signed_rawtx = scripts.sign_deposit(
+            get_tx, FUNDING_WIF, unsigned_rawtx
+        )
+        api.sendrawtransaction(tx_hex=signed_rawtx)
 
     # connect clients
     assert len(api.mph_status()["connections"]) == 0
