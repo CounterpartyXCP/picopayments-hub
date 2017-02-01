@@ -93,14 +93,14 @@ def connected_clients():
     for i in range(3):
         bob_wif = util.gen_funded_wif("XCP", 1000000, 1000000)
         client = Mph(util.MockAPI(auth_wif=bob_wif))
-        client.connect(1000000, 42, asset="XCP")
+        client.connect(1000000, expire_time=42, asset="XCP")
         clients.append(client)
 
     # fund A7736697071037023001 clients
     for i in range(3):
         bob_wif = util.gen_funded_wif("A7736697071037023001", 1000000, 1000000)
         client = Mph(util.MockAPI(auth_wif=bob_wif))
-        client.connect(1000000, 42, asset="A7736697071037023001")
+        client.connect(1000000, expire_time=42, asset="A7736697071037023001")
         clients.append(client)
 
     cron.fund_deposits()

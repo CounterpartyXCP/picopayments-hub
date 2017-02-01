@@ -270,10 +270,9 @@ def recover_funds(hub_connection, cursor=None):
     h2c_mpc_id = hub_connection["h2c_channel_id"]
     c2h_state = db.load_channel_state(c2h_mpc_id, asset, cursor=cursor)
     h2c_state = db.load_channel_state(h2c_mpc_id, asset, cursor=cursor)
-    txs = Mpc(api).full_duplex_recover_funds(
+    return Mpc(api).full_duplex_recover_funds(
         get_wif, get_secret, c2h_state, h2c_state
     )
-    return txs
 
 
 def close_connection(handle, h2c_spend_secret=None):

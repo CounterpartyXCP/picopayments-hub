@@ -3,11 +3,13 @@
 # License: MIT (see LICENSE file)
 
 
+import time
 from picopayments_hub import etc
 from picopayments_hub import db
 from picopayments_hub import lib
 from picopayments_hub import sql
 from picopayments_hub import api
+from micropayment_core import util
 from micropayment_core.scripts import get_deposit_spend_secret_hash
 from picopayments_cli.mpc import Mpc
 
@@ -78,7 +80,7 @@ def fund_deposits():
 
 def publish_commits():
     with etc.database_lock:
-        txids = []
+        commit_rawtxs = []
         cursor = sql.get_cursor()
         for hub_connection in db.hub_connections_complete(cursor=cursor):
             asset = hub_connection["asset"]
@@ -104,21 +106,44 @@ def publish_commits():
                     state=c2h_state
                 )
                 if len(c2h_commits_published) == 0:
-                    txid = Mpc(api).finalize_commit(lib.get_wif, c2h_state)
-                    if txid:
-                        txids.append(txid)
+                    rawtx = Mpc(api).finalize_commit(lib.get_wif, c2h_state)
+                    if rawtx:
+                        commit_rawtxs.append(util.gettxid(rawtx))
 
-        return txids
+        return commit_rawtxs
+
+
+def _merge_rawtxs(a, b):
+    merged = {
+        "payout": [],
+        "revoke": [],
+        "change": [],
+        "expire": [],
+        "commit": []
+    }
+    merged["payout"] = a["payout"] + b["payout"]
+    merged["revoke"] = a["revoke"] + b["revoke"]
+    merged["change"] = a["change"] + b["change"]
+    merged["expire"] = a["expire"] + b["expire"]
+    merged["commit"] = a["commit"] + b["commit"]
+    return merged
 
 
 def recover_funds():
     """Recover funds where possible"""
     with etc.database_lock:
-        txs = []
+        rawtxs = {
+            "payout": [],
+            "revoke": [],
+            "change": [],
+            "expire": [],
+            "commit": []
+        }
         cursor = sql.get_cursor()
         for hub_connection in db.hub_connections_recoverable(cursor=cursor):
-            txs += lib.recover_funds(hub_connection, cursor=cursor)
-        return txs
+            result = lib.recover_funds(hub_connection, cursor=cursor)
+            rawtxs = _merge_rawtxs(rawtxs, result)
+        return rawtxs
 
 
 def collect_garbage():
@@ -129,9 +154,10 @@ def collect_garbage():
 
 def run_all():
     with etc.database_lock:
-        txids = []
-        txids += publish_commits()
-        txids += recover_funds()
-        fund_deposits()  # FIXME add created txids
+        commit_rawtxs = publish_commits()
+        rawtxs = recover_funds()
+        rawtxs["commit"] += commit_rawtxs
+        fund_deposits()  # FIXME add created rawtxs
         collect_garbage()
-        return txids
+        print("RAWTXS:", time.time(), rawtxs)
+        return rawtxs

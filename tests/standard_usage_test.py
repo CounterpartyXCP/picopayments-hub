@@ -28,6 +28,16 @@ def get_tx(txid):
     return api.getrawtransaction(tx_hash=txid)
 
 
+def _check_rawtxs(result, payout=0, revoke=0, change=0, expire=0, commit=0):
+    return (
+        len(result["payout"]) == payout and
+        len(result["revoke"]) == revoke and
+        len(result["change"]) == change and
+        len(result["expire"]) == expire and
+        len(result["commit"]) == commit
+    )
+
+
 def _assert_states_synced(handle, c2h_state, h2c_state):
     connection = db.hub_connection(handle=handle)
     db_h2c_state = db.load_channel_state(connection["h2c_channel_id"],
@@ -160,13 +170,16 @@ def test_standard_usage(server_db):
     assert len(api.mph_status()["connections"]) == 4
     assert alpha.close() is not None        # H2C COMMIT TX
     assert len(api.mph_status()["connections"]) == 3
-    assert len(alpha.update()) == 0         # h2c payout delay not yet passed
+    assert _check_rawtxs(alpha.update())  # h2c payout delay not yet passed
     util_test.create_next_block(server_db)  # let payout delay pass
-    assert len(alpha.update()) == 1         # H2C PAYOUT TX
-    assert len(cron.run_all()) == 2         # H2C CHANGE TX, C2H COMMIT TX
+    assert _check_rawtxs(alpha.update(), payout=1)  # H2C PAYOUT TX
+
+    # H2C CHANGE TX, C2H COMMIT TX
+    assert _check_rawtxs(cron.run_all(), change=1, commit=1)
+
     util_test.create_next_block(server_db)  # let c2h payout delay pass
-    assert len(cron.run_all()) == 1         # C2H PAYOUT TX
-    assert len(alpha.update()) == 1         # C2H CHANGE TX
+    assert _check_rawtxs(cron.run_all(), payout=1)  # C2H PAYOUT TX
+    assert _check_rawtxs(alpha.update(), change=1)  # C2H CHANGE TX
 
     # close beta payment channel
     # recover | h2c | c2h |
@@ -177,10 +190,11 @@ def test_standard_usage(server_db):
     assert len(api.mph_status()["connections"]) == 3
     assert beta.close() is None
     assert len(api.mph_status()["connections"]) == 2
-    assert len(cron.run_all()) == 2         # H2C CHANGE TX, C2H COMMIT TX
+    # H2C CHANGE TX, C2H COMMIT TX
+    assert _check_rawtxs(cron.run_all(), change=1, commit=1)
     util_test.create_next_block(server_db)  # let payout delay pass
-    assert len(cron.run_all()) == 1         # C2H PAYOUT TX
-    assert len(beta.update()) == 1          # C2H CHANGE TX
+    assert _check_rawtxs(cron.run_all(), payout=1)  # C2H PAYOUT TX
+    assert _check_rawtxs(beta.update(), change=1)  # C2H CHANGE TX
 
     # close gamma payment channel
     # recover | h2c | c2h |
@@ -191,9 +205,9 @@ def test_standard_usage(server_db):
     assert len(api.mph_status()["connections"]) == 2
     assert gamma.close() is not None        # H2C COMMIT TX
     assert len(api.mph_status()["connections"]) == 1
-    assert len(gamma.update()) == 1         # C2H CHANGE TX
-    assert len(gamma.update()) == 1         # H2C PAYOUT TX
-    assert len(cron.run_all()) == 1         # H2C CHANGE TX
+    assert _check_rawtxs(gamma.update(), change=1)  # C2H CHANGE TX
+    assert _check_rawtxs(gamma.update(), payout=1)  # H2C PAYOUT TX
+    assert _check_rawtxs(cron.run_all(), change=1)  # H2C CHANGE TX
 
     # close delta payment channel
     # recover | h2c | c2h |
@@ -204,8 +218,8 @@ def test_standard_usage(server_db):
     assert len(api.mph_status()["connections"]) == 1
     assert delta.close() is None
     assert len(api.mph_status()["connections"]) == 0
-    assert len(delta.update()) == 1         # C2H CHANGE TX
-    assert len(cron.run_all()) == 1         # H2C CHANGE TX
+    assert _check_rawtxs(delta.update(), change=1)  # C2H CHANGE TX
+    assert _check_rawtxs(cron.run_all(), change=1)  # H2C CHANGE TX
 
     _assert_states_synced(alpha.handle, alpha.c2h_state, alpha.h2c_state)
     _assert_states_synced(beta.handle, beta.c2h_state, beta.h2c_state)
@@ -220,88 +234,97 @@ def test_hub_doesnt_publish_commit(server_db):
 
 @pytest.mark.usefixtures("picopayments_server")
 def test_user_doesnt_publish_commit(server_db):
-    pass
 
-    # # fund server
-    # for i in range(2):
-    #     address = lib.get_funding_addresses([ASSET])[ASSET]
-    #     rawtx = api.create_send(**{
-    #         'source': FUNDING_ADDRESS,
-    #         'destination': address,
-    #         'asset': ASSET,
-    #         'quantity': 1000000,
-    #         'regular_dust_size': 1000000
-    #     })
-    #     api.sendrawtransaction(tx_hex=rawtx)
+    # fund server
+    for i in range(2):
+        address = lib.get_funding_addresses([ASSET])[ASSET]
+        unsigned_rawtx = api.create_send(**{
+            'source': FUNDING_ADDRESS,
+            'destination': address,
+            'asset': ASSET,
+            'quantity': 1000000,
+            'regular_dust_size': 1000000
+        })
+        signed_rawtx = scripts.sign_deposit(get_tx, FUNDING_WIF,
+                                            unsigned_rawtx)
+        api.sendrawtransaction(tx_hex=signed_rawtx)
 
-    # # connect clients
-    # assert len(api.mph_status()["connections"]) == 0
-    # clients = []
-    # for i in range(2):
-    #     auth_wif = util.gen_funded_wif(ASSET, 1000000, 1000000)
-    #     client = Mph(util.MockAPI(auth_wif=auth_wif))
-    #     txid = client.connect(1000000, 42, asset=ASSET)
-    #     assert txid is not None
+    # connect clients
+    assert len(api.mph_status()["connections"]) == 0
+    clients = []
+    for i in range(2):
+        auth_wif = util.gen_funded_wif(ASSET, 1000000, 1000000)
+        client = Mph(util.MockAPI(auth_wif=auth_wif))
+        txid = client.connect(1000000, 42, asset=ASSET)
+        assert txid is not None
 
-    #     status = client.get_status()
-    #     assert status["send_balance"] == 1000000
-    #     assert status["send_deposit_ttl"] is not None
-    #     assert status["recv_deposit_ttl"] is None  # hub deposit not yet made
-    #     clients.append(client)
-    # assert len(api.mph_status()["connections"]) == 2
+        status = client.get_status()
+        assert status["send_balance"] == 1000000
+        assert status["send_deposit_ttl"] is not None
+        assert status["recv_deposit_ttl"] is None  # hub deposit not yet made
+        clients.append(client)
+    assert len(api.mph_status()["connections"]) == 2
 
-    # # server funds deposits
-    # assert len(cron.fund_deposits()) == 2
-    # assert len(cron.fund_deposits()) == 0
-    # for client in clients:
-    #     status = client.get_status()
-    #     assert status["recv_deposit_ttl"] is not None  # hub deposit now made
+    # server funds deposits
+    assert len(cron.fund_deposits()) == 2
+    assert len(cron.fund_deposits()) == 0
+    for client in clients:
+        status = client.get_status()
+        assert status["recv_deposit_ttl"] is not None  # hub deposit now made
 
-    # # before status
-    # alpha, beta = clients
+    # before status
+    alpha, beta = clients
 
-    # # send funds to beta
-    # alpha.micro_send(beta.handle, 42)
-    # alpha.sync()
-    # alpha_status = alpha.get_status()
-    # assert alpha_status["send_balance"] == 1000000 - 42 - 1
+    # send funds to beta
+    alpha.micro_send(beta.handle, 42)
+    alpha.sync()
+    alpha_status = alpha.get_status()
+    assert alpha_status["send_balance"] == 1000000 - 42 - 1
 
-    # # beta received funds
-    # beta.sync()
-    # beta_status = beta.get_status()
-    # assert beta_status["send_balance"] == 1000000 + 42 - 1
+    # beta received funds
+    beta.sync()
+    beta_status = beta.get_status()
+    assert beta_status["send_balance"] == 1000000 + 42 - 1
 
-    # # return some funds to alpha
-    # beta.micro_send(alpha.handle, 13)
-    # beta.sync()
-    # beta_status = beta.get_status()
-    # assert beta_status["send_balance"] == 1000000 + 42 - 1 - 13 - 1
+    # return some funds to alpha
+    beta.micro_send(alpha.handle, 13)
+    beta.sync()
+    beta_status = beta.get_status()
+    assert beta_status["send_balance"] == 1000000 + 42 - 1 - 13 - 1
 
-    # # alpha received funds
-    # alpha.sync()
-    # alpha_status = alpha.get_status()
-    # assert alpha_status["send_balance"] == 1000000 - 42 - 1 + 13 - 1
+    # alpha received funds
+    alpha.sync()
+    alpha_status = alpha.get_status()
+    assert alpha_status["send_balance"] == 1000000 - 42 - 1 + 13 - 1
 
-    # # beta settles
-    # assert len(api.mph_status()["connections"]) == 2
-    # assert beta.close() is not None  # h2c commit
-    # assert len(api.mph_status()["connections"]) == 1
-    # assert len(beta.update()) == 1  # c2h change
-    # util_test.create_next_block(server_db)  # let payout delay pass
-    # assert len(beta.update()) == 1  # h2c payout
-    # assert len(cron.run_all()) == 1  # h2c change
+    # beta settles
+    assert len(api.mph_status()["connections"]) == 2
+    assert beta.close() is not None  # H2C COMMIT TX
+    assert len(api.mph_status()["connections"]) == 1
+    assert _check_rawtxs(beta.update())  # h2c payout delay not yet passed
+    util_test.create_next_block(server_db)  # let payout delay pass
+    assert _check_rawtxs(beta.update(), payout=1)  # H2C PAYOUT TX
+    # H2C CHANGE TX, C2H COMMIT TX
+    assert _check_rawtxs(cron.run_all(), change=1, commit=1)
+    util_test.create_next_block(server_db)  # let c2h payout delay pass
+    assert _check_rawtxs(cron.run_all(), payout=1)  # C2H PAYOUT TX
+    assert _check_rawtxs(beta.update(), change=1)  # C2H CHANGE TX
 
-    # # # let client deposit expire
-    # # c2h_deposit_ttl = 9999999999999999
-    # # while c2h_deposit_ttl > 0:
-    # #     util_test.create_next_block(server_db)
-    # #     status = alpha.get_status(clearance=0)
-    # #     c2h_deposit_ttl = status["send_deposit_ttl"]
+    # let channel expire
+    for i in range(50):
+        util_test.create_next_block(server_db)
 
-    # # # hub closes alice channel
-    # # assert len(cron.run_all()) == 999
+    # hub closes alice channel
+    #        | h2c | c2h |
+    # -------+-----+-----+
+    # commit |  -  |  X  |
+    # payout |  -  |  X  |
+    # change |  -  |  -  |
+    # expire |  X  |  -  |
+    # C2H COMMIT TX, H2C EXPIRE TX
+    assert _check_rawtxs(cron.run_all(), commit=1, expire=1)
+    assert _check_rawtxs(cron.run_all(), payout=1)  # C2H PAYOUT TX
 
-    # #  _assert_states_synced(alpha.handle, alpha.c2h_state, alpha.h2c_state)
-    # #  _assert_states_synced(beta.handle, beta.c2h_state, beta.h2c_state)
-    # #  _assert_states_synced(gamma.handle, gamma.c2h_state, gamma.h2c_state)
-    # #  _assert_states_synced(delta.handle, delta.c2h_state, delta.h2c_state)
+    # FIXME check entire h2c deposit recovered
+    # FIXME assert _check_rawtxs(alpha.update(), change=1)
+    # FIXME check tx transfer amounts and resulting balances
