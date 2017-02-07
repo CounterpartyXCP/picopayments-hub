@@ -102,13 +102,9 @@ def publish_commits():
             if expired or closed or h2c_commits_published or h2c_spend_secret:
                 if not closed:
                     db.set_connection_closed(handle=hub_connection["handle"])
-                c2h_commits_published = api.mpc_published_commits(
-                    state=c2h_state
-                )
-                if len(c2h_commits_published) == 0:
-                    rawtx = Mpc(api).finalize_commit(lib.get_wif, c2h_state)
-                    if rawtx:
-                        commit_rawtxs.append(util.gettxid(rawtx))
+                rawtx = Mpc(api).finalize_commit(lib.get_wif, c2h_state)
+                if rawtx:
+                    commit_rawtxs.append(util.gettxid(rawtx))
 
         return commit_rawtxs
 
