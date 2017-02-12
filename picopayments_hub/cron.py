@@ -104,24 +104,29 @@ def publish_commits():
                     db.set_connection_closed(handle=hub_connection["handle"])
                 rawtx = Mpc(api).finalize_commit(lib.get_wif, c2h_state)
                 if rawtx:
-                    commit_rawtxs.append(util.gettxid(rawtx))
+                    commit_rawtxs.append(rawtx)
 
         return commit_rawtxs
 
 
 def _merge_rawtxs(a, b):
     merged = {
-        "payout": [],
-        "revoke": [],
-        "change": [],
-        "expire": [],
-        "commit": []
+        "payout": {},
+        "revoke": {},
+        "change": {},
+        "expire": {},
+        "commit": {}
     }
-    merged["payout"] = a["payout"] + b["payout"]
-    merged["revoke"] = a["revoke"] + b["revoke"]
-    merged["change"] = a["change"] + b["change"]
-    merged["expire"] = a["expire"] + b["expire"]
-    merged["commit"] = a["commit"] + b["commit"]
+    merged["payout"].update(a["payout"])
+    merged["revoke"].update(a["revoke"])
+    merged["change"].update(a["change"])
+    merged["expire"].update(a["expire"])
+    merged["commit"].update(a["commit"])
+    merged["payout"].update(b["payout"])
+    merged["revoke"].update(b["revoke"])
+    merged["change"].update(b["change"])
+    merged["expire"].update(b["expire"])
+    merged["commit"].update(b["commit"])
     return merged
 
 
@@ -129,11 +134,11 @@ def recover_funds():
     """Recover funds where possible"""
     with etc.database_lock:
         rawtxs = {
-            "payout": [],
-            "revoke": [],
-            "change": [],
-            "expire": [],
-            "commit": []
+            "payout": {},
+            "revoke": {},
+            "change": {},
+            "expire": {},
+            "commit": {}
         }
         cursor = sql.get_cursor()
         for hub_connection in db.hub_connections_recoverable(cursor=cursor):
@@ -152,7 +157,8 @@ def run_all():
     with etc.database_lock:
         commit_rawtxs = publish_commits()
         rawtxs = recover_funds()
-        rawtxs["commit"] += commit_rawtxs
+        for commit_rawtx in commit_rawtxs:
+            rawtxs["commit"][util.gettxid(commit_rawtx)] = commit_rawtxs
         fund_deposits()  # FIXME add created rawtxs
         collect_garbage()
         print("RAWTXS:", time.time(), rawtxs)
