@@ -31,7 +31,7 @@ install:
   - pip install pytest==2.9.1
   - pip install pytest-cov==2.2.1
   - pip install jsonschema==2.5.1
-  - pip install micropayment-core==0.4.2
+  - pip install micropayment-core==0.4.5
   - pip install python-bitcoinlib==0.5.1
   - pip install requests==2.10.0
   - pip install tendo==0.2.8
@@ -43,8 +43,8 @@ install:
   - pip install -r requirements_tests.txt
 
 script:
-  - pep8 picopayments
-  - py.test --ignore=env --verbose --cov-config=.coveragerc --cov-report=term-missing --cov=./picopayments -vv
+  - pep8 picopayments_hub
+  - py.test --ignore=env --verbose --cov-config=.coveragerc --cov-report=term-missing --cov=./picopayments_hub -vv
 
 after_success:
   - coveralls
