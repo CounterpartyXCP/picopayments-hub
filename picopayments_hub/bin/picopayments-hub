@@ -4,9 +4,6 @@
 # License: MIT (see LICENSE file)
 
 
-# FIXME rename to picopayments-server
-
-
 import sys
 from picopayments_hub.srv import main
 

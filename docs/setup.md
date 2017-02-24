@@ -121,9 +121,6 @@ Best use a screen as the node does not run as a daemon.
 
     pip install picopayments-hub
     
-    # show hub terms (edit terms file as you see fit)
-    picopayments-hub --testnet --terms  # FIXME add command
-
     # Start picopayment hub (use generated self signed cert)
     picopayments-hub --testnet --host=0.0.0.0 --cp_url=http://127.0.0.1:14000/api/
 

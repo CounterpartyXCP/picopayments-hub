@@ -42,7 +42,7 @@ def parse(args):
         '--port', type=int, default=default, metavar="PORT",
         help="Server port: {0}".format(default)
     )
-    # FIXME check ~/.picopayments/ for cert and pkey files if not given
+    # TODO check ~/.picopayments/ for cert and pkey files if not given
     parser.add_argument(
         '--ssl_cert_file', default=None, metavar="PATH",
         help="Path to ssl certificate file."

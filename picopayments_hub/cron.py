@@ -14,7 +14,7 @@ from micropayment_core.scripts import get_deposit_spend_secret_hash
 from picopayments_cli.mpc import Mpc
 
 
-# FIXME use http interface to ensure its called in the same process
+# FIXME use http interface to ensure its called in the same process!!!
 
 
 def fund_deposits():
@@ -159,7 +159,7 @@ def run_all():
         rawtxs = recover_funds()
         for commit_rawtx in commit_rawtxs:
             rawtxs["commit"][util.gettxid(commit_rawtx)] = commit_rawtxs
-        fund_deposits()  # FIXME add created rawtxs
+        fund_deposits()  # TODO add created rawtxs
         collect_garbage()
         print("RAWTXS:", time.time(), rawtxs)
         return rawtxs

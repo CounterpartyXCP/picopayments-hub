@@ -183,7 +183,7 @@ def deposit_input(handle, deposit_script,
     if connection["complete"]:
         raise err.DepositAlreadyGiven(handle)
 
-    # FIXME validate terms["expire_max"] >= expire time >= terms["expire_min"]
+    # TODO validate terms["expire_max"] >= expire time >= terms["expire_min"]
     validate.hash160(next_revoke_secret_hash)
     c2h_channel = _channel_client(handle, client_pubkey)
     expected_payee_pubkey = c2h_channel["payee_pubkey"]
@@ -200,7 +200,7 @@ def sync_input(handle, next_revoke_secret_hash, client_pubkey,
 
     if revokes:
         jsonschema.validate(revokes, REVOKES_SCHEMA)
-        # FIXME check revokes match commits?
+        # TODO check revokes match commits?
 
     if commit:
         jsonschema.validate(commit, COMMIT_SCHEMA)

@@ -167,7 +167,6 @@ def find_key_with_funds(asset, asset_quantity, btc_quantity):
     random.shuffle(keys)  # prevent draining btc for fees from one address
     for key in keys:
         address = key["address"]
-        # FIXME ignore if locked by counterpartylib
         if has_unconfirmed_transactions(address):
             continue  # ignore if unconfirmed inputs/outputs
         if key["address"] in _LOCKS:
@@ -220,9 +219,9 @@ def update_channel_state(channel_id, asset, commit=None,
             commit_script=commit["script"]
         )
     if revokes is not None:
-        # FIXME will not set revokes as unnotified
-        #       currently not a problem as its only used for hub to client
-        #       but its begging to be missused!!
+        # TODO will not set revokes as unnotified
+        #      currently not a problem as its only used for hub to client
+        #      but its begging to be missused!!
         state = api.mpc_revoke_all(state=state, secrets=revokes)
     cursor.execute("BEGIN TRANSACTION;")
     db.save_channel_state(
@@ -376,6 +375,7 @@ def get_hub_liquidity(assets=None):
                 result["total"][asset] += quantity
 
             # add balance to addresses
+            # TODO sign something known to prove control of address
             result["addresses"][key["asset"]].append({
                 "address": key["address"],
                 "balances": balances
@@ -389,10 +389,10 @@ def get_balances(address, assets=None):
 
 
 def get_connections_status(assets=None):
-    # FIXME limit to only open connections
-    # FIXME limit by asset
     connections = {}
     for hub_conn in db.hub_connections_open():
+        if assets is not None and hub_conn["asset"] not in assets:
+            continue
         connections[hub_conn["handle"]] = get_status(hub_conn)
     return connections
 
@@ -448,8 +448,8 @@ def publish(rawtx):
 
 def send_funds(destination, asset, quantity):
     from picopayments_hub import api
-    regular_dust_size = 5500  # FIXME get from cplib
-    fee_per_kb = 25000  # FIXME get from cplib
+    regular_dust_size = 5500  # TODO get from cplib
+    fee_per_kb = 25000  # TODO get from cplib
     fee = int(fee_per_kb / 2)
     extra_btc = (fee + regular_dust_size) * 3
     key = find_key_with_funds(asset, quantity, extra_btc)
@@ -483,7 +483,7 @@ def has_unconfirmed_transactions(address):
 def load_connection_data(handle, new_c2h_commit=None,
                          new_h2c_revokes=None, cursor=None):
     from picopayments_hub import api
-    # FIXME this is getting dangerous, used in lib and verify, split it up!
+    # TODO this is getting dangerous, used in lib and verify, split it up!
 
     # connection data
     connection = db.hub_connection(handle=handle, cursor=cursor)
@@ -502,6 +502,8 @@ def load_connection_data(handle, new_c2h_commit=None,
     h2c_deposit_address = deposit_address(h2c_state)
     h2c_transferred = get_transferred_quantity(h2c_state)
     h2c_deposit = get_balances(h2c_deposit_address, [asset])[asset]
+
+    # TODO remove now impossable unnotified commit?
     h2c_unnotified_commit = db.unnotified_commit(
         channel_id=connection["h2c_channel_id"], cursor=cursor
     )
@@ -537,7 +539,7 @@ def load_connection_data(handle, new_c2h_commit=None,
         "h2c_expired": is_expired(h2c_state, etc.expire_clearance),
         "c2h_state": c2h_state,
         "c2h_expired": is_expired(c2h_state, etc.expire_clearance),
-        "h2c_unnotified_commit": h2c_unnotified_commit,  # FIXME remove
+        "h2c_unnotified_commit": h2c_unnotified_commit,
         "sendable_amount": sendable_amount,
         "receivable_amount": receivable_amount,
         "terms": terms,
@@ -639,7 +641,7 @@ def get_terms(assets=None):
         with open(etc.path_terms, 'r') as infile:
             terms_data = json.load(infile)
 
-    # FIXME validate terms data
+    # TODO validate terms data
 
     # limit to given assets
     if assets:
