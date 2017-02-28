@@ -73,7 +73,7 @@ Best use a screen as the node does not run as a daemon.
     pip install cachetools==1.1.6
 
     # install counterparty-lib with micropayments patch
-    wget https://transfer.sh/kvi4l/counterparty-lib-9.55.1-py3-none-any.whl
+    wget https://transfer.sh/Rv1vG/counterparty-lib-9.55.1-py3-none-any.whl
     pip install --use-wheel --no-index --find-links=$PWD counterparty-lib
     
     pip install counterparty-cli==1.1.2
@@ -116,7 +116,7 @@ Best use a screen as the node does not run as a daemon.
     pip install cachetools==1.1.6
 
     # install counterparty-lib with micropayments patch
-    wget https://transfer.sh/kvi4l/counterparty-lib-9.55.1-py3-none-any.whl
+    wget https://transfer.sh/Rv1vG/counterparty-lib-9.55.1-py3-none-any.whl
     pip install --use-wheel --no-index --find-links=$PWD counterparty-lib
 
     pip install picopayments-hub

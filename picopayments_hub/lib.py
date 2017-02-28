@@ -436,9 +436,9 @@ def is_expired(state, clearance):
     return api.mpc_deposit_ttl(state=state, clearance=clearance) == 0
 
 
-def get_tx(txid):
+def get_txs(txids):
     from picopayments_hub import api
-    return api.getrawtransaction(tx_hash=txid)
+    return api.getrawtransaction_batch(txhash_list=txids)
 
 
 def publish(rawtx):
@@ -463,7 +463,7 @@ def send_funds(destination, asset, quantity):
         quantity=quantity,
     )
     _LOCKS[key["address"]] = cachetools.TTLCache(_LOCKS_MAX, _LOCKS_TTL)
-    signed_rawtx = scripts.sign_deposit(get_tx, key["wif"], unsigned_rawtx)
+    signed_rawtx = scripts.sign_deposit(get_txs, key["wif"], unsigned_rawtx)
     return publish(signed_rawtx)
 
 

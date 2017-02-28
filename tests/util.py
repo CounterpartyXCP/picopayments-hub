@@ -8,8 +8,8 @@ from counterpartylib.test.fixtures.params import DP
 from micropayment_core import scripts
 
 
-def get_tx(txid):
-    return api.getrawtransaction(tx_hash=txid)
+def get_txs(txids):
+    return api.getrawtransaction_batch(txhash_list=txids)
 
 
 class MockAPI(object):
@@ -51,6 +51,6 @@ def gen_funded_wif(asset, asset_quantity, btc_quantity):
         'quantity': asset_quantity,
         'regular_dust_size': btc_quantity
     })
-    signed_rawtx = scripts.sign_deposit(get_tx, src_wif, unsigned_rawtx)
+    signed_rawtx = scripts.sign_deposit(get_txs, src_wif, unsigned_rawtx)
     api.sendrawtransaction(tx_hex=signed_rawtx)
     return dest_wif

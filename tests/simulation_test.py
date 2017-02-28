@@ -27,8 +27,8 @@ FUNDING_WIF = DP["addresses"][0][2]  # XTC: 91950000000, BTC: 199909140
 FUNDING_ADDRESS = address_from_wif(FUNDING_WIF)
 
 
-def get_tx(txid):
-    return api.getrawtransaction(tx_hash=txid)
+def get_txs(txids):
+    return api.getrawtransaction_batch(txhash_list=txids)
 
 
 @pytest.mark.usefixtures("picopayments_server")
@@ -45,7 +45,7 @@ def test_simulation_xcp():
             'regular_dust_size': 1000000
         })
         signed_rawtx = scripts.sign_deposit(
-            get_tx, FUNDING_WIF, unsigned_rawtx)
+            get_txs, FUNDING_WIF, unsigned_rawtx)
         api.sendrawtransaction(tx_hex=signed_rawtx)
 
     # connect clients

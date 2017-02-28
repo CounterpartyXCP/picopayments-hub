@@ -19,8 +19,8 @@ FUNDING_WIF = DP["addresses"][0][2]  # XTC: 91950000000, BTC: 199909140
 FUNDING_ADDRESS = address_from_wif(FUNDING_WIF)
 
 
-def get_tx(txid):
-    return api.getrawtransaction(tx_hash=txid)
+def get_txs(txids):
+    return api.getrawtransaction_batch(txhash_list=txids)
 
 
 @pytest.mark.usefixtures("picopayments_server")
@@ -49,7 +49,7 @@ def test_no_keys_with_sufficient_asset():
         asset="A7736697071037023001",
         quantity=100000000
     )
-    signed_rawtx = scripts.sign_deposit(get_tx, FUNDING_WIF,
+    signed_rawtx = scripts.sign_deposit(get_txs, FUNDING_WIF,
                                         unsigned_rawtx)
     api.sendrawtransaction(tx_hex=signed_rawtx)
 
@@ -64,7 +64,7 @@ def test_no_keys_with_sufficient_asset():
                 'quantity': 1000000,
                 'regular_dust_size': 1000000
             })
-            signed_rawtx = scripts.sign_deposit(get_tx, FUNDING_WIF,
+            signed_rawtx = scripts.sign_deposit(get_txs, FUNDING_WIF,
                                                 unsigned_rawtx)
             api.sendrawtransaction(tx_hex=signed_rawtx)
 
@@ -81,7 +81,7 @@ def test_no_keys_with_sufficient_btc():
         asset="A7736697071037023001",
         quantity=100000000
     )
-    signed_rawtx = scripts.sign_deposit(get_tx, FUNDING_WIF, unsigned_rawtx)
+    signed_rawtx = scripts.sign_deposit(get_txs, FUNDING_WIF, unsigned_rawtx)
     api.sendrawtransaction(tx_hex=signed_rawtx)
 
     # fund server
@@ -95,7 +95,7 @@ def test_no_keys_with_sufficient_btc():
                 'quantity': 1000000,
                 'regular_dust_size': 1000000
             })
-            signed_rawtx = scripts.sign_deposit(get_tx, FUNDING_WIF,
+            signed_rawtx = scripts.sign_deposit(get_txs, FUNDING_WIF,
                                                 unsigned_rawtx)
             api.sendrawtransaction(tx_hex=signed_rawtx)
 
