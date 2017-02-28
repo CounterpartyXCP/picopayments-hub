@@ -24,13 +24,12 @@ install:
   - pip install colorlog==2.7.0
   - pip install json-rpc==1.10.3
   - pip install six==1.10.0
-  - pip install pycoin==0.70
   - pip install pycrypto==2.6.1
   - pip install pysha3==0.3
   - pip install pytest==2.9.2
   - pip install pytest-cov==2.2.1
   - pip install jsonschema==2.5.1
-  - pip install micropayment-core==0.4.5
+  - pip install micropayment-core==1.0.0
   - pip install python-bitcoinlib==0.5.1
   - pip install requests==2.10.0
   - pip install tendo==0.2.8
