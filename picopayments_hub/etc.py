@@ -4,6 +4,7 @@
 
 
 import os
+import picopayments_cli
 from threading import RLock
 
 
@@ -43,6 +44,7 @@ delay_time = 2
 def load(args):
     testnet = args["testnet"]
     basedir = args["basedir"]
+    picopayments_cli.etc.load(basedir, testnet)
     database_file = "testnet.db" if testnet else "mainnet.db"
     terms_file = "testnet.terms" if testnet else "mainnet.terms"
     log_file = "testnet.log" if testnet else "mainnet.log"

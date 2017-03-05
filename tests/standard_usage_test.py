@@ -63,7 +63,7 @@ def test_standard_usage(server_db):
 
     # fund server
     for i in range(4):
-        address = lib.get_funding_addresses([ASSET])[ASSET]
+        address = lib.get_funding_address()
         unsigned_rawtx = api.create_send(**{
             'source': FUNDING_ADDRESS,
             'destination': address,
@@ -237,7 +237,7 @@ def test_user_doesnt_publish_commit(server_db):
 
     # fund server
     for i in range(2):
-        address = lib.get_funding_addresses([ASSET])[ASSET]
+        address = lib.get_funding_address()
         unsigned_rawtx = api.create_send(**{
             'source': FUNDING_ADDRESS,
             'destination': address,

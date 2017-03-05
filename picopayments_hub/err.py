@@ -94,5 +94,5 @@ class DepositExpired(Exception):
 class InsufficientFunds(Exception):
 
     def __init__(self, asset, quantity):
-        msg = "No keypair for {0} with {1} funds."
-        super(InsufficientFunds, self).__init__(msg.format(asset, quantity))
+        msg = "Insufficient Funds: {0}{1} required!"
+        super(InsufficientFunds, self).__init__(msg.format(quantity, asset))

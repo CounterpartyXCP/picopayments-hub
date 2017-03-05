@@ -87,10 +87,9 @@ test: setup
 	$(PEP8) picopayments_hub
 	$(PEP8) examples
 	$(PEP8) tests
-	$(PYTEST) --ignore=env --verbose --cov-config=.coveragerc --cov-report=term-missing --cov=./picopayments_hub -vv 
-	# $(PYTEST) --ignore=env --verbose --cov-config=.coveragerc --cov-report=term-missing --cov=./picopayments_hub -vv --capture=no --pdb tests/cron_test.py::test_cron_check_for_expire_before_commit
-	# $(PYTEST) --ignore=env --verbose --cov-config=.coveragerc --cov-report=term-missing --cov=./picopayments_hub -vv --capture=no --pdb tests/standard_usage_test.py
-	# $(PYTEST) --ignore=env --verbose --cov-config=.coveragerc --cov-report=term-missing --cov=./picopayments_hub -vv --capture=no --pdb tests/api_mph_sync_test.py::test_validate_handles_exist
+	$(PYTEST) --ignore=env --verbose --cov-config=.coveragerc --cov-report=term-missing --cov=./picopayments_hub -vv  # --capture=no --pdb
+	# $(PYTEST) --ignore=env --verbose --cov-config=.coveragerc --cov-report=term-missing --cov=./picopayments_hub -vv --capture=no tests/api_mph_sync_test.py::test_pubkey_missmatch
+	# $(PYTEST) --ignore=env --verbose --cov-config=.coveragerc --cov-report=term-missing --cov=./picopayments_hub -vv --capture=no --pdb tests/cron_test.py
 
 
 publish: test

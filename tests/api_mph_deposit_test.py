@@ -7,8 +7,9 @@ import jsonschema
 # from counterpartylib.test import conftest
 
 from counterpartylib.test.util_test import CURR_DIR as CPLIB_TESTDIR
-from picopayments_hub import lib
+from micropayment_core import keys
 from picopayments_hub import api
+from picopayments_hub import etc
 from picopayments_hub import err
 from picopayments_cli import auth
 from micropayment_core import util
@@ -35,8 +36,7 @@ DEPOSIT_RESULT_SCHEMA = {
 @pytest.mark.usefixtures("picopayments_server")
 def test_validate_handle_exists():
     try:
-        asset = "XCP"
-        client_key = lib.create_key(asset, netcode="XTN")
+        wif = keys.generate_wif(etc.netcode)
         next_revoke_secret_hash = util.hash160hex(util.b2h(os.urandom(32)))
         c2h_deposit_script = util.b2h(os.urandom(32)),
         params = {
@@ -44,7 +44,7 @@ def test_validate_handle_exists():
             "deposit_script": c2h_deposit_script,
             "next_revoke_secret_hash": next_revoke_secret_hash
         }
-        params = auth.sign_json(params, client_key["wif"])
+        params = auth.sign_json(params, wif)
         api.mph_deposit(**params)
         assert False
     except err.HandleNotFound:
@@ -55,19 +55,16 @@ def test_validate_handle_exists():
 def test_validate_deposit_not_already_given():
     try:
         asset = "XCP"
-        client_key = lib.create_key(asset, netcode="XTN")
-        client_pubkey = client_key["pubkey"]
+        wif = keys.generate_wif(etc.netcode)
+        client_pubkey = keys.pubkey_from_wif(wif)
 
         h2c_spend_secret = util.b2h(os.urandom(32))
         h2c_spend_secret_hash = util.hash160hex(
             h2c_spend_secret
         )
 
-        params = {
-            "asset": asset,
-            "spend_secret_hash": h2c_spend_secret_hash
-        }
-        params = auth.sign_json(params, client_key["wif"])
+        params = {"asset": asset, "spend_secret_hash": h2c_spend_secret_hash}
+        params = auth.sign_json(params, wif)
         result = api.mph_request(**params)
 
         handle = result["handle"]
@@ -86,7 +83,7 @@ def test_validate_deposit_not_already_given():
             "deposit_script": c2h_deposit_script,
             "next_revoke_secret_hash": next_revoke_secret_hash
         }
-        params = auth.sign_json(params, client_key["wif"])
+        params = auth.sign_json(params, wif)
         result = api.mph_deposit(**params)
         assert result is not None
         jsonschema.validate(result, DEPOSIT_RESULT_SCHEMA)
@@ -98,7 +95,7 @@ def test_validate_deposit_not_already_given():
             "deposit_script": c2h_deposit_script,
             "next_revoke_secret_hash": next_revoke_secret_hash
         }
-        params = auth.sign_json(params, client_key["wif"])
+        params = auth.sign_json(params, wif)
         result = api.mph_deposit(**params)
 
         assert False

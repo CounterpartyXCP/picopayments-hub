@@ -8,15 +8,12 @@ import copy
 import json
 import pkg_resources
 import cachetools
-import random
-from collections import defaultdict
-from pycoin.key.BIP32Node import BIP32Node
-from pycoin.serialize import b2h
 from micropayment_core import util
 from micropayment_core import keys
 from micropayment_core import scripts
 from counterpartylib.lib.util import DictCache
 from picopayments_cli.mpc import Mpc
+from picopayments_cli.auth import load_wif
 from picopayments_hub import db
 from picopayments_hub import err
 from picopayments_hub import etc
@@ -26,10 +23,9 @@ from picopayments_hub import sql
 _TERMS_FP = pkg_resources.resource_stream("picopayments_hub", "terms.json")
 TERMS = json.loads(_TERMS_FP.read().decode("utf-8"))
 
-
-_LOCKS = DictCache(size=65535)  # address -> lock
-_LOCKS_TTL = 3.0  # seconds
-_LOCKS_MAX = 5000  # per address
+_UTXO_LOCKS = DictCache(size=65535)  # "utxo_txid:utxo_index" -> lock
+_UTXO_LOCKS_TTL = 3.0  # seconds
+_UTXO_LOCKS_MAX = 5000  # per address
 
 
 def get_secret(secret_hash, cursor=None):
@@ -40,16 +36,13 @@ def get_secret(secret_hash, cursor=None):
 
 
 def get_wif(pubkey):
-    return db.key(pubkey=pubkey)["wif"]
+    wif = load_wif()
+    assert(pubkey == keys.pubkey_from_wif(wif))
+    return wif
 
 
-def create_key(asset, netcode="BTC"):
-    secure_random_data = os.urandom(32)
-    key = BIP32Node.from_master_secret(secure_random_data, netcode=netcode)
-    return {
-        "asset": asset, "pubkey": b2h(key.sec()),
-        "wif": key.wif(), "address": key.address(),
-    }
+def get_funding_address():
+    return keys.address_from_wif(load_wif())
 
 
 def create_secret():
@@ -66,10 +59,9 @@ def create_hub_connection(asset, client_pubkey,
     data.update(current_terms)
 
     # new hub key
-    hub_key = create_key(asset, netcode=etc.netcode)
-    data["hub_wif"] = hub_key["wif"]
-    data["hub_pubkey"] = hub_key["pubkey"]
-    data["hub_address"] = hub_key["address"]
+    hub_wif = load_wif()
+    data["hub_pubkey"] = keys.pubkey_from_wif(hub_wif)
+    data["hub_address"] = keys.address_from_wif(hub_wif)
 
     # client key
     data["client_pubkey"] = client_pubkey
@@ -94,7 +86,7 @@ def create_hub_connection(asset, client_pubkey,
             "spend_secret_hash": data["secret_hash"],
             "channel_terms": current_terms
         },
-        hub_key["wif"]
+        hub_wif
     )
 
 
@@ -116,15 +108,15 @@ def _load_incomplete_connection(handle, c2h_deposit_script_hex):
     assert(c2h["payer_pubkey"] == client_pubkey)
     assert(c2h["payee_pubkey"] == hub_pubkey)
 
-    hub_key = db.key(pubkey=hub_pubkey)
+    hub_wif = get_wif(hub_pubkey)
 
-    return hub_conn, h2c, expire_time, hub_key
+    return hub_conn, h2c, expire_time, hub_wif
 
 
 def complete_connection(handle, c2h_deposit_script,
                         next_revoke_secret_hash):
 
-    hub_conn, h2c, expire_time, hub_key = _load_incomplete_connection(
+    hub_conn, h2c, expire_time, hub_wif = _load_incomplete_connection(
         handle, c2h_deposit_script
     )
 
@@ -157,38 +149,8 @@ def complete_connection(handle, c2h_deposit_script,
             "deposit_script": h2c_deposit_script,
             "next_revoke_secret_hash": data["secret_hash"]
         },
-        hub_key["wif"]
+        hub_wif
     )
-
-
-def find_key_with_funds(asset, asset_quantity, btc_quantity):
-    nearest = {"key": None, "available": 2100000000000000}
-    keys = db.keys(asset=asset)
-    random.shuffle(keys)  # prevent draining btc for fees from one address
-    for key in keys:
-        address = key["address"]
-        if has_unconfirmed_transactions(address):
-            continue  # ignore if unconfirmed inputs/outputs
-        if key["address"] in _LOCKS:
-            continue  # ignore recently used to avoid doublespends
-        balances = get_balances(address, assets=["BTC", asset])
-        if btc_quantity > balances["BTC"]:
-            continue  # not enough btc
-        if asset_quantity > balances[asset]:
-            continue  # not enough assets
-        if nearest["available"] > balances[asset]:
-            nearest = {"key": key, "available": balances[asset]}
-    return nearest["key"]
-
-
-def get_funding_addresses(assets=None):
-    assets = _terms_assets(assets=assets)
-    addresses = {}
-    for asset in assets:
-        key = create_key(asset, netcode=etc.netcode)
-        db.add_keys([key])
-        addresses[asset] = key["address"]
-    return addresses
 
 
 def initialize(args):
@@ -300,8 +262,8 @@ def close_connection(handle, h2c_spend_secret=None):
         )
         c2h_spend_secret = get_secret(c2h_spend_secret_hash)
 
-    hub_key = db.channel_payer_key(id=hub_connection["h2c_channel_id"])
-    return ({"spend_secret": c2h_spend_secret}, hub_key["wif"])
+    hub_wif = load_wif()
+    return ({"spend_secret": c2h_spend_secret}, hub_wif)
 
 
 def sync_hub_connection(handle, next_revoke_secret_hash,
@@ -331,7 +293,7 @@ def sync_hub_connection(handle, next_revoke_secret_hash,
         h2c_commit_id, c2h_revokes, c2h_id, next_revoke_secret
     )
 
-    hub_key = db.channel_payer_key(id=h2c_id)
+    hub_wif = load_wif()
     return (
         {
             "receive": receive_payments,
@@ -339,7 +301,7 @@ def sync_hub_connection(handle, next_revoke_secret_hash,
             "revokes": [r["revoke_secret"] for r in c2h_revokes],
             "next_revoke_secret_hash": next_revoke_secret["secret_hash"]
         },
-        hub_key["wif"]
+        hub_wif
     )
 
 
@@ -352,35 +314,9 @@ def _terms_assets(assets=None):
 
 def get_hub_liquidity(assets=None):
     assets = _terms_assets(assets=assets)
-
-    result = {
-        "total": defaultdict(lambda: 0),
-        "addresses": defaultdict(lambda: []),
-    }
-
-    for asset in assets:
-        for key in db.keys(asset=asset):
-
-            # get balance for asset address
-            balances = get_balances(
-                key["address"], assets=["BTC", key["asset"]]
-            )
-
-            # do not show keys with no balances
-            if not sum(balances.values()):
-                continue
-
-            # update total
-            for asset, quantity in balances.items():
-                result["total"][asset] += quantity
-
-            # add balance to addresses
-            # TODO sign something known to prove control of address
-            result["addresses"][key["asset"]].append({
-                "address": key["address"],
-                "balances": balances
-            })
-    return result
+    # TODO sign something known to prove control of address
+    address = keys.address_from_wif(load_wif())
+    return get_balances(address, assets=assets)
 
 
 def get_balances(address, assets=None):
@@ -452,19 +388,52 @@ def send_funds(destination, asset, quantity):
     fee_per_kb = 25000  # TODO get from cplib
     fee = int(fee_per_kb / 2)
     extra_btc = (fee + regular_dust_size) * 3
-    key = find_key_with_funds(asset, quantity, extra_btc)
-    if key is None:
-        raise err.InsufficientFunds(asset, quantity)
+    wif = load_wif()
+    address = keys.address_from_wif(wif)
+    utxos = _get_hub_utxos(address, asset, quantity, extra_btc)
     unsigned_rawtx = api.create_send(
-        source=key["address"],
+        source=address,
         destination=destination,
         asset=asset,
         regular_dust_size=extra_btc,
         quantity=quantity,
+        disable_utxo_locks=True,
+        custom_inputs=utxos,
     )
-    _LOCKS[key["address"]] = cachetools.TTLCache(_LOCKS_MAX, _LOCKS_TTL)
-    signed_rawtx = scripts.sign_deposit(get_txs, key["wif"], unsigned_rawtx)
+    signed_rawtx = scripts.sign_deposit(get_txs, wif, unsigned_rawtx)
     return publish(signed_rawtx)
+
+
+def _getutxoid(utxo):
+    return "{0}:{1}".format(utxo["txid"], utxo["vout"])
+
+
+def _get_hub_utxos(address, asset, asset_quantity, btc_quantity):
+    from picopayments_hub import api
+
+    # FIXME includes unconfirmed spends but not deposits!
+    asset_balance = get_balances(address, assets=[asset])[asset]
+    if asset_balance < asset_quantity:
+        raise err.InsufficientFunds(asset, asset_quantity)
+
+    utxos = api.get_unspent_txouts(address=address, unconfirmed=False)
+    utxo_sum = 0
+    results = []
+    for utxo in utxos:
+        utxoid = _getutxoid(utxo)
+        if utxoid in _UTXO_LOCKS:
+            continue
+        if utxo_sum >= btc_quantity:
+            break
+        utxo_sum += util.to_satoshis(utxo["amount"])
+        _UTXO_LOCKS[utxoid] = cachetools.TTLCache(
+            _UTXO_LOCKS_MAX, _UTXO_LOCKS_TTL
+        )
+        results.append(utxo)
+    if utxo_sum < btc_quantity:
+        raise err.InsufficientFunds("BTC", btc_quantity)
+
+    return results
 
 
 def get_transactions(address):
@@ -557,7 +526,7 @@ def _send_client_funds(connection_data, quantity):
     next_revoke_secret_hash = result["next_revoke_secret_hash"]
     deposit_script_bin = h2c_state["deposit_script"]
     hub_pubkey = scripts.get_deposit_payer_pubkey(deposit_script_bin)
-    wif = db.key(pubkey=hub_pubkey)["wif"]
+    wif = get_wif(hub_pubkey)
 
     result = Mpc(api).full_duplex_transfer(
         wif, get_secret, h2c_state, c2h_state, quantity,

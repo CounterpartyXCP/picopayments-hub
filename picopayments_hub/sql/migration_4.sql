@@ -1,0 +1,6 @@
+BEGIN TRANSACTION;
+
+ALTER TABLE MicropaymentChannel ADD COLUMN handle TEXT;
+DROP TABLE Keys;
+
+COMMIT;

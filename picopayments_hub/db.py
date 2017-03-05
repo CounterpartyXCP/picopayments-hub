@@ -16,6 +16,7 @@ _MIGRATIONS = {
     1: sql.load("migration_1"),
     2: sql.load("migration_2"),
     3: sql.load("migration_3"),
+    4: sql.load("migration_4"),
 }
 _HANDLE_EXISTS = "SELECT EXISTS(SELECT * FROM HubConnection WHERE handle = ?);"
 _COMMITS_REQUESTED = sql.load("commits_requested")
@@ -23,7 +24,6 @@ _COMMITS_ACTIVE = sql.load("commits_active")
 _COMMITS_REVOKED = sql.load("commits_revoked")
 _ADD_HUB_CONNECTION = sql.load("add_hub_connection")
 _ADD_REVOKE_SECRET = sql.load("add_revoke_secret")
-_ADD_KEY = sql.load("add_key")
 _ADD_COMMIT_REQUESTED = sql.load("add_commit_requested")
 _ADD_COMMIT_ACTIVE = sql.load("add_commit_active")
 _ADD_COMMIT_REVOKED = sql.load("add_commit_revoked")
@@ -33,12 +33,9 @@ _SET_PAYMENT_NOTIFIED = sql.load("set_payment_notified")
 _SET_REVOKE_NOTIFIED = sql.load("set_revoke_notified")
 
 
-key = sql.make_fetchone("key")
 get_secret = sql.make_fetchone("get_secret")
 add_secret = sql.make_execute("add_secret")
-keys = sql.make_fetchall("keys")
 terms = sql.make_fetchone("terms")
-channel_payer_key = sql.make_fetchone("channel_payer_key")
 c2h_channel = sql.make_fetchone("c2h_channel")
 h2c_channel = sql.make_fetchone("h2c_channel")
 unnotified_commit = sql.make_fetchone("unnotified_commit")
@@ -94,13 +91,6 @@ def setup():
         db_version += 1
         script = "PRAGMA user_version = {0};".format(db_version)
         sql.execute(script, cursor=cursor)
-
-
-def add_keys(keys, cursor=None):
-    cursor = cursor or sql.get_cursor()
-    cursor.execute("BEGIN TRANSACTION")
-    cursor.executemany(_ADD_KEY, keys)
-    cursor.execute("COMMIT")
 
 
 def commits_requested(channel_id, cursor=None):

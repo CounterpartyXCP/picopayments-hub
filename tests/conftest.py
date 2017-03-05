@@ -72,8 +72,8 @@ def connected_clients():
 
     # fund server
     for i in range(3):
-        addresses = lib.get_funding_addresses(["XCP", "A7736697071037023001"])
-        for asset, address in addresses.items():
+        address = lib.get_funding_address()
+        for asset in ["XCP", "A7736697071037023001"]:
             unsigned_rawtx = api.create_send(**{
                 'source': FUNDING_ADDRESS,
                 'destination': address,
@@ -91,15 +91,15 @@ def connected_clients():
 
     # fund XCP clients
     for i in range(3):
-        bob_wif = util.gen_funded_wif("XCP", 1000000, 1000000)
-        client = Mph(util.MockAPI(auth_wif=bob_wif))
+        wif = util.gen_funded_wif("XCP", 1000000, 1000000)
+        client = Mph(util.MockAPI(auth_wif=wif))
         client.connect(1000000, expire_time=42, asset="XCP")
         clients.append(client)
 
     # fund A7736697071037023001 clients
     for i in range(3):
-        bob_wif = util.gen_funded_wif("A7736697071037023001", 1000000, 1000000)
-        client = Mph(util.MockAPI(auth_wif=bob_wif))
+        wif = util.gen_funded_wif("A7736697071037023001", 1000000, 1000000)
+        client = Mph(util.MockAPI(auth_wif=wif))
         client.connect(1000000, expire_time=42, asset="A7736697071037023001")
         clients.append(client)
 
