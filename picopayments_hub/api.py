@@ -3,7 +3,10 @@
 # License: MIT (see LICENSE file)
 
 
+import os
 from jsonrpc import dispatcher
+from btctxstore import BtcTxStore
+from micropayment_core import util
 from picopayments_hub import etc
 from picopayments_hub import verify
 from picopayments_hub import lib
@@ -15,8 +18,20 @@ from picopayments_cli.rpc import jsonrpc_call
 def mph_status(assets=None):
     with etc.database_lock:
         verify.status_input(assets)
+        btctxstore = BtcTxStore(testnet=etc.testnet)
+        wif = lib.load_wif()
+        address = btctxstore.get_address(wif)
+        message = util.b2h(os.urandom(32))
+        signature = btctxstore.sign_unicode(wif, message)
+        if isinstance(signature, bytes):  # XXX update btctxstore instead !!!
+            signature = signature.decode("utf-8")
         return {
-            "liquidity": lib.get_hub_liquidity(assets=assets),
+            "funds": {
+                "address": address,
+                "message": message,
+                "signature": signature,
+                "liquidity": lib.get_hub_liquidity(assets=assets),
+            },
             "current_terms": lib.get_terms(assets=assets),
             "connections": lib.get_connections_status(assets=assets)
         }

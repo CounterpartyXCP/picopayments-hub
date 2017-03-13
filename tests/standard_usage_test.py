@@ -77,7 +77,8 @@ def test_standard_usage(server_db):
         api.sendrawtransaction(tx_hex=signed_rawtx)
 
     # connect clients
-    assert len(api.mph_status()["connections"]) == 0
+    status = api.mph_status()
+    assert len(status["connections"]) == 0
     clients = []
     for i in range(4):
         auth_wif = util.gen_funded_wif(ASSET, 1000000, 1000000)

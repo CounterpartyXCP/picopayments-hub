@@ -1,4 +1,5 @@
 six == 1.10.0
+btctxstore == 4.8.0
 picopayments-cli == 1.0.1
 apsw == 3.9.2-r1
 pycrypto == 2.6.1
