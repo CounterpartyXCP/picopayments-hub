@@ -66,9 +66,10 @@ def fund_deposits():
                 target = int(c2h_deposit_balance * deposit_ratio)
             quantity = target - h2c_deposit_balance
             if quantity > 0:
-                txid = lib.send_funds(h2c_deposit_address, asset, quantity)
+                sent = lib.send_funds(h2c_deposit_address, asset, quantity)
                 deposits.append({
-                    "txid": txid,
+                    "txid": sent["txid"],
+                    "rawtx": sent["rawtx"],
                     "asset": asset,
                     "address": h2c_deposit_address,
                     "quantity": quantity,
@@ -115,18 +116,21 @@ def _merge_rawtxs(a, b):
         "revoke": {},
         "change": {},
         "expire": {},
-        "commit": {}
+        "commit": {},
+        "deposit": {},
     }
     merged["payout"].update(a["payout"])
     merged["revoke"].update(a["revoke"])
     merged["change"].update(a["change"])
     merged["expire"].update(a["expire"])
     merged["commit"].update(a["commit"])
+    merged["deposit"].update(a["deposit"])
     merged["payout"].update(b["payout"])
     merged["revoke"].update(b["revoke"])
     merged["change"].update(b["change"])
     merged["expire"].update(b["expire"])
     merged["commit"].update(b["commit"])
+    merged["deposit"].update(b["deposit"])
     return merged
 
 
@@ -138,7 +142,8 @@ def recover_funds():
             "revoke": {},
             "change": {},
             "expire": {},
-            "commit": {}
+            "commit": {},
+            "deposit": {},
         }
         cursor = sql.get_cursor()
         for hub_connection in db.hub_connections_recoverable(cursor=cursor):
@@ -159,7 +164,8 @@ def run_all():
         rawtxs = recover_funds()
         for commit_rawtx in commit_rawtxs:
             rawtxs["commit"][util.gettxid(commit_rawtx)] = commit_rawtxs
-        fund_deposits()  # TODO add created rawtxs
+        for deposit in fund_deposits():
+            rawtxs["deposit"][deposit["txid"]] = deposit["rawtx"]
         collect_garbage()
-        print("RAWTXS:", time.time(), rawtxs)
+        print(time.time(), "RAWTXS:", rawtxs)  # TODO use propper logger
         return rawtxs

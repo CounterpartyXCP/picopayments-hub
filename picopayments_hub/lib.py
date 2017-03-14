@@ -309,12 +309,13 @@ def _terms_assets(assets=None):
     """limit to terms assets and use all terms assets if none given"""
     if assets is not None:
         return set(get_terms().keys()).intersection(set(assets))
-    return get_terms().keys()
+    return list(get_terms().keys())
 
 
 def get_hub_liquidity(assets=None):
     assets = _terms_assets(assets=assets)
-    # TODO sign something known to prove control of address
+    if "BTC" not in assets:
+        assets.append("BTC")
     address = keys.address_from_wif(load_wif())
     return get_balances(address, assets=assets)
 
@@ -383,6 +384,9 @@ def publish(rawtx):
 
 
 def send_funds(destination, asset, quantity):
+
+    # FIXME test behaves correctly with previous unconfirmed sends
+
     from picopayments_hub import api
     regular_dust_size = 5500  # TODO get from cplib
     fee_per_kb = 25000  # TODO get from cplib
@@ -401,7 +405,9 @@ def send_funds(destination, asset, quantity):
         custom_inputs=utxos,
     )
     signed_rawtx = scripts.sign_deposit(get_txs, wif, unsigned_rawtx)
-    return publish(signed_rawtx)
+    txid = publish(signed_rawtx)
+    assert txid, "Failed to publish transaction: {0}".format(signed_rawtx)
+    return {"txid": txid, "rawtx": signed_rawtx}
 
 
 def _getutxoid(utxo):
@@ -411,7 +417,6 @@ def _getutxoid(utxo):
 def _get_hub_utxos(address, asset, asset_quantity, btc_quantity):
     from picopayments_hub import api
 
-    # FIXME includes unconfirmed spends but not deposits!
     asset_balance = get_balances(address, assets=[asset])[asset]
     if asset_balance < asset_quantity:
         raise err.InsufficientFunds(asset, asset_quantity)

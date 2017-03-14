@@ -88,20 +88,15 @@ test: setup
 	$(PEP8) examples
 	$(PEP8) tests
 	$(PYTEST) --ignore=env --verbose --cov-config=.coveragerc --cov-report=term-missing --cov=./picopayments_hub -vv  # --capture=no --pdb
-	# $(PYTEST) --ignore=env --verbose --cov-config=.coveragerc --cov-report=term-missing --cov=./picopayments_hub -vv --capture=no tests/api_mph_sync_test.py::test_pubkey_missmatch
-	# $(PYTEST) --ignore=env --verbose --cov-config=.coveragerc --cov-report=term-missing --cov=./picopayments_hub -vv --capture=no --pdb tests/cron_test.py
+	# $(PYTEST) --ignore=env --verbose --cov-config=.coveragerc --cov-report=term-missing --cov=./picopayments_hub -vv --capture=no --pdb tests/terms_change_test.py 
 
 
-publish: test
+publish: setup
 	$(PY) setup.py register bdist_wheel upload
 
 
 view_readme: setup graphs
 	env/bin/restview README.rst
-
-
-graphs:
-	ditaa schema.ditaa schema.png
 
 
 bitcoind_startserver:
@@ -119,6 +114,10 @@ bitcoind_stopserver:
 counterparty_startserver: bitcoind_startserver
 	# requires "pip install counterparty-cli==1.1.2"
 	env/bin/counterparty-server --testnet --backend-port=18332 --backend-user=bitcoinrpcuser --backend-password=bitcoinrpcpass start
+
+
+hub_startserver: setup
+	env/bin/picopayments-hub --testnet --cp_url=http://127.0.0.1:14000/api/ --basedir=$(HOME)/.picopayments_local_hub/
 
 
 # Break in case of bug!
