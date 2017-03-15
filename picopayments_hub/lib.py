@@ -385,8 +385,6 @@ def publish(rawtx):
 
 def send_funds(destination, asset, quantity):
 
-    # FIXME test behaves correctly with previous unconfirmed sends
-
     from picopayments_hub import api
     regular_dust_size = 5500  # TODO get from cplib
     fee_per_kb = 25000  # TODO get from cplib
@@ -410,10 +408,6 @@ def send_funds(destination, asset, quantity):
     return {"txid": txid, "rawtx": signed_rawtx}
 
 
-def _getutxoid(utxo):
-    return "{0}:{1}".format(utxo["txid"], utxo["vout"])
-
-
 def _get_hub_utxos(address, asset, asset_quantity, btc_quantity):
     from picopayments_hub import api
 
@@ -425,7 +419,7 @@ def _get_hub_utxos(address, asset, asset_quantity, btc_quantity):
     utxo_sum = 0
     results = []
     for utxo in utxos:
-        utxoid = _getutxoid(utxo)
+        utxoid = "{0}:{1}".format(utxo["txid"], utxo["vout"])
         if utxoid in _UTXO_LOCKS:
             continue
         if utxo_sum >= btc_quantity:

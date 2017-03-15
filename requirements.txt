@@ -1,6 +1,6 @@
 six == 1.10.0
 btctxstore == 4.8.0
-picopayments-cli == 1.0.2
+picopayments-cli == 1.0.3
 apsw == 3.9.2-r1
 pycrypto == 2.6.1
 python-dateutil == 2.5.3

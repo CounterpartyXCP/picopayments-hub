@@ -88,7 +88,7 @@ test: setup
 	$(PEP8) examples
 	$(PEP8) tests
 	$(PYTEST) --ignore=env --verbose --cov-config=.coveragerc --cov-report=term-missing --cov=./picopayments_hub -vv  # --capture=no --pdb
-	# $(PYTEST) --ignore=env --verbose --cov-config=.coveragerc --cov-report=term-missing --cov=./picopayments_hub -vv --capture=no --pdb tests/terms_change_test.py 
+	# $(PYTEST) --ignore=env --verbose --cov-config=.coveragerc --cov-report=term-missing --cov=./picopayments_hub -vv --capture=no --pdb tests/get_hub_liquidity_test.py
 
 
 publish: setup
