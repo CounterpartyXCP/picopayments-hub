@@ -67,14 +67,15 @@ def fund_deposits():
             quantity = target - h2c_deposit_balance
             if quantity > 0:
                 sent = lib.send_funds(h2c_deposit_address, asset, quantity)
-                deposits.append({
-                    "txid": sent["txid"],
-                    "rawtx": sent["rawtx"],
-                    "asset": asset,
-                    "address": h2c_deposit_address,
-                    "quantity": quantity,
-                    "handle": hub_connection["handle"]
-                })
+                if sent:
+                    deposits.append({
+                        "txid": sent["txid"],
+                        "rawtx": sent["rawtx"],
+                        "asset": asset,
+                        "address": h2c_deposit_address,
+                        "quantity": quantity,
+                        "handle": hub_connection["handle"]
+                    })
 
         return deposits
 

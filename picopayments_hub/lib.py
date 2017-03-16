@@ -386,26 +386,30 @@ def publish(rawtx):
 def send_funds(destination, asset, quantity):
 
     from picopayments_hub import api
-    regular_dust_size = 5500  # TODO get from cplib
-    fee_per_kb = 25000  # TODO get from cplib
-    fee = int(fee_per_kb / 2)
-    extra_btc = (fee + regular_dust_size) * 3
-    wif = load_wif()
-    address = keys.address_from_wif(wif)
-    utxos = _get_hub_utxos(address, asset, quantity, extra_btc)
-    unsigned_rawtx = api.create_send(
-        source=address,
-        destination=destination,
-        asset=asset,
-        regular_dust_size=extra_btc,
-        quantity=quantity,
-        disable_utxo_locks=True,
-        custom_inputs=utxos,
-    )
-    signed_rawtx = scripts.sign_deposit(get_txs, wif, unsigned_rawtx)
-    txid = publish(signed_rawtx)
-    assert txid, "Failed to publish transaction: {0}".format(signed_rawtx)
-    return {"txid": txid, "rawtx": signed_rawtx}
+    try:
+        regular_dust_size = 5500  # TODO get from cplib
+        fee_per_kb = 25000  # TODO get from cplib
+        fee = int(fee_per_kb / 2)
+        extra_btc = (fee + regular_dust_size) * 3
+        wif = load_wif()
+        address = keys.address_from_wif(wif)
+        utxos = _get_hub_utxos(address, asset, quantity, extra_btc)
+        unsigned_rawtx = api.create_send(
+            source=address,
+            destination=destination,
+            asset=asset,
+            regular_dust_size=extra_btc,
+            quantity=quantity,
+            disable_utxo_locks=True,
+            custom_inputs=utxos,
+        )
+        signed_rawtx = scripts.sign_deposit(get_txs, wif, unsigned_rawtx)
+        txid = publish(signed_rawtx)
+        assert txid, "Failed to publish transaction: {0}".format(signed_rawtx)
+        return {"txid": txid, "rawtx": signed_rawtx}
+    except err.InsufficientFunds:
+        print("Insufficient funds!")
+        return None
 
 
 def _get_hub_utxos(address, asset, asset_quantity, btc_quantity):
